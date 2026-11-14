@@ -1,16 +1,781 @@
 {
   "mode": "standard",
-  "generated_at": "2026-11-14T04:36:11.850994+00:00",
+  "generated_at": "2026-11-14T06:53:29.459848+00:00",
   "stats": {
     "mode": "standard",
     "tag_count": 1,
-    "deep_divecandidates": 0,
-    "deep_cap": null,
-    "deep_selected": 0,
-    "quick_candidates": 0,
+    "deep_divecandidates": 5,
+    "deep_cap": 6,
+    "deep_selected": 5,
+    "quick_candidates": 11,
     "quick_skim_target": 11,
-    "quick_selected": 0
+    "quick_selected": 11
   },
-  "deep_dive": [],
-  "quick_skim": []
+  "deep_dive": [
+    {
+      "id": "2611.06453v1",
+      "source": "arxiv",
+      "title": "Beyond Infraction Scores: Failure-Boundary Profiles for Closed-Loop Evaluation of Driving and Robot Navigation Agents",
+      "abstract": "Closed-loop driving benchmarks in CARLA rank agents by a driving score that multiplies route completion by an infraction penalty. This score does not distinguish an agent that stops in front of an obstacle from one that pushes past it. In a corridor closed by two parked cars, for example, one agent that drives through with contact averages 52.2 on the blocked widths, while the agents that stop average between 37.8 and 40.6. We propose failure-boundary profiles, an evaluation in which each scenario family varies one measured factor, such as corridor width or the time gap in oncoming traffic, and each variant is certified from measurement as one where the agent should proceed or one where it should stop. Along this axis we estimate two curves per agent, commitment (the probability of attempting the passage) and competence (the probability of passing without contact), and locate where each crosses one half, with intervals that account for the simulator's run-to-run variance. The certified labels also give a summary metric, decision accuracy, which credits clean passes on passable variants and stops on blocked ones. We evaluate seven driving agents on seven CARLA families. The rule-based expert reaches a decision accuracy of 0.74 and TFv6, the highest-scoring learned agent, 0.60. Agents with similar driving scores fail in different ways, and agents that reliably stop at a blocked corridor still rarely wait for a gap in oncoming traffic. We also apply the method, unchanged, to a warehouse robot in Isaac Sim. The navigation policy we test stops at blocked gaps in only one of three families, and two fine-tuned versions of it pass more gaps cleanly but no longer stop at all.",
+      "authors": [
+        "Milan Bulat",
+        "Gino Ardelean",
+        "Ellington Kirby"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "cs.CV",
+        "cs.SE"
+      ],
+      "published": "2026-11-04 12:54:09+00:00",
+      "link": "https://arxiv.org/pdf/2611.06453v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 10.0,
+      "llm_evidence_en": "Proposes failure-boundary profiles for closed-loop evaluation of driving agents, critiquing infraction-based driving scores",
+      "llm_evidence_cn": "提出失败边界画像用于驾驶智能体闭环评估，并批判违规分数指标",
+      "llm_evidence": "提出失败边界画像用于驾驶智能体闭环评估，并批判违规分数指标",
+      "canonical_evidence": "提出失败边界画像用于驾驶智能体闭环评估，并批判违规分数指标",
+      "llm_tldr_en": "CARLA closed-loop benchmarks rank agents by a single driving score that hides whether an agent stops or pushes through obstacles; the paper proposes failure-boundary profiles varying one measured factor per scenario family to reveal masked behavior differences.",
+      "llm_tldr_cn": "针对CARLA闭环基准仅以驾驶分数排名、难以区分停车避障与强行通过障碍的问题，论文提出失败边界画像评估方法，通过在每个场景族中改变单一测量因子并将变体标注为应通行或应停车，揭示了驾驶分数掩盖的行为差异，为闭环驾驶评估提供了更细粒度反映安全边界的度量框架。",
+      "llm_tldr": "针对CARLA闭环基准仅以驾驶分数排名、难以区分停车避障与强行通过障碍的问题，论文提出失败边界画像评估方法，通过在每个场景族中改变单一测量因子并将变体标注为应通行或应停车，揭示了驾驶分数掩盖的行为差异，为闭环驾驶评估提供了更细粒度反映安全边界的度量框架。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "Methods and metrics for evaluating autonomous driving system performance",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2611.09888v1",
+      "source": "arxiv",
+      "title": "Scenario Orchestration for Closed-loop Policy Evaluation of Autonomous Driving",
+      "abstract": "Scenario-based simulation is central to evaluating autonomous-driving policies, but a scenario scripted before execution (i.e., with predetermined, fixed actor routes and speeds) may not preserve its intended interaction once the tested ego policy responds in closed loop. Scripted scenarios cannot adapt to unanticipated ego behavior, while learned traffic actors may remain reactive without reliably realizing a particular scenario intent. We introduce a scenario orchestrator that continuously monitors the joint traffic state and adapts non-ego actors through re-timing, re-routing, and role reassignment for creating a specific scenario intent. At each step, the orchestrator solves a constrained optimization problem that preserves the intended interaction while limiting interventions and maintaining traffic feasibility. We further distinguish scenario realization from policy failure, allowing a test to first be judged based on whether the intended interaction occurred and then by how the ego policy responded. Experiments in the CARLA simulator across multiple scenario families and driving policies show that orchestration realizes targeted interactions more reliably than scripted and learned actor-level baselines, particularly under variations in initial conditions and ego behavior. These results support closed-loop scenario orchestration as a tool for controlled and reproducible policy evaluation.",
+      "authors": [
+        "Frieda Rong",
+        "Zhaoyue Wang",
+        "Veer Kapadia",
+        "Vishaka Rajani",
+        "Aren A. Babikian",
+        "Xujie Si",
+        "Mahsa Golchoubian",
+        "Raquel Urtasun",
+        "Igor Gilitschenski"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-11-06 18:58:27+00:00",
+      "link": "https://arxiv.org/pdf/2611.09888v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "scenario orchestrator for closed-loop policy evaluation of autonomous driving",
+      "llm_evidence_cn": "面向自动驾驶闭环策略评估的场景编排器",
+      "llm_evidence": "面向自动驾驶闭环策略评估的场景编排器",
+      "canonical_evidence": "面向自动驾驶闭环策略评估的场景编排器",
+      "llm_tldr_en": "Scripted scenarios fail to preserve intended interactions under closed-loop ego behavior. This paper introduces a scenario orchestrator that adapts non-ego actors via re-timing, re-routing and role reassignment through constrained optimization, improving scenario-intent fidelity for closed-loop policy evaluation.",
+      "llm_tldr_cn": "脚本化场景在闭环中被测自车策略响应后往往无法保持预期的交互意图，导致评估失真。本文提出场景编排器，持续监测联合交通状态，通过重定时、重路由与角色重分配自适应调整非自车参与者，并在每一步求解约束优化以保持场景意图。实验表明该方法能更可靠地在闭环仿真中复现目标交互，为自动驾驶策略评估提供更可信的场景基础。",
+      "llm_tldr": "脚本化场景在闭环中被测自车策略响应后往往无法保持预期的交互意图，导致评估失真。本文提出场景编排器，持续监测联合交通状态，通过重定时、重路由与角色重分配自适应调整非自车参与者，并在每一步求解约束优化以保持场景意图。实验表明该方法能更可靠地在闭环仿真中复现目标交互，为自动驾驶策略评估提供更可信的场景基础。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "closed-loop simulation for evaluating autonomous driving planning and control",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2611.06229v1",
+      "source": "arxiv",
+      "title": "Bug2Scenario: Root-Cause-Preserving Test Scenario Amplification for Autonomous Driving Software",
+      "abstract": "Simulation-based fuzzing exposes autonomous driving system (ADS) failures by repeatedly mutating and executing scenarios, but converting one failure into reusable regression scenarios remains difficult. Such variants test whether the mechanism persists after software changes, for example by varying weather or actor placement while retaining a collision's actor-route conflict. We present Bug2Scenario, a root-cause-guided post-fuzzing framework. From scenario data, traces, and oracle evidence, it extracts a root-cause pattern. An LLM proposes semantic variations over actors, missions, routes, and weather. Deterministic rules construct DriveFuzz-compatible scenarios. Execution evidence and manual review assess preservation. Separating these responsibilities prevents fluency, syntax, or recurring labels from masquerading as causal evidence. Under matched seeds, six LLM backbones, candidate budget, and execution pipeline, Bug2Scenario improves strict preservation by 6.7 percentage points (p=0.104; not significant) and boundary-inclusive preservation by 10.6 points (p=0.011). Feedback helps some initially unsuccessful seeds yield a strictly preserved candidate. Seed-level stopping then avoids further API calls and simulator runs. Remaining failures reflect actor-placement constraints, simulator instability, and incomplete or conflicting causal evidence. Bug2Scenario thus produces reliable ADS regression assets. Our implementation is available at https://github.com/YgcCoder/Bug2Sce.",
+      "authors": [
+        "Yuchen Cao",
+        "Zhenyu Mao",
+        "Jacky Wai Keung",
+        "Yifei Wang",
+        "Yihan Liao",
+        "Jingyu Zhang"
+      ],
+      "primary_category": "cs.SE",
+      "categories": [
+        "cs.SE"
+      ],
+      "published": "2026-11-04 09:37:37+00:00",
+      "link": "https://arxiv.org/pdf/2611.06229v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "root-cause-preserving test scenario amplification for autonomous driving regression testing",
+      "llm_evidence_cn": "面向自动驾驶回归测试的根因保持测试场景扩增",
+      "llm_evidence": "面向自动驾驶回归测试的根因保持测试场景扩增",
+      "canonical_evidence": "面向自动驾驶回归测试的根因保持测试场景扩增",
+      "llm_tldr_en": "Bug2Scenario extracts root-cause patterns from ADS fuzzing failures and uses an LLM to propose semantic scenario variations, producing DriveFuzz-compatible regression scenarios that preserve the original failure mechanism.",
+      "llm_tldr_cn": "基于仿真的模糊测试能暴露自动驾驶系统失效，但把单次失效转化为可复用的回归场景仍很困难。本文提出Bug2Scenario，从场景数据、轨迹与判定证据中提取根因模式，再由大模型在参与者、任务、路线与天气上做语义变异，并用确定性规则生成DriveFuzz兼容场景。执行证据与人工复核用于评估根因保持程度。该框架提升了失效场景的可复用性，为自动驾驶回归测试与场景覆盖提供了系统化方法。",
+      "llm_tldr": "基于仿真的模糊测试能暴露自动驾驶系统失效，但把单次失效转化为可复用的回归场景仍很困难。本文提出Bug2Scenario，从场景数据、轨迹与判定证据中提取根因模式，再由大模型在参与者、任务、路线与天气上做语义变异，并用确定性规则生成DriveFuzz兼容场景。执行证据与人工复核用于评估根因保持程度。该框架提升了失效场景的可复用性，为自动驾驶回归测试与场景覆盖提供了系统化方法。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "coverage metrics for autonomous driving test scenarios",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2611.11627v1",
+      "source": "arxiv",
+      "title": "Attack Injection to Vehicle Reactions: Extensible Closed-Loop Adversarial Evaluation Framework",
+      "abstract": "Autonomous vehicles can use information exchanged with other vehicles and roadside infrastructure to support driving decisions. However, applications that rely on this information can make unsafe decisions when it is falsified. Studying the resulting traffic effects requires following received information through application decisions, vehicle reactions, and subsequent interactions. We present an extensible closed-loop adversarial evaluation framework built on VaN3Twin, a platform for traffic and wireless network simulation, with a diverse attack library and a labelled dataset covering benign and attack conditions. A key advantage of the framework is that it can be extended with additional attacks, message paths, receiving applications, and logging fields. The added library contains 76 configurable attack profiles adapted to message formats defined by the European Telecommunications Standards Institute. These profiles are organized into nine groups of related attacks, referred to as suites. The framework connects live attack injection and simulated network delivery to receiving applications, whose selected commands update vehicle movement. The resulting state feeds subsequent message generation, closing the loop. The dataset links physical vehicle states and message exchanges to attack labels, application decisions, selected commands, and traffic outcomes. Evaluation with individual and combined attack suites confirmed execution of all profiles, and every suite produced requests linked to attacked messages. A recorded sequence also showed a vehicle reacting to an attacked message and subsequently influencing another vehicle through an unmodified message describing its updated movement. These findings demonstrate how live injection and vehicle feedback support the study of direct and indirect effects as traffic evolves.",
+      "authors": [
+        "Mohamed Gaber",
+        "Tahsin Wahid",
+        "Mohammad Mamun",
+        "Salimur Choudhury"
+      ],
+      "primary_category": "cs.CR",
+      "categories": [
+        "cs.CR",
+        "cs.NI"
+      ],
+      "published": "2026-11-08 21:19:56+00:00",
+      "link": "https://arxiv.org/pdf/2611.11627v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "extensible closed-loop adversarial evaluation framework for autonomous driving systems",
+      "llm_evidence_cn": "面向自动驾驶系统的可扩展闭环对抗评估框架",
+      "llm_evidence": "面向自动驾驶系统的可扩展闭环对抗评估框架",
+      "canonical_evidence": "面向自动驾驶系统的可扩展闭环对抗评估框架",
+      "llm_tldr_en": "An extensible closed-loop adversarial evaluation framework on the VaN3Twin traffic and wireless simulation platform traces falsified V2X messages through AV decisions and vehicle reactions, with an attack library and labelled dataset.",
+      "llm_tldr_cn": "依赖车路协同信息的自动驾驶应用在信息被伪造时可能做出不安全决策，而其交通影响需沿信息流追踪到车辆反应与后续交互。本文构建基于VaN3Twin交通与无线网络仿真平台的可扩展闭环对抗评估框架，配备多样化攻击库与标注数据集，覆盖正常与攻击条件。框架可扩展新的攻击、消息路径与接收应用。该工作为车联网安全相关的自动驾驶闭环评估提供了可复用的实验基础设施。",
+      "llm_tldr": "依赖车路协同信息的自动驾驶应用在信息被伪造时可能做出不安全决策，而其交通影响需沿信息流追踪到车辆反应与后续交互。本文构建基于VaN3Twin交通与无线网络仿真平台的可扩展闭环对抗评估框架，配备多样化攻击库与标注数据集，覆盖正常与攻击条件。框架可扩展新的攻击、消息路径与接收应用。该工作为车联网安全相关的自动驾驶闭环评估提供了可复用的实验基础设施。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "What validation frameworks support closed loop evaluation of autonomous driving systems?",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2611.12932v1",
+      "source": "arxiv",
+      "title": "URL-Sim: Unified and Regulated LiDAR Simulation for High-Fidelity Reconstruction of Dynamic Driving Scenes",
+      "abstract": "Reconstructing high-fidelity LiDAR simulation scenes from real-world driving logs is essential for cost-effective safety validation of autonomous driving systems. While simulators based on Neural Radiance Fields (NeRF) achieve realistic scene reconstruction, their large-scale adoption is limited by slow rendering speeds. Recent 3D Gaussian splatting (3DGS) approaches have improved rendering efficiency through explicit primitive representation and differentiable rasterization. However, existing 3DGS-based methods remain largely restricted to rigid vehicles and produce redundant primitives through unconstrained densification. To address these limitations, we propose URL-Sim, a unified and regulated dynamic LiDAR simulation framework. URL-Sim constructs a dynamic Gaussian scene graph that decouples the modeling of traffic participants, including vehicles, pedestrians, and cyclists, enabling accurate reconstruction of heterogeneous dynamic objects within a single framework. It further introduces a regulated Gaussian densification strategy that ranks primitives with multi-dimensional importance scores and allocates Gaussians to the most critical regions while keeping the total primitive count bounded. Experiments on the Waymo and KITTI-360 datasets demonstrate that URL-Sim achieves higher quantitative accuracy and visual quality than existing baselines under comparable primitive budgets, and accurately recovers the geometry and poses of diverse dynamic traffic participants.",
+      "authors": [
+        "Kefei Qian",
+        "Xipeng Feng",
+        "Jie Li",
+        "Long Cao",
+        "Yuhan Chen",
+        "Xiangfei Huang",
+        "Guofa Li"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV"
+      ],
+      "published": "2026-11-06 07:17:45+00:00",
+      "link": "https://arxiv.org/pdf/2611.12932v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "high-fidelity LiDAR simulation for AV safety validation",
+      "llm_evidence_cn": "用于自动驾驶安全验证的高保真激光雷达仿真",
+      "llm_evidence": "用于自动驾驶安全验证的高保真激光雷达仿真",
+      "canonical_evidence": "用于自动驾驶安全验证的高保真激光雷达仿真",
+      "llm_tldr_en": "URL-Sim reconstructs high-fidelity dynamic LiDAR driving scenes from real logs using regulated 3D Gaussian splatting, aiming to support cost-effective safety validation of autonomous driving systems.",
+      "llm_tldr_cn": "从真实驾驶日志重建高保真激光雷达仿真场景对自动驾驶的低成本安全验证至关重要，但NeRF渲染慢、3DGS又多限于刚性车辆且产生冗余基元。作者提出URL-Sim，统一并调控动态激光雷达仿真，改进3DGS表示以处理动态场景并抑制冗余致密化。该方法提升仿真保真度与效率，为自动驾驶系统的安全验证与仿真测试提供高保真场景基础。",
+      "llm_tldr": "从真实驾驶日志重建高保真激光雷达仿真场景对自动驾驶的低成本安全验证至关重要，但NeRF渲染慢、3DGS又多限于刚性车辆且产生冗余基元。作者提出URL-Sim，统一并调控动态激光雷达仿真，改进3DGS表示以处理动态场景并抑制冗余致密化。该方法提升仿真保真度与效率，为自动驾驶系统的安全验证与仿真测试提供高保真场景基础。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "driving simulators used to test autonomous vehicle performance",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2611.06204v1",
+      "source": "arxiv",
+      "title": "CoSafe: Cooperative Runtime Safety Assurance for Mixed-Traffic Autonomous Driving",
+      "abstract": "With the rapid development of autonomous driving systems (ADSes), real-world roads are evolving into mixed-traffic environments where autonomous vehicles (AVs) and other traffic participants (e.g., human-driven vehicles (HDVs), cyclists, and pedestrians) coexist and interact with each other. However, current ADSes still incur various safety violations in mixed traffic scenarios, raising a strong demand for runtime safety assurance frameworks that can continuously monitor hazards and prevent potential violations. Existing ego-centric assurance approaches are insufficient for mixed traffic, where violations often arise from locally reasonable yet jointly incompatible decisions among multiple vehicles and cannot be reliably resolved through independent takeover.   To bridge this gap, we propose CoSafe, a modular and ADS-agnostic cooperative runtime safety assurance framework for mixed-traffic autonomous driving to extend runtime safety assurance from ego-centric takeover to scene-level cooperative intervention. CoSafe leverages vehicle-to-everything (V2X) communication to enable roadside units (RSUs) to monitor scene-level hazards and jointly mitigate hazards involving multiple vehicles. We integrate CoSafe with seven state-of-the-art ADSes, and our evaluation on the InterDrive benchmark demonstrates that CoSafe improves the driving score of AVs by 70.03% on average, reduces safety violations by 87.80%, and accurately identifies unsafe AVs with an F3 score of 0.930, while satisfying real-time constraints.",
+      "authors": [
+        "Dingji Wang",
+        "You Lu",
+        "Haowen Jiang",
+        "Yanggang Chen",
+        "Yuyang Bi",
+        "Bihuan Chen",
+        "Shenglin Bao",
+        "Xin Peng"
+      ],
+      "primary_category": "cs.SE",
+      "categories": [
+        "cs.SE",
+        "cs.AI",
+        "cs.RO"
+      ],
+      "published": "2026-11-04 09:21:22+00:00",
+      "link": "https://arxiv.org/pdf/2611.06204v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "runtime safety assurance and hazard monitoring for autonomous driving systems",
+      "llm_evidence_cn": "面向自动驾驶系统的运行时安全保障与风险监控",
+      "llm_evidence": "面向自动驾驶系统的运行时安全保障与风险监控",
+      "canonical_evidence": "面向自动驾驶系统的运行时安全保障与风险监控",
+      "llm_tldr_en": "CoSafe is a cooperative runtime safety assurance framework for mixed traffic that monitors multi-vehicle interactions to prevent violations arising from jointly incompatible but locally reasonable decisions.",
+      "llm_tldr_cn": "混合交通中自动驾驶车辆与人类驾驶车辆、骑行者与行人共存，安全违规常源于多车局部合理但整体不兼容的决策，现有以自车为中心的保障方法难以应对。本文提出CoSafe协同运行时安全保障框架，持续监测多车交互中的风险并协同决策以预防潜在违规。论文围绕混合交通场景设计监控与干预机制。该工作为自动驾驶系统在真实混合交通中的安全性验证与运行期保障提供了新思路。",
+      "llm_tldr": "混合交通中自动驾驶车辆与人类驾驶车辆、骑行者与行人共存，安全违规常源于多车局部合理但整体不兼容的决策，现有以自车为中心的保障方法难以应对。本文提出CoSafe协同运行时安全保障框架，持续监测多车交互中的风险并协同决策以预防潜在违规。论文围绕混合交通场景设计监控与干预机制。该工作为自动驾驶系统在真实混合交通中的安全性验证与运行期保障提供了新思路。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "Validation processes for ensuring driving system correctness and safety",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2611.06627v1",
+      "source": "arxiv",
+      "title": "Interactive World Simulation with Cosmos for Physical AI",
+      "abstract": "We present a shared framework that adapts Cosmos world foundation models for real-time interactive world simulation in Physical AI. By streaming visual observations in response to actions and scene controls, the framework enables users and embodied agents to interact with evolving virtual environments. It supports both predicting the visual consequences of actions and generating observations from physical state maintained by an external simulator. We demonstrate this approach across camera navigation and robot manipulation, controllable video transfer, and multi-view autonomous vehicle (AV) simulation. These examples provide a shared foundation for developing interactive virtual environments for Physical AI training and evaluation. Our code and model checkpoints are available at https://github.com/nvidia/cosmos and https://huggingface.co/collections/nvidia/cosmos3-examples. The project website is available at https://research.nvidia.com/labs/cosmos-lab/cosmos-simulation.",
+      "authors": [
+        "NVIDIA",
+        ":",
+        "Anis Ahmad",
+        "Jon Allen",
+        "Malik Aqeel Anwar",
+        "Jesse Archer",
+        "Maciej Bala",
+        "Piotr Barejko",
+        "Aarti Basant",
+        "Dan Blick",
+        "Taras Bolzhelarskyi",
+        "Henry Che",
+        "Jin Chen",
+        "Yukang Chen",
+        "Tae Eun Choe",
+        "Yuzhu Dong",
+        "Nat Duca",
+        "Liang Feng",
+        "Francesco Ferroni",
+        "Xiao Fu",
+        "Mohit Gambhir",
+        "Vivek Goel",
+        "Rony Goldenthal",
+        "Aryaman Gupta",
+        "Ali Hassani",
+        "Nathan Hayes-Roth",
+        "Yong He",
+        "Michael Honke",
+        "Shengyu Huang",
+        "Wei Huang",
+        "DeLesley Hutchins",
+        "Suneel Indupuru",
+        "Pooya Jannaty",
+        "Jingyi Jin",
+        "Janmesh Kalra",
+        "Ashna Khetan",
+        "Xin Kong",
+        "Aleksandr Korovko",
+        "Hui Kuang",
+        "Zhengfei Kuang",
+        "George Kurian",
+        "Jean-Francois Lafleche",
+        "Jayjun Lee",
+        "Justin Leung",
+        "William Lew",
+        "Xiang Li",
+        "Zhaoshuo Li",
+        "Chen-Hsuan Lin",
+        "Ming-Yu Liu",
+        "Xiangyu Lu",
+        "Yuhang Lu",
+        "Martin Ding Ma",
+        "Qianli Ma",
+        "Aditya Mahajan",
+        "Miguel Martin",
+        "Janarbek Matai",
+        "Jonathan McCaffrey",
+        "Qing Miao",
+        "Ashkan Mirzaei",
+        "Mustafa Munir",
+        "Sangmin Oh",
+        "David Pankratz",
+        "Trung Pham",
+        "Marilyn Reeb",
+        "Gavriel State",
+        "Jiaxiang Tang",
+        "Shitao Tang",
+        "Yue Tang",
+        "Tolou Tavakkoli",
+        "Alexander Temirov",
+        "Hweimi Tsou",
+        "Sergei Vasilev",
+        "Thomas Volk",
+        "Andrew Z. Wang",
+        "Hao Wang",
+        "Shijie Wang",
+        "Zhonghao Wang",
+        "David Wehr",
+        "Shumian Xin",
+        "Mengyao Xu",
+        "Yao Xu",
+        "Shuai Yang",
+        "Sophia Zalewski",
+        "Pengcuo Zeren",
+        "Cindy Zha",
+        "Jing Zhang",
+        "Yuliya Zhautouskaya",
+        "Kaiwen Zheng",
+        "Andrew Zhu",
+        "Rick Zhuang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.CV",
+        "cs.LG",
+        "cs.RO"
+      ],
+      "published": "2026-11-04 15:11:04+00:00",
+      "link": "https://arxiv.org/pdf/2611.06627v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "AV simulation environment for training and evaluation",
+      "llm_evidence_cn": "用于训练与评估的自动驾驶仿真环境",
+      "llm_evidence": "用于训练与评估的自动驾驶仿真环境",
+      "canonical_evidence": "用于训练与评估的自动驾驶仿真环境",
+      "llm_tldr_en": "A shared framework adapts Cosmos world foundation models for real-time interactive simulation, demonstrated on robot manipulation and multi-view autonomous vehicle simulation for training and evaluation.",
+      "llm_tldr_cn": "针对物理AI训练与评估缺乏实时交互式虚拟环境的问题，本文提出共享框架，改造Cosmos世界基础模型，使其能根据动作与场景控制流式生成视觉观测，并支持由外部仿真器物理状态生成观测。在相机导航、机器人操作及多视角自动驾驶仿真中的演示表明，该框架为构建交互式虚拟环境的训练与评估提供了通用基础。",
+      "llm_tldr": "针对物理AI训练与评估缺乏实时交互式虚拟环境的问题，本文提出共享框架，改造Cosmos世界基础模型，使其能根据动作与场景控制流式生成视觉观测，并支持由外部仿真器物理状态生成观测。在相机导航、机器人操作及多视角自动驾驶仿真中的演示表明，该框架为构建交互式虚拟环境的训练与评估提供了通用基础。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "driving simulators used to test autonomous vehicle performance",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2611.07516v1",
+      "source": "arxiv",
+      "title": "Training-Independent Validation of a Learning-Based Controller for Stunt Maneuvers",
+      "abstract": "Learned controllers for vehicle maneuvers are usually validated under the conditions and objective used to train them, where they appear highly reliable, yet the parameters that change on real roads are often not those the model was trained on. We argue that validation must be independent of training: it should vary physical parameters that training kept fixed and use acceptance criteria absent from the training objective. A learning-based control policy, G-Maneuver, with 90.11% success is tested for stunt-level maneuvers. A looser terminal-heading score ranked the worst setting as the best. Because real stunt tests are safety-critical, a simulation-to-reality-to-simulation (Sim2Real2Sim) loop uses the simulation to select safe zones for real-vehicle trials with 16.9% acceptance. Automotive safety analysis frameworks are used to identify parameters for validation using coverage tests. We demonstrated that the kinematic stunt-driving indicators, namely heading change, sideslip, and speed-normalized yaw rate, match between simulation and the real world, while force and roll indicators do not, which identifies the indicators that can support safe deployment. A video of the experiments is available at https://youtu.be/dN1Oes8pNIo.",
+      "authors": [
+        "Kiruthiga Chandra Shekar",
+        "Aliasghar Arab",
+        "Jingang Yi"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO",
+        "eess.SY"
+      ],
+      "published": "2026-11-05 06:25:26+00:00",
+      "link": "https://arxiv.org/pdf/2611.07516v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "training-independent validation with Sim2Real2Sim loop",
+      "llm_evidence_cn": "基于Sim2Real2Sim回路的训练无关验证",
+      "llm_evidence": "基于Sim2Real2Sim回路的训练无关验证",
+      "canonical_evidence": "基于Sim2Real2Sim回路的训练无关验证",
+      "llm_tldr_en": "The paper argues vehicle controllers must be validated independently of training, varying untrained physical parameters, and uses a Sim2Real2Sim loop for safe stunt maneuver validation.",
+      "llm_tldr_cn": "学习型车辆控制器常在训练条件下验证而显得可靠，但真实道路变化的参数并非训练所用。作者主张验证须独立于训练，改变训练中固定的物理参数并采用训练目标之外的验收准则。以G-Maneuver特技控制策略为例，较松的终端航向评分会把最差设置评为最优，故引入仿真到现实再回仿真的回路，用于筛选安全区域并验证安全关键的特技动作。",
+      "llm_tldr": "学习型车辆控制器常在训练条件下验证而显得可靠，但真实道路变化的参数并非训练所用。作者主张验证须独立于训练，改变训练中固定的物理参数并采用训练目标之外的验收准则。以G-Maneuver特技控制策略为例，较松的终端航向评分会把最差设置评为最优，故引入仿真到现实再回仿真的回路，用于筛选安全区域并验证安全关键的特技动作。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "How can simulation fidelity and sim to real transfer be assessed for autonomous driving validation?",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2611.09270v1",
+      "source": "arxiv",
+      "title": "EGT: Execution-Grounded Traversability through Learned Closed-Loop Trajectory Distributions",
+      "abstract": "Rough terrain traversability is often estimated through point-wise roll, pitch, or force-angle margins along a planned path. However, these metrics are often inaccurate and overly conservative because they ignore how terrain disturbances and low-level controller corrections can affect the vehicle's motions. To overcome these limitations, we introduce Execution-Grounded Traversability (EGT), defined as the probability that a vehicle-controller pair can execute a candidate path while meeting trajectory-level tracking and progress requirements. We estimate EGT by predicting the distribution of closed-loop trajectories using a latent-space flow matching (FM) model conditioned on multi-resolution terrain features and 3D vehicle attitude and wheel-ground contact points prior. Across 650 simulated trials on unseen terrains, EGT reduces safe-path rejection to 2.2% (versus 11.4%-39.5% for pose-margin and force-angle baselines) and unsafe acceptance to 7.7%. Integrated into a receding-horizon sampling-based planner, EGT reduces navigation failure rates by 24-42 and 30-44 percentage points over [1] and [2], respectively, while cutting goal-reaching time by up to 20.5% and 45%. Finally, we demonstrate zero-shot transfer of our simulation-trained model to real-world outdoor experiments.",
+      "authors": [
+        "Chinmay Mundane",
+        "Amith Manoharan",
+        "Arun Kumar Singh"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-11-06 10:26:44+00:00",
+      "link": "https://arxiv.org/pdf/2611.09270v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "closed-loop trajectory distribution metric for path execution evaluation",
+      "llm_evidence_cn": "用于路径执行评估的闭环轨迹分布度量",
+      "llm_evidence": "用于路径执行评估的闭环轨迹分布度量",
+      "canonical_evidence": "用于路径执行评估的闭环轨迹分布度量",
+      "llm_tldr_en": "EGT replaces conservative point-wise traversability margins with the probability that a vehicle-controller pair can execute a path, estimated via learned closed-loop trajectory distributions.",
+      "llm_tldr_cn": "崎岖地形可通行性常由路径上的逐点侧倾、俯仰或力角裕度估计，但这些指标忽略地形扰动和底层控制器修正，容易过于保守。本文提出执行接地可通行性EGT，定义为车辆-控制器对执行候选路径并满足跟踪与进度要求的概率，并用潜在空间流匹配模型预测闭环轨迹分布。该方法将可通行性评估从几何裕度推进到闭环执行层面，为越野车辆规划与控制评估提供了更准确的度量。",
+      "llm_tldr": "崎岖地形可通行性常由路径上的逐点侧倾、俯仰或力角裕度估计，但这些指标忽略地形扰动和底层控制器修正，容易过于保守。本文提出执行接地可通行性EGT，定义为车辆-控制器对执行候选路径并满足跟踪与进度要求的概率，并用潜在空间流匹配模型预测闭环轨迹分布。该方法将可通行性评估从几何裕度推进到闭环执行层面，为越野车辆规划与控制评估提供了更准确的度量。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "closed-loop simulation for evaluating autonomous driving planning and control",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2611.07939v1",
+      "source": "arxiv",
+      "title": "WAM-Sim0.1: World Anchored Memory Meets Online RL for Consistent and Realistic Driving Simulation",
+      "abstract": "Autoregressive driving world models systematically suffer from structural drift, identity drift, and quality decay over long rollout horizons due to transient conditioning signals that lack persistent state. We present WAM-Sim, a driving world model anchored by a persistent hierarchical memory and optimized via online flow-matching RL. WAM-Sim structures persistent context across three temporal and semantic scales: pose-aligned structural tokens encoding persistent road topology, read-only scene tokens supplying geolocated background appearance, and write-once instance tokens preserving individual traffic participant identities across occlusions and chunk boundaries. To restore visual sharpness and physical plausibility degraded by multi-scale conditioning, we introduce an online post-training framework that optimizes self-generated rollouts via flow-matching RL guided by hierarchy-aligned visual rewards and a vision-language model physical judge. The invariant memory empirically confines policy optimization within the anchored context, helping suppress semantic collapse and reward hacking, while online RL systematically enforces physical commonsense and fine-grained visual fidelity. On the nuScenes benchmark, WAM-Sim achieves a superior generation fidelity (FID=3.47, FVD=25.72) and strong downstream perception performance (24.16 mAP, 71.23 road mIoU). On minute-scale rollouts of self-collected data, WAM-Sim substantially mitigates structural and identity drift, preserving high scene similarity and subject identity coherence across extended horizons. Project page: https://fudan-generative-vision.github.io/WAM-Sim.",
+      "authors": [
+        "Jiahao Cui",
+        "Jiaye Li",
+        "Wenhao Zhang",
+        "Yaoyi Li",
+        "Shan Luan",
+        "Quanhui Tang",
+        "Jianhua Han",
+        "Lin Cheng",
+        "Hang Xu",
+        "Siyu Zhu"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV"
+      ],
+      "published": "2026-11-05 12:40:57+00:00",
+      "link": "https://arxiv.org/pdf/2611.07939v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Driving world model producing consistent and realistic simulation for testing autonomous driving",
+      "llm_evidence_cn": "驾驶世界模型生成一致且真实的仿真，用于自动驾驶测试",
+      "llm_evidence": "驾驶世界模型生成一致且真实的仿真，用于自动驾驶测试",
+      "canonical_evidence": "驾驶世界模型生成一致且真实的仿真，用于自动驾驶测试",
+      "llm_tldr_en": "Autoregressive driving world models drift and decay over long rollouts; WAM-Sim anchors context with a persistent hierarchical memory across three scales and optimizes via online flow-matching RL to keep simulation consistent and realistic.",
+      "llm_tldr_cn": "针对自回归驾驶世界模型在长时推演中因缺乏持久状态而出现结构、身份漂移与画质衰减的问题，论文提出WAM-Sim，用分层持久记忆跨三个时间语义尺度锚定上下文，并结合在线流匹配强化学习优化，缓解了漂移与质量衰减，提升了驾驶仿真的一致性与真实感，为高保真驾驶仿真提供了新思路。",
+      "llm_tldr": "针对自回归驾驶世界模型在长时推演中因缺乏持久状态而出现结构、身份漂移与画质衰减的问题，论文提出WAM-Sim，用分层持久记忆跨三个时间语义尺度锚定上下文，并结合在线流匹配强化学习优化，缓解了漂移与质量衰减，提升了驾驶仿真的一致性与真实感，为高保真驾驶仿真提供了新思路。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "driving simulators used to test autonomous vehicle performance",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2611.11131v1",
+      "source": "arxiv",
+      "title": "CrossLiDAR: Controllable Multi-Sensor LiDAR Sequence Generation",
+      "abstract": "High-fidelity LiDAR simulation remains a bottleneck for scalable development and validation of autonomous systems. Existing generators can synthesize realistic scans, but they are typically constrained to a single sensor configuration, offer limited control over structure and geometry, and drift in long-horizon 4D generation. We present CrossLiDAR, a unified transformer-based framework capable of generating controllable and spatio-temporally consistent multi-sensor LiDAR sequences. Our approach leverages a rectified flow objective with a Multi-Modal Diffusion Transformer (MM-DiT) backbone, within a compact latent space of range images. To support multiple LiDAR sensors, an Inter-sensor Module enables interaction across sensors, while a ControlNet-style branch provides structural conditioning (e.g., BEV priors or 3D bounding boxes). For modeling the temporal consistency, CrossLiDAR generates short $N$-frame sequences and extends them autoregressively to improve long-horizon coherence. Our model significantly outperforms state-of-the-art baselines, achieving an average improvement of 29.56\\% in JSD and 15.36\\% in MMD evaluated on nuScenes and the Waymo Dataset. CrossLiDAR bridges the gap to modern autonomous-driving simulation by enabling calibration-consistent multi-sensor LiDAR rollouts over long horizons for controllable, scenario-based testing.",
+      "authors": [
+        "Khanh Nguyen",
+        "Thomas Walker",
+        "Hichem Telli",
+        "Carlos de la Torre-Ortiz",
+        "Stefano Fiorini",
+        "Salah Eddine Bekhouche",
+        "Mohammed-En-Nadhir Zighem",
+        "Wassim Swaileh",
+        "Tinghuai Wang"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV",
+        "cs.AI",
+        "cs.RO"
+      ],
+      "published": "2026-11-08 04:41:17+00:00",
+      "link": "https://arxiv.org/pdf/2611.11131v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "high-fidelity LiDAR simulation for scalable development and validation of autonomous systems",
+      "llm_evidence_cn": "面向自主系统可扩展开发与验证的高保真激光雷达仿真",
+      "llm_evidence": "面向自主系统可扩展开发与验证的高保真激光雷达仿真",
+      "canonical_evidence": "面向自主系统可扩展开发与验证的高保真激光雷达仿真",
+      "llm_tldr_en": "Presents CrossLiDAR, a transformer-based generator of controllable, spatio-temporally consistent multi-sensor LiDAR sequences to support scalable simulation-based validation of autonomous systems.",
+      "llm_tldr_cn": "高保真激光雷达仿真是自主系统可扩展开发与验证的瓶颈，现有生成器受限于单传感器配置、可控性差且长时四维生成漂移。论文提出CrossLiDAR，基于整流流目标与多模态扩散Transformer骨干，在距离图像隐空间生成可控且时空一致的多传感器激光雷达序列。跨传感器模块与类ControlNet分支增强多传感器交互与几何控制，为仿真驱动的验证提供更可靠的传感数据来源。",
+      "llm_tldr": "高保真激光雷达仿真是自主系统可扩展开发与验证的瓶颈，现有生成器受限于单传感器配置、可控性差且长时四维生成漂移。论文提出CrossLiDAR，基于整流流目标与多模态扩散Transformer骨干，在距离图像隐空间生成可控且时空一致的多传感器激光雷达序列。跨传感器模块与类ControlNet分支增强多传感器交互与几何控制，为仿真驱动的验证提供更可靠的传感数据来源。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "driving simulators used to test autonomous vehicle performance",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2611.15020v1",
+      "source": "arxiv",
+      "title": "Genie Sim Benchmark: Real-to-Sim Fidelity and Evaluation",
+      "abstract": "We evaluate Genie Sim Benchmark through paired real-simulation tasks and complementary system-identification studies. Across 22 robot-task pairs spanning 16 task names, task-specific pi0.5 policies fine-tuned on real-robot data achieve a descriptive Score correlation of 0.9686, MAE 0.0405, RMSE 0.0520, with simulation-real differences from -0.110 to +0.080. G2 crsB experiments assess long-horizon closed-loop position and joint-side torque agreement, while five representative object cases examine identification and cross-engine contact transfer. A separate 32.6503 s teleoperation trajectory, excluded from mechanical identification and servo-gain search, evaluates external position targets through simulated motion-controller command shaping and a calibrated position servo. Across both arms, per-joint position RMSE spans 0.00614-0.03522 rad and current-derived torque RMSE spans 0.73545-4.00099 N m. Native PhysX adaptations recover three recorded interaction tasks, with case-dependent alignment gains. These results support task-specific simulation evaluation through joint assessment of task outcomes and physical-response consistency.",
+      "authors": [
+        "Di Yang",
+        "Da Huang",
+        "Yang Lv",
+        "Fan Yang",
+        "Yi Lu",
+        "Zheyuan Xing",
+        "Linting Guo",
+        "Jiaen Shen",
+        "Wenjun Sun",
+        "Maoqing Yao",
+        "Qian Wang"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-11-11 04:25:57+00:00",
+      "link": "https://arxiv.org/pdf/2611.15020v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "real-to-sim fidelity assessment and sim-real correlation for a simulation benchmark",
+      "llm_evidence_cn": "针对仿真基准的真实到仿真保真度评估与仿真-真机一致性度量",
+      "llm_evidence": "针对仿真基准的真实到仿真保真度评估与仿真-真机一致性度量",
+      "canonical_evidence": "针对仿真基准的真实到仿真保真度评估与仿真-真机一致性度量",
+      "llm_tldr_en": "Genie Sim Benchmark is assessed through paired real-simulation robot tasks and system identification, yielding a 0.9686 score correlation and low error, indicating the simulator reliably reproduces real-robot performance.",
+      "llm_tldr_cn": "机器人仿真基准的可信度取决于仿真与真实世界的一致程度，但缺乏系统的保真度评估。本文通过成对的真机-仿真任务与系统辨识实验评估Genie Sim基准，覆盖22组机器人任务对。微调后的策略在仿真与真机得分相关系数达0.9686，平均绝对误差0.0405，并进一步用长时程闭环实验检验位置与力矩一致性。结果表明该基准能较可靠地复现真机表现，为仿真评测的可信度提供了量化依据。",
+      "llm_tldr": "机器人仿真基准的可信度取决于仿真与真实世界的一致程度，但缺乏系统的保真度评估。本文通过成对的真机-仿真任务与系统辨识实验评估Genie Sim基准，覆盖22组机器人任务对。微调后的策略在仿真与真机得分相关系数达0.9686，平均绝对误差0.0405，并进一步用长时程闭环实验检验位置与力矩一致性。结果表明该基准能较可靠地复现真机表现，为仿真评测的可信度提供了量化依据。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "How can simulation fidelity and sim to real transfer be assessed for autonomous driving validation?",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2611.11532v1",
+      "source": "arxiv",
+      "title": "DriveFoundry: Co-Evolving Data and Model for Efficient Closed-Loop Iteration in Autonomous Driving",
+      "abstract": "A driving foundation model must learn reusable decision knowledge from rare critical events and apply it under strict runtime constraints. We introduce DriveFoundry, a closed-loop framework improving iteration efficiency under data and computation budgets by coupling structured causal data refinement with adaptive inference. The Data Engine builds traceable scene-candidate records linking scene evidence and factor-decision relations to candidate trajectories and outcome assessments. Candidate comparisons and counterfactual annotations clarify how scene factors affect behavioral feasibility and preference. Verified model failures guide VLM-assisted annotation and expert correction, refining training data and annotation systems. The model engine, Xiaomi-Drive-o1, unifies Perception, Causation, Action, World, and Value within a shared vision-language backbone to enable cross-task knowledge transfer. Block-wise latent refill passes candidate-specific evidence and predicted visual consequences between task blocks, connecting scene understanding, planning, and evaluation. A learned value-of-computation head selects tasks and allocates latent tokens based on expected benefit and cost, adapting inference to each decision. On PhysicalAI, the 9B model achieves the lowest ADE@1 across evaluated splits and horizons among tested models. In AlpaSim, it outperforms Alpamayo 1.5 across all metrics and achieves lower close-encounter and off-road rates than the 34B Alpamayo 2 Super, while trailing in progress and AlpaSim scores. For the 0.8B variant, joint training reduces 5 s minADE@6 by about 54% without altering the inference path or token budget. Adaptive inference matches full reasoning performance using only 28% of tokens. Real-vehicle tests confirm runtime feasibility, supporting a unified paradigm for learning from critical experience and dynamically allocating computation.",
+      "authors": [
+        "Ziyang Yao",
+        "Yuncheng Jiang",
+        "Fang Li",
+        "Haochen Liu",
+        "Shaoqing Xu",
+        "Wen Zhang",
+        "Xiangyang Chu",
+        "Zibin Guo",
+        "Jiale Hou",
+        "Chuang Wan",
+        "Jia Hua",
+        "Gengzhao Xiang",
+        "Xiaoran Luo",
+        "Chong He",
+        "Yuechen Luo",
+        "Junzhe Wang",
+        "Zhiyu Sun",
+        "Jun Zhang",
+        "Wei Li",
+        "Lei Li",
+        "Hongwei Xie",
+        "Bing Wang",
+        "Yuannan Shen",
+        "Jianwei Cui",
+        "Guang Chen",
+        "Hangjun Ye",
+        "Jingwei Zhao"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-11-08 18:16:59+00:00",
+      "link": "https://arxiv.org/pdf/2611.11532v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "closed-loop iteration framework with outcome assessment for driving models",
+      "llm_evidence_cn": "带结果评估的自动驾驶模型闭环迭代框架",
+      "llm_evidence": "带结果评估的自动驾驶模型闭环迭代框架",
+      "canonical_evidence": "带结果评估的自动驾驶模型闭环迭代框架",
+      "llm_tldr_en": "DriveFoundry is a closed-loop framework coupling structured causal data refinement with adaptive inference and VLM-assisted annotation to improve iteration efficiency of driving foundation models under data and compute budgets.",
+      "llm_tldr_cn": "驾驶基础模型需从稀有关键事件中学习可复用决策知识，并在严格运行时约束下应用，但数据与算力预算有限。本文提出DriveFoundry闭环框架，将结构化因果数据精炼与自适应推理耦合，构建可追溯的场景-候选记录并利用反事实标注澄清场景因素对行为可行性的影响。经验证的模型失效引导视觉语言模型辅助标注与专家修正，从而迭代优化训练数据。该框架提升了闭环迭代效率，为自动驾驶系统的持续评测与改进提供支撑。",
+      "llm_tldr": "驾驶基础模型需从稀有关键事件中学习可复用决策知识，并在严格运行时约束下应用，但数据与算力预算有限。本文提出DriveFoundry闭环框架，将结构化因果数据精炼与自适应推理耦合，构建可追溯的场景-候选记录并利用反事实标注澄清场景因素对行为可行性的影响。经验证的模型失效引导视觉语言模型辅助标注与专家修正，从而迭代优化训练数据。该框架提升了闭环迭代效率，为自动驾驶系统的持续评测与改进提供支撑。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "closed-loop simulation for evaluating autonomous driving planning and control",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2611.13790v1",
+      "source": "arxiv",
+      "title": "RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving",
+      "abstract": "End-to-end autonomous driving systems increasingly rely on generating multiple trajectory candidates and selecting one for execution. In this setting, a central challenge is no longer only candidate generation, but how to evaluate candidates according to their long-horizon consequences under uncertainty. Existing methods still mainly use deterministic point scores, heuristic subscores, or single-outcome evaluations, which makes it difficult to capture delayed failures, tail risk, and ranking instability under plausible future perturbations. We present RiSE-Drive, a framework for risk-sensitive long-horizon candidate evaluation in end-to-end autonomous driving. RiSE-Drive first performs candidate-conditioned latent future rollout, then estimates long-horizon outcome distributions instead of single scalar scores, and finally ranks candidates using a tail-risk-aware and perturbation-robust decision criterion. This reformulates candidate scoring from deterministic oracle-style evaluation into distributional outcome assessment with explicit risk control. As a result, the evaluator is encouraged to prefer candidates that are not only strong under nominal conditions, but also reliable under long-horizon rollout and safety-critical deviations. Experiments on the NAVSIM-v1 and NAVSIM-v2 benchmarks, as well as the closed-loop HUGSIM benchmark, show that RiSE-Drive achieves state-of-the-art performance and significantly improves the robustness of candidate selection.",
+      "authors": [
+        "Yu Zhao",
+        "Hongyi Duan",
+        "Ming Yin",
+        "Hongyuan Zhang",
+        "Fan Yang",
+        "Hongzhi Wang",
+        "Xiubo Liang"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-11-10 09:22:58+00:00",
+      "link": "https://arxiv.org/pdf/2611.13790v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "framework for risk-sensitive long-horizon candidate evaluation in end-to-end driving",
+      "llm_evidence_cn": "端到端驾驶中风险敏感的长时程候选评估框架",
+      "llm_evidence": "端到端驾驶中风险敏感的长时程候选评估框架",
+      "canonical_evidence": "端到端驾驶中风险敏感的长时程候选评估框架",
+      "llm_tldr_en": "End-to-end driving selects among trajectory candidates, yet deterministic point scores miss delayed failures and tail risk. RiSE-Drive performs risk-sensitive long-horizon candidate evaluation via latent future rollout, better capturing uncertainty and ranking stability.",
+      "llm_tldr_cn": "端到端自动驾驶需从多个轨迹候选中择优执行，但现有确定性点分数与单结果评估难以刻画延迟失效与尾部风险。本文提出RiSE-Drive，通过候选条件下的潜在未来推演进行风险敏感的长时程评估，从而在不确定性下更稳健地排序候选轨迹。实验表明该框架能更好捕捉长时程后果并提升排序稳定性，为自动驾驶轨迹评价提供了新的评估方法视角。",
+      "llm_tldr": "端到端自动驾驶需从多个轨迹候选中择优执行，但现有确定性点分数与单结果评估难以刻画延迟失效与尾部风险。本文提出RiSE-Drive，通过候选条件下的潜在未来推演进行风险敏感的长时程评估，从而在不确定性下更稳健地排序候选轨迹。实验表明该框架能更好捕捉长时程后果并提升排序稳定性，为自动驾驶轨迹评价提供了新的评估方法视角。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "Methods and metrics for evaluating autonomous driving system performance",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2611.14815v1",
+      "source": "arxiv",
+      "title": "BirdDreams: Joint Perspective and BEV Video Generation for a Plausible, Reactive Driving World Model",
+      "abstract": "Driving world models aim to simulate how a scene unfolds under different ego actions. This requires plausible motion of surrounding vehicles as well as precise ego-trajectory control. Learning vehicle motion from perspective video alone is challenging because motion is entangled with appearance and vehicles can be occluded. Prior work therefore conditions video generation on layouts that specify vehicle motion, providing control over surrounding vehicles but requiring their future trajectories as inputs. We introduce BirdDreams, an autoregressive driving world model that jointly generates perspective video and a schematic bird's-eye-view (BEV) video, making scene layout part of the predicted future. The BEV, rendered from scene annotations for training, depicts roads and vehicles as simple shapes at a fixed metric scale, providing a top-down view of their positions and motion with reduced occlusion between vehicles. Perspective video, by contrast, retains scene details that the BEV omits, such as traffic signals and object appearance. Joint attention between two video diffusion transformers, one per stream, lets each stream inform the other during generation. The predicted BEV also provides a geometric interface for ego control: we translate and rotate its latest frame along an input ego trajectory and use the resulting frames as a soft condition that shows how the scene would appear to move if only the ego vehicle moved. At inference, BirdDreams generates both videos from a single camera image without requiring an HD map or vehicle-state inputs. On PhysicalAI-AV and nuScenes, BirdDreams follows input ego trajectories more faithfully than prior driving world models and generates more plausible ego motion without ego-action conditioning. Human evaluation shows that BirdDreams outperforms a perspective-only baseline in generating realistic surrounding-vehicle behavior.",
+      "authors": [
+        "Junyoung Seo",
+        "Jaewoo Seo",
+        "Seungryong Kim",
+        "Laura Leal-Taixé",
+        "Xiuming Zhang",
+        "Seung Wook Kim"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV"
+      ],
+      "published": "2026-11-10 23:04:58+00:00",
+      "link": "https://arxiv.org/pdf/2611.14815v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Reactive driving world model simulating plausible scene evolution under ego actions for testing",
+      "llm_evidence_cn": "可反应的驾驶世界模型在自车动作下模拟可信场景演化，用于测试",
+      "llm_evidence": "可反应的驾驶世界模型在自车动作下模拟可信场景演化，用于测试",
+      "canonical_evidence": "可反应的驾驶世界模型在自车动作下模拟可信场景演化，用于测试",
+      "llm_tldr_en": "Learning vehicle motion from perspective video alone is hard due to entangled appearance and occlusion; BirdDreams jointly generates perspective and BEV video, making scene layout part of the predicted future for plausible, controllable driving simulation.",
+      "llm_tldr_cn": "针对仅从透视视频学习车辆运动时运动与外观纠缠、遮挡导致建模困难的问题，论文提出BirdDreams自回归驾驶世界模型，联合生成透视视频与鸟瞰示意图，使场景布局成为预测未来的一部分，从而实现对周围车辆运动与自车轨迹的可控建模，提升了驾驶仿真的可信度与反应性。",
+      "llm_tldr": "针对仅从透视视频学习车辆运动时运动与外观纠缠、遮挡导致建模困难的问题，论文提出BirdDreams自回归驾驶世界模型，联合生成透视视频与鸟瞰示意图，使场景布局成为预测未来的一部分，从而实现对周围车辆运动与自车轨迹的可控建模，提升了驾驶仿真的可信度与反应性。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "driving simulators used to test autonomous vehicle performance",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2611.16767v1",
+      "source": "arxiv",
+      "title": "Evaluating Video LLMs' Understanding of Corner Cases in Autonomous Driving",
+      "abstract": "Natural language explanations promised by modern Video Large Language Models (Video LLMs) offer autonomous driving systems a path toward detailed scene description and interpretable decision making on the road. While recent benchmarks have begun assessing these models on driving scenes, they mainly target routine traffic conditions and general comprehension tasks based on existing driving datasets and therefore fail to evaluate model performance on the rarest and most safety-critical driving events, also known as \"corner cases\". To provide a comprehensive evaluation of Video LLMs on precisely these scenarios, we introduce DashBench, a benchmark testing 25 Video LLMs on 1,709 carefully curated driving videos spanning not only collision-related corner cases but also rare non-collision ones. Through extensive prompts and open-ended question answering, we expose a critical capability gap: all evaluated models perform substantially below the threshold required for safety-critical driving applications, frequently misjudging or missing dangerous events on the road ahead and hallucinating non-existent agents or actions in their explanations. We believe DashBench, combining an extensive dataset with a rigorous evaluation toolkit and a detailed diagnosis of current model limitations, drives progress toward safer, more explainable autonomous driving systems. The code and data will be shared at: cornercase-dashbench.github.io",
+      "authors": [
+        "Gabriel Manalu",
+        "Minh Son Hoang",
+        "Hyeontaek Hwang",
+        "Jaesung Lee",
+        "Hyojin Choi",
+        "Tran Tuan Phong",
+        "Seon Kwon Kim",
+        "Saad Wazir",
+        "Daeyoung Kim"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV",
+        "cs.AI"
+      ],
+      "published": "2026-11-12 13:15:27+00:00",
+      "link": "https://arxiv.org/pdf/2611.16767v1",
+      "tags": [
+        "keyword:driving-eval",
+        "query:driving-eval"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "benchmark evaluating models on corner-case driving scenarios",
+      "llm_evidence_cn": "面向极端场景的驾驶模型评测基准",
+      "llm_evidence": "面向极端场景的驾驶模型评测基准",
+      "canonical_evidence": "面向极端场景的驾驶模型评测基准",
+      "llm_tldr_en": "Existing driving benchmarks target routine conditions and miss rare safety-critical corner cases. This paper introduces DashBench, evaluating 25 Video LLMs on 1,709 curated driving videos to probe understanding of corner cases in autonomous driving.",
+      "llm_tldr_cn": "现有驾驶基准多聚焦常规交通场景，难以评估模型在罕见且安全攸关的极端场景下的表现。本文提出DashBench基准，基于1709段精选驾驶视频对25个视频大模型进行系统评测，覆盖碰撞相关等多种极端场景。该工作揭示了视频大模型在极端驾驶场景理解上的不足，为自动驾驶相关模型的评测提供了更贴近安全需求的基准与指标视角。",
+      "llm_tldr": "现有驾驶基准多聚焦常规交通场景，难以评估模型在罕见且安全攸关的极端场景下的表现。本文提出DashBench基准，基于1709段精选驾驶视频对25个视频大模型进行系统评测，覆盖碰撞相关等多种极端场景。该工作揭示了视频大模型在极端驾驶场景理解上的不足，为自动驾驶相关模型的评测提供了更贴近安全需求的基准与指标视角。",
+      "llm_tags": [
+        "query:driving-eval"
+      ],
+      "matched_query_tag": "query:driving-eval",
+      "matched_query_text": "Methods and metrics for evaluating autonomous driving system performance",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
 }

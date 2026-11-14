@@ -1,0 +1,907 @@
+Title: CrossLiDAR: Controllable Multi-Sensor LiDAR Sequence Generation
+
+URL Source: https://arxiv.org/pdf/2611.11131v1
+
+Published Time: Tue, 10 Nov 2026 03:20:27 GMT
+
+Number of Pages: 23
+
+Markdown Content:
+# CrossLiDAR: Controllable Multi-Sensor LiDAR Sequence Generation 
+
+## Khanh Nguyen †* Thomas Walker ¶* Hichem Telli ¶*† 
+
+## Carlos de la Torre-Ortiz ¶* Stefano Fiorini ¶* Salah Eddine Bekhouche §
+
+## Mohammed-En-Nadhir Zighem ¶ Wassim Swaileh ¶ Tinghuai Wang ¶†Computer Vision Center, Universitat Aut` onoma de Barcelona, Spain  
+
+> §
+
+## University of the Basque Country, Spain ¶ Independent Researcher 
+
+## Abstract 
+
+High-fidelity LiDAR simulation remains a bottleneck for scalable development and validation of autonomous sys-tems. Existing generators can synthesize realistic scans, but they are typically constrained to a single sensor con-figuration, offer limited control over structure and geome-try, and drift in long-horizon 4D generation. We present CrossLiDAR, a unified transformer-based framework capa-ble of generating controllable and spatio-temporally con-sistent multi-sensor LiDAR sequences. Our approach lever-ages a rectified flow objective with a Multi-Modal Dif-fusion Transformer (MM-DiT) backbone, within a com-pact latent space of range images. To support multi-ple LiDAR sensors, an Inter-sensor Module enables in-teraction across sensors, while a ControlNet-style branch provides structural conditioning (e.g., BEV priors or 3D bounding boxes). For modeling the temporal consistency, CrossLiDAR generates short N -frame sequences and ex-tends them autoregressively to improve long-horizon coher-ence. Our model significantly outperforms state-of-the-art baselines, achieving an average improvement of 29.56% in JSD and 15.36% in MMD evaluated on nuScenes and the Waymo Dataset. CrossLiDAR bridges the gap to modern autonomous-driving simulation by enabling calibration-consistent multi-sensor LiDAR rollouts over long horizons for controllable, scenario-based testing. 
+
+## 1. Introduction 
+
+Autonomous systems have become fundamental in mod-ern robotics and industrial innovation. These systems, ranging from self-driving vehicles [47, 66] to surveying drones [42, 69], often rely heavily on LiDAR to navigate complex 3D environments. By providing high-fidelity geo-         
+
+> *Equal contribution.
+> †The corresponding author: tellihicham@univ-biskra.dz Multiple sensors Multi-sensor views Multi-sensor fused in ego frame Conditions (e.g., bbox)
+> Front Rear Le �Right Cross-sensor module Recti �ied �low ControlNet Img Text Bbox BEV VAE enc. VAE dec.
+
+Figure 1. CrossLiDAR jointly generates synchronized LiDAR sequences for multi-sensor setups. Top: given multiple sensors mounted around the ego vehicle, CrossLiDAR synthesizes geo-metrically aligned per-sensor views (front/rear/left/right) that can be fused into a consistent ego-frame point cloud, while support-ing structural conditions such as 3D bounding boxes. Bottom: 
+
+our pipeline operates in a VAE-compressed range-image latent space; a rectified-flow module integrates an Inter-sensor Module for sensor-aware generation and a ControlNet branch for structural conditioning using BEV maps with projected 3D bounding boxes, yielding controllable multi-sensor LiDAR sequences. 
+
+metric data, LiDAR enables precise perception; however, it is constrained by the high cost of the sensors and logistical complexity of real-world data collection. Furthermore, cap-turing critical “corner cases” [71], such as high-impact col-lisions or extreme meteorological conditions, remains in-herently dangerous and rare in physical datasets [55]. Traditional simulation toolkits [7, 20, 30, 33] require labor-intensive manual scene modeling or existing real-world scans, limiting their scalability. Therefore, research has shifted toward generative models to automate this pro-cess, despite the inherent challenges of LiDAR data: high sparsity, non-uniformity, and intrinsic geometric structure. Early generators built on Generative Adversarial Networks (GANs) [3, 12] and Variational Autoencoders (VAEs) [17] often produced “fuzzy” geometries and detail loss. While score-based models like LiDARGen [74] im-arXiv:2611.11131v1 [cs.CV] 8 Nov 2026 proved fidelity, they suffered from slow sampling speed and poor long-range performance. More recently, UltraL-iDAR [61] utilized VQ-VAEs [51] in the Bird’s-Eye-View (BEV) to enhance realism. However, processing sparse BEV representations often results in significant computa-tional waste on empty voxels, leading to inefficient genera-tion. Alternatively, RangeLDM [13] and LiDMs [41] lever-age Latent Diffusion Models (LDMs) [43] in the range-view to improve speed. However, these frameworks are primarily restricted to fixed sensor architectures and in-put dimensions, preventing cross-sensor scalability. Fur-thermore, they lack fine-grained structural guidance (e.g., ControlNet [70]), rendering them impractical for real-world usage, where side LiDAR proves to be more affordable. More recently, LiDARCrafter [22] extended LiDAR gen-eration to 4D scene modeling by employing a tri-branch diffusion framework that generates temporally ordered 3D LiDAR sequences, with time serving as the fourth dimen-sion. While it achieves impressive temporal consistency, the model remains limited to single-LiDAR sensor configu-rations. In modern autonomous driving architectures, how-ever, configurations with multiple LiDAR sensors have be-come the industry standard [49]. This shift is driven by the move toward cost-effective sensor redundancy, where multiple low-profile units augment or replace a single high-performance rooftop scanner to eliminate blind spots. Un-like single-sensor setups, these distributed arrays introduce non-trivial geometric disparities and complex overlapping fields of view. Existing 4D models typically lack the archi-tectural mechanisms to perform cross-sensor fusion. To address these limitations, we introduce CrossLiDAR, a rectified flow model [26] that departs from conventional U-Net-based architectures [44] in favor of a transformer-based design: the Multi-Modal Diffusion Transformer (MM-DiT) [9], see Figure 1. By leveraging the supe-rior modeling capacity and flexibility of transformers [52], CrossLiDAR captures the intricate geometric dependencies of LiDAR sequences with significantly higher fidelity than previous methods. Central to our framework is a special-ized Inter-sensor Module designed to decouple the genera-tion process from specific hardware constraints. This mod-ule enables our model to handle multiple LiDAR sensors in parallel, modeling their interactions and ensuring geometric consistency, without the need to design separate models for each sensor configuration. This is particularly effective for the increasingly common integration of low-cost side sen-sors. To provide more fine-grained geometric consistency, we incorporate a ControlNet-style branch, which allows for precise scene manipulation through various priors, includ-ing 3D bounding boxes and BEV maps [40]. Finally, to achieve high-fidelity temporal LiDAR generation, CrossLi-DAR introduces a LiDAR Sequence Module . Unlike exist-ing methods that focus solely on single-frame generation, our model performs multi-frame generation (e.g., 5-frame sequence). These short-term sequences can then be itera-tively extended through an autoregressive mechanism, en-abling the synthesis of long-horizon [34], temporally stable LiDAR sequences. To the best of our knowledge, CrossL-iDAR serves as the first truly controllable and multi-sensor pipeline for LiDAR simulation. We evaluate CrossLiDAR on two large-scale datasets: Waymo Open Dataset [49], which provides the multi-sensor data from peripheral side LiDARs, and nuScenes [4]. Compared to existing baselines, in the image-based setup, CrossLiDAR achieves an average improvement of 29.56% in JSD and 15.36% in MMD, with particularly superior per-formance in the multi-sensor configurations. 
+
+Our main contributions are as follows: 
+
+• We introduce CrossLiDAR, a unified diffusion trans-former that enables multi-sensor LiDAR generation via an Inter-sensor Module , and supports controllable syn-thesis from geometric cues through a ControlNet branch. • We present a 4D generation strategy that jointly synthe-sizes short multi-frame sequences with a LiDAR Sequence Module and extends them autoregressively, reducing tem-poral drift and improving long-horizon consistency. • We show state-of-the-art (SOTA) performance on Waymo (multi-sensor) and nuScenes (single-sensor) for both single-frame generation and LiDAR sequences. 
+
+## 2. Related Work and Background 
+
+Multisensor LiDAR Generation. Generative models for autonomous driving assume a single LiDAR sensor, whereas real vehicles often deploy a heterogeneous suite (e.g., top-mounted long-range and multiple side-mounted sensors) to capture overlapping perspectives. Multi-sensor data generation has been extensively explored in the camera domain, where recent works target the consistent synthesis of multi-camera surround-view [11, 21, 54, 64]. In con-trast, to our knowledge, no prior generative model explic-itly leverages multiple LiDAR sensors simultaneously. Akey technical challenge is that multi-LiDAR point clouds must be carefully aligned: sensors at different positions yield point clouds in distinct coordinate frames. Unless corrected, naively merging multi-LiDAR data leads to dis-tributional artifacts and geometric inconsistencies [13, 59]. Existing LiDAR generators, including LiDARGen [74], RangeLDM [13], and LiDARCrafter [22], operate on a single aggregated point cloud per scene without explicitly addressing sensor-specific geometries. Recent range- and layout-based methods broaden LiDAR generation beyond unconditional scan synthesis. SPIRAL [73] jointly gen-erates range-view depth, reflectance, and semantic maps, while La La LiDAR [27] introduces scene-graph and lay-out conditioning for controllable object-level LiDAR scene generation. Veila [28] generates panoramic LiDAR from a monocular RGB image, and DynamicCity [1] models dy-namic scenes through 4D occupancy generation. However, these methods do not explicitly model synchronized, cali-brated multi-LiDAR sensors. Furthermore, other works us-ing the Waymo Open Dataset [49], one of the few avail-able multi-sensor datasets, often restrict themselves to only the front-facing sensor [8, 60, 63, 72]. As a result, there is a need for dedicated architectures employing inter-sensor modules, which maintain the unique geometric properties of individual sensors while ensuring global spatial consistency across the entire sensor suite. 
+
+LiDAR Generation Architectures. Beyond sensor con-figuration, the architectural foundations of LiDAR gener-ative models are rapidly evolving. Previous latent diffu-sion models (LDMs), such as RangeLDM [13], LiDM [41], and LiDARCrafter [22], rely on conventional 2D convolu-tional U-Net backbones. These architectures are often con-strained by local receptive fields, which can struggle to cap-ture the global context and long-range dependencies inher-ent in sparse 3D data. To address these structural bottle-necks, MM-DiT [9] architectures offer a more scalable so-lution. By leveraging self-attention, transformer-based ap-proaches capture spatial and temporal dependencies more effectively than traditional U-Net-based frameworks. 
+
+LiDAR Sequence Generation. Point cloud prediction [31, 56–58] has emerged as a fundamental self-supervised task in autonomous driving, utilizing historical sequences to forecast future spatial states. Early methods focused on es-timating scene flow between consecutive frames to project future point cloud sequences [25, 68]. However, these flow-based approaches incur substantial computational costs, limiting their practical applicability in real-time systems. Consequently, recent studies have shifted toward direct prediction from raw point cloud data [29, 37, 56, 57] to improve efficiency. Further advancements include 4D-Occ [16], which formulates the task as geometric oc-cupancy prediction, and ViDAR [65], which leverages historical images to predict future LiDAR scenes. De-spite these developments, existing prediction-based frame-works generally require multiple historical frames as in-put, still struggle with long-horizon LiDAR forecasting, and provide limited controllability for dynamic scene gen-eration. LiDARCrafter [22] addressed long-horizon gen-eration through an autoregressive diffusion framework, but relies on ego-motion-based extrapolation, a strong prior that restricts the diversity of generated sequences. More recently, U4D [62] introduced uncertainty-aware 4D Li-DAR generation by allocating generation capacity to chal-lenging regions and improving spatio-temporal coherence. In contrast, CrossLiDAR focuses on controllable multi-sensor LiDAR generation, combining long-horizon tempo-ral consistency with calibration-aware cross-sensor align-ment through a ControlNet-based conditioning branch. 
+
+## 3. CrossLiDAR 
+
+3.1. Problem Formulation 
+
+We consider S LiDAR sensors mounted at distinct view-points around the vehicle. At each time step k, each sensor 
+
+s ∈ { 1, . . . , S } generates a point cloud P (s) 
+
+> k
+
+⊂ R3, which is projected into a range image X(s) 
+
+> k
+
+∈ RH×W ×C , where 
+
+H and W denote the vertical and horizontal resolutions, respectively, and C represents the feature channels (e.g., range, intensity, and elongation). To create a unified input for our model, we stack these images along the sensor di-mension to form a multi-sensor tensor Xk ∈ RS×H×W ×C .Since our objective is to generate sequences of multi-sensor LiDAR data, we denote the ground-truth and gen-erated spatio-temporal tensors as X ∈ RK×S×H×W ×C
+
+and ˆX ∈ RK×S×H×W ×C , respectively, obtained by stack-ing {Xk}Kk=1 (and { ˆXk}Kk=1 ) along the temporal dimen-sion, such that the k-th slice corresponds to the multi-sensor tensor at time step k. To ensure the generated range im-ages correspond to valid 3D structures, a pixel at (u, v )
+
+with range value r (depth) is mapped to Cartesian coor-dinates p = [α, β, γ ]⊤ using the following spherical-to-Cartesian transformation: α = r · cos( θ) · cos( ϕ), β =
+
+−r · cos( θ) · sin( ϕ), and γ = r · sin( θ), where ϕ and θ de-note the horizontal and vertical angles, respectively. These angles are derived from the pixel coordinates (u, v ) based on the field-of-view (FOV) and resolution of each sensor. Our framework consists of two components: a LiDAR compression module and a generative backbone. For com-pression, we utilize a VAE that operates purely on the spa-tial dimensions. The encoder Eζ processes each sensor frame independently (without temporal or cross-sensor cou-pling) and maps X(s) 
+
+> k
+
+to a compact latent representation 
+
+z(s) 
+
+> k
+
+. The decoder Dη reconstructs the corresponding range image from the latent representation. The generation pro-cess is modeled using an MM-DiT architecture [9], which models joint spatio-temporal dependencies across sensors and frames. To maintain long-term temporal consistency and mitigate cumulative drift, we employ an autoregressive strategy by adding noise to the first N -conditional frame. 
+
+3.2. The Variational Autoencoder 
+
+To mitigate the computational cost of modeling high-dimensional range-image sequences, we employ a VAE that compresses each input range image into a lower-dimensional latent space [43]. In our setting, the input ten-sor is X ∈ RK×S×H×W ×C . Differently from [13, 41], we apply a linear normalization to the raw range values, map-ping the input to a symmetric interval [−1, 1] . We treat each 
+
+(k, s ) pair (frame k and sensor view s) as an independent sample by reshaping (K, S ) into the batch dimension, i.e., 
+
+B = B · K · S, and encode x ∈ RH×W ×C .MM-DiT Block LayerNorm & MLP Unpatchify trainable frozen ControlNet Block adaLN Flash 
+
+> Attention MLP adaLN Flash
+> Attention MLP tzcPatchify Sensor
+> Embed MM-DiT cczMM-DiT ssewgver
+> Khanh Nguyen VAE
+> Encoder Inter Sensor
+> Module LiDAR Sequence
+> Module Text
+> Encoder Image
+> Encoder 3DBox
+> Encoder Pose
+> Encoder BEV 3D Box time Conditioning Module Control Projection Range Image Temporal Point Cloud VAE
+> Decoder
+
+Figure 2. Overview of CrossLiDAR Framework . Our framework utilizes a latent rectified-flow [26] formulation to generate synchronized multi-sensor LiDAR sequences. (Left) A frozen VAE encoder first maps range images into a compact latent space zt. (Right) These latents are processed by an MM-DiT [9] backbone, which incorporates two different attention mechanisms: an Inter-sensor Module for cross-sensor alignment and a LiDAR Sequence Module for temporal consistency. The generation is guided by a dedicated ControlNet [70] branch for BEV and 3D layout control. Finally, a frozen VAE decoder transforms the denoised latents back into high-fidelity temporal point clouds. 
+
+The encoder/decoder ( Eζ and Dη ) follow the design of [13]: the encoder maps each input range image to a la-tent feature map z = Eζ (x) ∈ Rc×h×w, where the spatial dimensions are downsampled by a factor f , i.e., (h, w ) = (H/f, W/f ). The decoder reconstructs ˆx = Dη (z). We train our VAE by maximizing the Evidence Lower Bound (ELBO) [17]: 
+
+LELBO (ζ, η ) = Eqζ (z|x)
+
+ log pη (x | z)
+
+− λ1DKL (qζ (z | x) ∥ p(z)) . (1) where x denotes a single range image drawn from X, and 
+
+p(z) = N (0 , I ). The first term evaluates the reconstruction likelihood of the decoder Dη from the latent z. In our im-plementation, this corresponds to an L1 pixel-wise recon-struction loss [13]. However, as a key departure from [13], we omit the adversarial discriminator and perceptual loss. 
+
+3.3. Rectified Flow for LiDAR Generation 
+
+After VAE pretraining, we freeze its encoder/decoder, and model the empirical latent distribution induced by the frozen encoder using a flow-based generative model built on a Transformer backbone, MM-DiT [9]. The Trans-former processes spatio-temporal latent inputs via special-ized temporal-attention and inter-sensor-attention blocks. 
+
+Latent Rectified-Flow Formulation. Given the multi-sensor range image sequence X and Eζ as the pretrained VAE encoder, for the data sample we compute the latent 
+
+z1 = Eζ (X ) ∼ p1(z), and draw an independent noise la-tent z0 ∼ p0(z) = N (0 , I ). For t ∈ [0 , 1] , we form the rectified (linear) bridge zt = (1 − t)z0 + tz 1. Following [9], the timestep t is sampled according to a Logit-Normal dis-tribution to prioritize the mid-range of the transport path. The instantaneous ground-truth velocity is constant along the bridge: 
+
+ddt zt = z1 − z0.
+
+Training. We train a time-dependent vector field vθ (zt, t, c )
+
+(parameterized by the Transformer) to regress this displace-ment by minimizing the rectified flow loss: 
+
+LRF = Et,z 0,z 1 ∥vθ (zt, t, c ) − (z1 − z0)∥22 ,
+
+where c denotes conditioning information (sensor iden-tifiers, textual prompts, bounding-box embeddings, etc.). Under this objective, the optimal vector field is the condi-tional expectation: 
+
+v⋆(zt, t ) = E [z1 − z0 | zt] ,
+
+which provides the probabilistic interpretation of the regres-sion target. 
+
+Inference. At inference, we generate latents by integrating the learned ODE: 
+
+dz dt = vθ (z, t, c ),
+
+from t = 0 to t = 1 . Because the rectified flow objec-tive encourages near-linear transport paths, accurate sam-ples are typically obtainable with a small number of inte-gration steps using a numerical solver (e.g., Euler or mid-point method). Once the latent z(1) is obtained, it is passed through the frozen VAE decoder Dη to reconstruct the multi-sensor range image sequence ˆX . While the model op-erates on range-image latents, the generated range images are back-projected into 3D points using the correspond-ing LiDAR sensor geometry. The reconstructed points are then transformed into the ego-vehicle coordinate frame us-ing calibrated sensor extrinsics and concatenated to form a unified multi-LiDAR point cloud (Appendix 8.1). 
+
+3.4. The Architecture Modules 
+
+MM-DiT Pre-Attention Stage. The generative backbone is implemented as a stack of MM-DiT blocks operating on VAE-compressed latents within the rectified-flow frame-work. Each block processes the latent tokens zt along with auxiliary concatenated modality tokens Φ = {ϕ1(m1) ∥· · · ∥ ϕD (mD )}. Following the canonical MM-DiT design, each block begins with a pre-attention stage utilizing Adap-tive Layer Normalization (AdaLN). The tokens are then processed through a spatio-temporal attention, where 3D ro-tary positional embeddings (3D RoPE) [48] are applied to queries and keys. A dedicated inter-sensor attention is in-serted at this stage to facilitate information exchange across multiple sensors at the same timestep. 
+
+The LiDAR Sequence Module. After reshaping the la-tent tokens as ˜zt ∈ R(B·K)×N ×c′
+
+and the modality to-kens ˜Φseq t ∈ R(B·K)×N ×c′
+
+, with N ≡ S · h · w, spatio-temporal dependencies are modeled via a multi-head joint self-attention mechanism. Let H be the number of heads and dh the per-head dimension so that c′ = Hd h. We first compute separate linear projections for ˜zt and ˜Φt, using two distinct sets of learnable weights: 
+
+Qz = ˜ ztW ′
+
+> Q
+
+, Kz = ˜ ztW ′ 
+
+> K
+
+, Vz = ˜ ztW ′
+
+> V
+
+QΦ = ˜Φseq t W ′′ 
+
+> Q
+
+, KΦ = ˜Φseq t W ′′  
+
+> K
+
+, VΦ = ˜Φseq t W ′′ 
+
+> V
+
+where W ′ 
+
+> Q,K,V
+
+∈ Rc′×c′
+
+and W ′′  
+
+> Q,K,V
+
+∈ Rc′×c′
+
+. We then apply 3D RoPE to the query and key of the latent. Next, the tokens are concatenated to form joint representations Q, K,
+
+V ∈ R(BK )×2N ×c′
+
+:
+
+Q = [ ˜Qz ∥ ˜QΦ], K = [ ˜Kz ∥ ˜KΦ], V = [ Vz ∥ VΦ].
+
+To maintain temporal consistency, we enforce causal mask-ing along the temporal axis. For the joint sequence length 
+
+2N , we define a mapping σ(i) that returns the temporal frame s for any index i ∈ {0, . . . , 2N − 1} such that 
+
+σ(i) = si mod N . We define the causal mask Mcausal ∈
+
+R2N ×2N by 0 if sj ≤ si, while −∞ if sj > s i. This configuration allows for bidirectional interaction between the LiDAR latent and the modality token at any given time step, while preventing leakage from future frames. Scaled dot-product attention with the causal mask (per head) A(h) is performed. The resulting joint output O =Concat( A(1) V (1) , . . . , A (H)V (H))WO is split back into the latent and modality tensors [Oz ∥ OΦ] = O ∈
+
+R(BK )×2N ×c′
+
+, where Oz , O Φ ∈ R(BK )×N ×c′
+
+are passed to their respective residual blocks and point-wise feed-forward networks, obtaining ˜z′ 
+
+> t
+
+and ˜Φ′
+
+> t
+
+.
+
+The Inter-sensor Module. To resolve geometric dispari-ties between the various LiDAR sensors positioned around the vehicle, the Inter-sensor module treats each sensor as a structured viewpoint and models their spatial interactions through joint attention rather than independent per-sensor generation. For this module, we employ a similar architec-tural configuration to the LiDAR Sequence Module, which consists of projected bounding box embedders to provide explicit spatial grounding for the different views. To com-pute the attention between sensors, we reshape the latent output as ˜z′ 
+
+> t
+
+∈ R(B·S)×M ×c′
+
+and the modality tokens as 
+
+˜Φinter t ∈ R(B·S)×M ×c′
+
+, where M = K · h · w. By shifting the sensor count K into the sequence dimension, the joint attention mechanism captures dependencies across different viewpoints within the same temporal frame. The attention process follows the same mathematical formulation as described in the LiDAR Sequence Module, utilizing separate linear projections W ′ 
+
+> Q,K,V
+
+and W ′′  
+
+> Q,K,V
+
+.However, the 3D RoPE is applied across the sensor index 
+
+k ∈ { 0, . . . , K − 1} and spatial coordinates (u, v ), rather than the temporal axis, while the causal mask is not adopted. 
+
+LiDAR ControlNet. To enable precise BEV-based struc-tural control over the synthesis process, we incorporate a ControlNet-style branch [70] conditioned on BEV maps containing projected 3D bounding boxes (Appendix 7). Following [70], we create a trainable copy of the MM-DiT backbone blocks while keeping the original generative weights frozen. The ControlNet branch adopts an internal structure iden-tical to the primary modules, including the factorized atten-tion schemes of the LiDAR Sequence and Inter-sensor mod-ules. For each block in this branch, we first fuse the struc-tural control signals (3D bounding boxes and BEV maps), with the current noisy latent zt. Specifically, the control signals are processed by a lightweight encoder to produce the embedding Φctrl , which is summed with zt to form a unified input for the ControlNet blocks. Therefore, the con-trol signals are directly grounded in the current denoising state, allowing for more accurate structural guidance. The output of the n-th ControlNet block, Block (n)ctrl integrates into the corresponding backbone, Block (l)backbone , via a zero-initialized residual connection. 
+
+3.5. Autoregressive Generation 
+
+Na¨ ıve autoregressive LiDAR generation iteratively condi-tions on a model’s own predictions, leading to exposure bias and compounding errors over long horizons [6, 15, 53]. Small inaccuracies in early frames are amplified during roll-out, causing drift and degraded generation quality. To ame-liorate this, we add a small amount of noise to the ground-truth conditioning frame during training. More precisely, rather than using clean conditioning frames during training we fix the noise level of initial frames to t ∈ [0 .7, 1] , encour-aging robustness to exposure bias during autoregression. 
+
+## 4. Experimental Results 
+
+4.1. Experimental Settings 
+
+Datasets. The nuScenes dataset [4] is designed for multi-modal perception in complex urban environments. We uti-lize 32-beam LiDAR sweeps. Each LiDAR sweep (sam-ple) is initially represented as a range image with a reso-lution of 32 × 1024 pixels (totaling 32,768 pixels), a ver-tical Field of View (FOV) spanning (+10 ◦, −30 ◦), and a depth range between 1 and 45 meters. The Waymo Open Dataset [49] utilizes a sensor suite consisting of five Li-DAR sensors. This configuration includes a primary high-performance mid-range LiDAR (Top) for long-range 360 ◦
+
+coverage, supplemented by four short-range side LiDARs (Front, Left, Right, and Rear) positioned around the vehi-cle’s perimeter. These side sensors are specifically designed to capture the immediate surroundings with high precision, providing a unique perspective that is less susceptible to the top-down occlusions common in roof-only configurations. Further details on both datasets are provided in Appendix 6. 
+
+Baselines. We compare CrossLiDAR against a comprehen-sive set of baselines categorized by their underlying repre-sentation. Range-based methods include LiDARGen [74], R2DM [35], RangeLDM [13], LiDM [41], and LiDAR-Crafter [22]. Voxel-based methods include the OpenDWM models [36, 46], and we additionally compare against the occupancy-centric UniScene [19]. Details of these methods under our setting are discussed in Appendix 10. 
+
+Table 1. Evaluations of Scene-level Fidelity on Waymo dataset 
+
+for multi-sensor LiDAR generation.                                                    
+
+> Method Venue Range Points BEV FRD ↓MMD ↓FPD ↓MMD ↓JSD ↓MMD ↓
+> Voxel
+> OpenDWM[36] CVPR’25 ——7.55 52.23 16.25 2.29 OpenDWM-DiT[46] CVPR’25 ——8.41 105.40 10.85 1.80
+> Range
+> LiDM[41] CVPR’24 2.29 148.83 4.67 65.76 19.34 1.00
+> RangeLDM[13] ECCV’24 10.97 979.33 122.38 1236.59 22.33 1.63 R2DM[35] ICRA’24 21.63 2283.90 40.56 228.04 27.54 1.97
+> CrossLiDAR —0.16 11.89 1.32 6.90 8.09 1.05
+
+Table 2. Evaluations of Scene-level Fidelity on nuScenes dataset for LiDAR generation.                                                                  
+
+> Method Venue Range Points BEV FRD ↓MMD ↓FPD ↓MMD ↓JSD ↓MMD ↓
+> Voxel
+> UniScene[19] CVPR’25 ————31.55 13.61 OpenDWM[36] CVPR’25 ——0.95 5.43 20.17 5.61 OpenDWM-DiT[46] CVPR’25 ——0.49 0.50 19.90 5.73
+> Range
+> LiDM[41] CVPR’24 495.54 0.18 2.06 1.83 5.86 0.73 RangeLDM[13] ECCV’24 ——14.22 184.74 5.47 1.92 R2DM[35] ICRA’24 243.35 1.40 ——3.51 0.71 LiDARCrafter[22] AAAI’26 194.30 0.08 ——3.11 0.42 CrossLiDAR —181.41 0.09 0.21 0.93 3.08 0.27
+
+Evaluation Metrics. Following [22], we evaluate the quality of the generated LiDAR data across three com-plementary representations: (1) Range-image fidelity using Fr´ echet Range Distance (FRD) and Maximum Mean Dis-crepancy (MMD); (2) Point-cloud geometry using Fr´ echet Point Distance (FPD) and MMD; and (3) BEV distribu-tion using Jensen–Shannon Divergence (JSD) and MMD. To evaluate temporal dynamics, we follow [22] by measur-ing frame-to-frame transformation accuracy and sequence smoothness using Temporal Transform Consistency Error (TTCE) and Chamfer Temporal Consistency (CTC). We additionally adapt three metrics from the video synthesis literature to the LiDAR domain to provide a more com-prehensive assessment of (4) Temporal coherence : Blind Video Temporal Consistency (BVC) [2], Fr´ echet Video Distance (FVD) [50], and Fr´ echet Video Motion Distance (FVMD) [24]. Finally, we evaluate rollout quality by ana-lyzing the accumulated point-cloud sequences. MMD val-ues are reported in 10 −4 and JSD values in 10 −2. In all tables, the best result is highlighted in bold and the second-best in underline. We evaluate a fixed, calibrated four-LiDAR configuration, using sensor-specific range-image geometry and extrinsic calibration for ego-frame alignment. More details are provided in Appendix 8. 
+
+4.2. Image Generation 
+
+We evaluate CrossLiDAR on single-frame LiDAR gener-ation across multi- and single-sensor benchmarks. Addi-tional details and ablation studies are in Appendix 7 and 9. 
+
+Table 3. 4D LiDAR generation on Waymo using video metrics including: Temporal Consistency and Rollout-level metrics.                                                                   
+
+> Method Venue TTCE ↓CTC ↓Rollout ↓
+> 121234CD JSD MMD Voxel
+> OpenDWM[36] (t=5) CVPR’25 990.17 990.74 0.37 0.52 0.65 0.68 2.81 0.53 0.57 OpenDWM-DiT[46] (t=5) CVPR’25 1025.78 1026.43 0.39 0.59 0.76 0.81 0.78 0.13 0.34
+> Range-Temporal
+> LiDM[41](t=3) CVPR’24 1444.74 1444.48 0.20 0.24 ——0.53 0.52 1.81 RangeLDM[13](t=3) ECCV’24 1686.14 1686.89 0.24 0.27 ——0.84 0.64 8.75
+> CrossLiDAR (t=5) —1016.74 1017.38 0.06 0.10 0.12 0.14 0.07 0.10 0.03
+
+Waymo. Table 1 reports scene-level fidelity on Waymo, our primary benchmark for the multi-sensor design, where CrossLiDAR outperforms all baselines. In the range-image domain, it improves FRD by 93.0% over the second-best method. Point-cloud fidelity follows the same trend, with a 71.7% FPD reduction relative to LiDM. On layout, CrossL-iDAR reduces JSD by 25.4% over the next-best baseline. These results indicate better scene-geometry preservation, further supported by our Ablation Study (Appendix 9.2) showing that the combined LiDAR Sequence and Inter-sensor Modules reduce FRD by 88.8% over naive stacking. 
+
+nuScenes. Table 2 reports results on the single-sensor nuScenes benchmark, where CrossLiDAR achieves SOTA across all three representation domains. The largest improvement is in the point-cloud domain, where our model achieves a 57 .1% reduction in FPD compared with OpenDWM-DiT. BEV alignment is also improved, with CrossLiDAR BEV MMD representing a 35 .7% reduction over LiDARCrafter. Our method also improves range-nuScenes 
+
+BEV/3D Box t = 0 t = 1 t = 2 
+
+Waymo Ours 
+
+Figure 3. Qualitative Results . The top row illustrates temporal sequence generation on nuScenes, where CrossLiDAR maintains strict temporal consistency and 3D bounding box alignment. The bottom row demonstrates multi-sensor Waymo generation, where a single unified scene is reconstructed by synchronizing outputs from four distinct generated sensors. Compared to baselines, CrossLiDAR produces scan patterns with improved scene-level geometric fidelity, effectively handling the complexities of multi-sensor generation. Table 4. 4D LiDAR generation on nuScenes using video metrics including: Temporal Consistency and Rollout-level metrics. The temporal horizon is fixed to t = 5 for all models.                                                                  
+
+> Method Venue TTCE ↓CTC ↓Rollout ↓
+> 341234CD JSD MMD Voxel
+> UniScene[19] CVPR’25 2.74 3.69 0.90 1.84 3.64 3.90 ———OpenDWM[36] CVPR’25 2.68 3.65 1.02 2.02 3.37 5.05 1.20 0.17 9.99 OpenDWM-DiT[46] CVPR’25 2.71 3.66 0.89 1.79 3.06 4.64 0.68 0.17 8.80
+> Range-Temporal
+> LiDARCrafter[22] AAAI’26 2.65 3.56 1.12 2.38 3.02 4.81 ———
+> CrossLiDAR —2.40 3.01 1.42 1.71 2.10 2.94 0.41 0.14 0.03
+
+image fidelity, reducing FRD by 6.6% compared with Li-DARCrafter. These results show the proposed framework remains effective even without the Inter-sensor Module. 
+
+4.3. 4D LiDAR Generation 
+
+We evaluate the temporal coherence of CrossLiDAR on multi- and single-sensor LiDAR sequence generation. 
+
+Waymo. Table 3 reports 4D generation metrics on Waymo. Since no prior method supports multi-sensor 4D LiDAR generation, we evaluate CrossLiDAR on Waymo’s fixed four-SIDE-LiDAR configuration at a rollout horizon of t=5 
+
+to assess temporal coherence and cross-sensor consistency. The model remains highly stable across all four CTC steps and achieves the best performance across all rollout-level metrics. Qualitative results in Figure 3 further show that CrossLiDAR better preserves foreground structure, tempo-ral alignment, and cross-sensor geometric consistency than range-based baselines. Additional multi-sensor rollouts, temporal consistency, and controllability examples are pro-vided in Appendix Figures 12 and 13. 
+
+nuScenes. Table 4 reports temporal generation results on the single-sensor nuScenes benchmark. CrossLiDAR achieves the best TTCE scores and outperforms prior meth-ods on longer-horizon CTC metrics, with the performance gap increasing as sequence length increases. CrossLiDAR achieves a 15 .4% reduction in TTCE at step 4 compared with LiDARCrafter, indicating better adherence to physi-cally plausible motion trajectories. Although OpenDWM-DiT achieves a lower CTC-1 error, its error accumulates rapidly over longer horizons. In contrast, CrossLiDAR re-duces CTC-4 by 36 .6% relative to OpenDWM-DiT. Rollout quality also improves, with a 39 .7% and 65 .8% reduction in CD compared with OpenDWM-DiT and OpenDWM, re-spectively. These results demonstrate our proposed frame-work effectively mitigates the geometric drift commonly as-sociated with long-horizon 4D LiDAR generation. Table 5. Auto-regressive generation on Waymo , including Temporal Consistency , Rollout-level and Motion-level metrics.                                                                                                                                                  
+
+> Method Venue TTCE ↓CTC ↓Rollout ↓Motion 341234CD JSD MMD BVC ↑FVD ↓
+> OpenDWM [36] (t=12) CVPR’25 471.34 471.40 0.42 0.55 0.66 0.73 0.11 0.38 0.17 ——OpenDWM-DiT [46] (t=12) CVPR’25 424.65 424.86 2.07 2.63 2.81 3.17 0.07 0.37 0.14 ——
+> CrossLiDAR —369.63 369.74 0.05 0.07 0.08 0.09 0.07 0.12 0.02 0.79 57.42
+> Table 6. Autoregressive generation on nuScenes , including Temporal Consistency ,Rollout-level and Motion-level metrics.
+> Method Venue TTCE ↓CTC ↓Rollout ↓Motion 341234CD JSD MMD BVC ↑FVD ↓FVMD ↓
+> UniScene [19] (t=5) CVPR’25 2.74 3.69 0.90 1.84 3.64 3.90 ——————OpenDWM [36] (t=16) CVPR’25 2.64 3.16 0.82 1.62 2.83 4.67 0.97 0.46 0.27 0.22 3923.11 4147.61 OpenDWM-DiT [46] (t=16) CVPR’25 1.23 1.39 0.68 1.42 2.42 3.83 0.83 0.24 0.13 0.43 2835.68 2261.98 LiDARCrafter [22] (t=5) AAAI’26 2.65 3.56 1.12 2.38 3.02 4.81 ——————
+> CrossLiDAR (t=16) —0.41 0.50 1.09 1.22 1.36 1.47 0.47 0.22 0.26 0.88 307.07 1672.90
+
+4.4. Autoregressive 4D LiDAR Generation 
+
+We assess long-horizon stability by extending CrossLiDAR autoregressively beyond its training window, in both multi-and single-sensor settings. 
+
+Waymo. Table 5 reports autoregressive generation on Waymo, where four side LiDARs make cross-sensor con-sistency especially hard to maintain as the rollout hori-zon grows. Extending the generated window to t=12 ,CrossLiDAR achieves the best temporal consistency, reduc-ing TTCE by 13 .0% over the strongest baseline and reduc-ing CTC by an average of 87 .8% across all four evaluation steps. At the rollout level, CrossLiDAR further reduces JSD by 67 .6% and MMD by 85 .7% compared with the strongest baseline. These results show the proposed framework ef-fectively preserves cross-sensor geometric consistency and temporal coherence during long autoregressive rollouts. 
+
+nuScenes. Table 6 evaluates 16-frame rollouts on nuScenes, where CrossLiDAR shows substantially im-proved long-horizon stability over previous methods. While LiDARCrafter’s CTC increases by 329 .5% across the eval-uated steps, CrossLiDAR grows by only 34 .9% , consistent with our noise-augmented training strategy for imperfect autoregressive conditioning. CrossLiDAR further reduces TTCE by 66 .7% and 64 .0% at steps 3 and 4, respectively, over the second-best method, suggesting the proposed flow-matching transformer better preserves physically plausible ego-motion. The gap between TTCE and CTC suggests dynamic objects remain harder to model than ego-motion. At the distributional level, CrossLiDAR reduces FVD by 
+
+89 .2% over OpenDWM-DiT, bringing the generated se-quences substantially closer to the real LiDAR distribution in appearance and dynamics. CrossLiDAR reduces FVMD by 26 .0% while improving BVC by 104 .7% , demonstrating more realistic motion and stronger temporal stability. These results show CrossLiDAR maintains high quality over long horizons, a key capability for scalable autonomy simulation. 
+
+## 5. Conclusions and Limitations 
+
+We present CrossLiDAR, a unified rectified-flow trans-former for controllable multi-sensor LiDAR generation in a compact range-image latent space. It comprises three key components: an Inter-sensor Module that models ge-ometric dependencies across heterogeneous LiDAR suites, a ControlNet-style conditioning branch for fine-grained structural control via BEV priors and 3D bounding boxes, and a noise-augmented autoregressive strategy that miti-gates cumulative drift over long horizons. On Waymo and nuScenes, CrossLiDAR achieves strong performance in single-frame fidelity, temporal consistency, and long-horizon rollout quality, with particularly strong gains in the multi-sensor setting unsupported by previous methods. Current limitations include the lack of quantitative eval-uation of foreground fidelity and bounding-box adherence. Our evaluation focuses on Waymo’s fixed, calibrated four-LiDAR configuration, motivating further study of sensor conditioning, cross-sensor overlap, and adaptability to dif-ferent sensor counts, types, layouts, and calibrations. The LiDAR Sequence and Inter-sensor Modules are evaluated jointly, leaving their individual contributions unquantified. Evaluation against additional recent 4D LiDAR genera-tion methods remains limited. Downstream benefits for 3D detection, semantic segmentation, occupancy predic-tion, and planning remain unevaluated. Future work will ad-dress richer dynamic object modeling and integration with downstream planning and validation pipelines, while fur-ther reducing the sim-to-real gap. References 
+
+[1] Hengwei Bian, Lingdong Kong, Haozhe Xie, Liang Pan, Yu Qiao, and Ziwei Liu. Dynamiccity: Large-scale 4d oc-cupancy generation from dynamic scenes. In International Conference on Learning Representations (ICLR) , 2025. 3 [2] Nicolas Bonneel, James Tompkin, Kalyan Sunkavalli, De-qing Sun, Sylvain Paris, and Hanspeter Pfister. Blind video temporal consistency. ACM Trans. Graph. , 34(6), 2015. 6 [3] Lucas Caccia, Herke Van Hoof, Aaron Courville, and Joelle Pineau. Deep generative modeling of LiDAR data. In 2019 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , pages 5034–5040. IEEE, 2019. 1 [4] Holger Caesar, Varun Bankiti, Alex H Lang, Sourabh Vora, Venice Erin Liong, Qiang Xu, Anush Krishnan, Yu Pan, Gi-ancarlo Baldan, and Oscar Beijbom. nuScenes: A multi-modal dataset for autonomous driving. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 11621–11631, 2020. 2, 5, 12, 20 [5] Jo˜ ao Carreira and Andrew Zisserman. Quo vadis, action recognition? a new model and the kinetics dataset. In Pro-ceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , pages 4724–4733, 2017. 17 [6] Boyuan Chen, Diego Mart´ ı Mons´ o, Yilun Du, Max Sim-chowitz, Russ Tedrake, and Vincent Sitzmann. Diffusion forcing: Next-token prediction meets full-sequence diffu-sion. Advances in Neural Information Processing Systems ,37:24081–24125, 2024. 5 [7] Alexey Dosovitskiy, German Ros, Felipe Codevilla, Antonio Lopez, and Vladlen Koltun. CARLA: An open urban driving simulator. In Proceedings of the 1st Annual Conference on Robot Learning , pages 1–16, 2017. 1 [8] Gamaleldin Elsayed, Aravindh Mahendran, Sjoerd Van Steenkiste, Klaus Greff, Michael C Mozer, and Thomas Kipf. Savi++: Towards end-to-end object-centric learning from real-world videos. Advances in Neural Information Processing Systems , 35:28940–28954, 2022. 3 [9] Patrick Esser, Sumith Kulal, Andreas Blattmann, Rahim Entezari, Jonas M¨ uller, Harry Saini, Yam Levi, Dominik Lorenz, Axel Sauer, Frederic Boesel, et al. Scaling recti-fied flow transformers for high-resolution image synthesis. In Proceedings of the 41st International Conference on Ma-chine Learning , pages 12606–12633, 2024. 2, 3, 4 [10] Xiaonan Fang and Song-Hai Zhang. Single-video temporal consistency enhancement with rolling guidance. In Compu-tational Visual Media: 12th International Conference, CVM 2024, Wellington, New Zealand, April 10–12, 2024, Pro-ceedings, Part II , page 109–130, Berlin, Heidelberg, 2024. Springer-Verlag. 17 [11] Yongjie Fu, Anmol Jain, Xu Chen, Zhaobin Mo, and Xuan Di. Drivegenvlm: Real-world video generation for vi-sion language model based autonomous driving. In 2024 IEEE International Automated Vehicle Validation Confer-ence (IAVVC) , pages 1–6. IEEE, 2024. 2 [12] Ian Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair, Aaron Courville, and Yoshua Bengio. Generative adversarial networks. Commu-nications of the ACM , 63(11):139–144, 2020. 1 [13] Qianjiang Hu, Zhimin Zhang, and Wei Hu. RangeLDM: Fast realistic LiDAR point cloud generation. In European Con-ference on Computer Vision , pages 115–135. Springer, 2024. 2, 3, 4, 6, 17, 18, 19, 20, 21 [14] Jiahui Huang, Zan Gojcic, Matan Atzmon, Or Litany, Sanja Fidler, and Francis Williams. Neural kernel surface re-construction. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 4369– 4379, 2023. 18 [15] Xun Huang, Zhengqi Li, Guande He, Mingyuan Zhou, and Eli Shechtman. Self forcing: Bridging the train-test gap in autoregressive video diffusion. In Advances in Neural Infor-mation Processing Systems , pages 167283–167308. Curran Associates, Inc., 2025. 5 [16] Tarasha Khurana, Peiyun Hu, David Held, and Deva Ra-manan. Point cloud forecasting as a proxy for 4d occupancy forecasting. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 1116– 1124, 2023. 3 [17] Diederik P Kingma and Max Welling. Auto-encoding varia-tional bayes. arXiv preprint arXiv:1312.6114 , 2013. 1, 4 [18] Jason Ku, Ali Harakeh, and Steven L Waslander. In defense of classical image processing: Fast depth completion on the cpu. In 2018 15th conference on computer and robot vision (CRV) , pages 16–22. Ieee, 2018. 12, 14 [19] Bohan Li, Jiazhe Guo, Hongsi Liu, Yingshuang Zou, Yikang Ding, Xiwu Chen, Hu Zhu, Feiyang Tan, Chi Zhang, Tiancai Wang, et al. Uniscene: Unified occupancy-centric driving scene generation. In Proceedings of the Computer Vision and Pattern Recognition Conference , pages 11971–11981, 2025. 6, 7, 8, 17, 18, 20 [20] Chenqi Li, Yuan Ren, and Bingbing Liu. Pcgen: Point cloud generator for LiDAR simulation. arXiv preprint arXiv:2210.08738 , 2022. 1 [21] Xiaofan Li, Yifu Zhang, and Xiaoqing Ye. Drivingdiffusion: layout-guided multi-view driving scenarios video generation with latent diffusion model. In European Conference on Computer Vision , pages 469–485. Springer, 2024. 2 [22] Alan Liang, Youquan Liu, Yu Yang, Dongyue Lu, Linfeng Li, Lingdong Kong, Huaici Zhao, and Wei Tsang Ooi. Lidar-crafter: Dynamic 4d world modeling from lidar sequences. In Proceedings of the AAAI Conference on Artificial Intelli-gence , pages 18406–18414, 2026. 2, 3, 6, 7, 8, 16, 20 [23] Yiyi Liao, Jun Xie, and Andreas Geiger. Kitti-360: A novel dataset and benchmarks for urban scene understanding in 2D and 3D. IEEE Transactions on Pattern Analysis and Machine Intelligence , 45(3):3292–3310, 2023. 16, 20 [24] Jiahe Liu, Youran Qu, Qi Yan, Xiaohui Zeng, Lele Wang, and Renjie Liao. Fr \’echet video motion distance: A metric for evaluating motion consistency in videos. arXiv preprint arXiv:2407.16124 , 2024. 6, 17 [25] Xingyu Liu, Charles R Qi, and Leonidas J Guibas. Flownet3d: Learning scene flow in 3D point clouds. In Pro-ceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 529–537, 2019. 3 [26] Xingchao Liu, Chengyue Gong, and Qiang Liu. Flow straight and fast: Learning to generate and transfer data with rectified flow. In The Eleventh International Conference on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023 . OpenReview.net, 2023. 2, 4 [27] Youquan Liu, Lingdong Kong, Weidong Yang, Xin Li, Alan Liang, Runnan Chen, Ben Fei, and Tongliang Liu. La la lidar: Large-scale layout generation from lidar data. In Pro-ceedings of the AAAI Conference on Artificial Intelligence ,pages 7377–7385, 2026. 2 [28] Youquan Liu, Lingdong Kong, Weidong Yang, Ao Liang, Jianxiong Gao, Yang Wu, Xiang Xu, Xin Li, Linfeng Li, Runnan Chen, et al. Veila: Panoramic lidar generation from a monocular rgb image. In 2026 IEEE International Con-ference on Robotics and Automation (ICRA) , pages 10426– 10433. IEEE, 2026. 2 [29] Zhen Luo, Junyi Ma, Zijie Zhou, and Guangming Xiong. Pcpnet: An efficient and semantic-enhanced transformer net-work for point cloud prediction. IEEE Robotics and Automa-tion Letters , 8(7):4267–4274, 2023. 3 [30] Sivabalan Manivasagam, Shenlong Wang, Kelvin Wong, Wenyuan Zeng, Mikita Sazanovich, Shuhan Tan, Bin Yang, Wei-Chiu Ma, and Raquel Urtasun. Lidarsim: Realistic Li-DAR simulation by leveraging the real world. In Proceed-ings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 11167–11176, 2020. 1 [31] Benedikt Mersch, Xieyuanli Chen, Jens Behley, and Cyrill Stachniss. Self-supervised point cloud prediction using 3D spatio-temporal convolutional networks. In Conference on Robot Learning , pages 1444–1454. PMLR, 2022. 3 [32] Andres Milioto, Ignacio Vizzo, Jens Behley, and Cyrill Stachniss. Rangenet++: Fast and accurate LiDAR semantic segmentation. In 2019 IEEE/RSJ international conference on intelligent robots and systems (IROS) , pages 4213–4220. IEEE, 2019. 15 [33] Javier Montalvo, Juan Ignacio Bravo P´ erez-Villar, ´Alvaro Garc´ ıa-Mart´ ın, Pablo Carballeira, and Jes´ us Besc´ os. SPIN: Spacecraft imagery for navigation. arXiv preprint arXiv:2406.07500 , 2024. 1 [34] Arian Mousakhan, Sudhanshu Mittal, Silvio Galesso, Karim Farid, and Thomas Brox. Orbis: Overcoming challenges of long-horizon prediction in driving world models. arXiv preprint arXiv:2507.13162 , 2025. 2 [35] Kazuto Nakashima and Ryo Kurazume. LiDAR data synthe-sis with denoising diffusion probabilistic models. In 2024 IEEE International Conference on Robotics and Automation (ICRA) , pages 14724–14731. IEEE, 2024. 6, 18, 20 [36] Jingcheng Ni, Yuxin Guo, Yichen Liu, Rui Chen, Lewei Lu, and Zehuan Wu. MaskGWM: A generalizable driving world model with video mask reconstruction. arXiv preprint arXiv:2502.11663 , 2025. 6, 7, 8, 17, 20 [37] Kaustab Pal, Aditya Sharma, Avinash Sharma, and K Mad-hava Krishna. ATPPNet: Attention based temporal point cloud prediction network. In 2024 IEEE International Con-ference on Robotics and Automation (ICRA) , pages 11140– 11146. IEEE, 2024. 3 [38] William Peebles and Saining Xie. Scalable diffusion models with transformers. In Proceedings of the IEEE/CVF inter-national conference on computer vision , pages 4195–4205, 2023. 18 [39] Charles R Qi, Hao Su, Kaichun Mo, and Leonidas J Guibas. Pointnet: Deep learning on point sets for 3D classification and segmentation. In Proceedings of the IEEE conference on computer vision and pattern recognition , pages 652–660, 2017. 15 [40] Hui Qian, Mingchen Wang, Maotao Zhu, and Hai Wang. A review of multi-sensor fusion in autonomous driving. Sen-sors , 25(19):6033, 2025. 2 [41] Haoxi Ran, Vitor Guizilini, and Yue Wang. Towards realistic scene generation with LiDAR diffusion models. In Proceed-ings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 14738–14748, 2024. 2, 3, 6, 17, 18, 19, 20 [42] Jonathan P Resop, Laura Lehmann, and W Cully Hession. Drone laser scanning for modeling riverscape topography and vegetation: Comparison with traditional aerial LiDAR. 
+
+Drones , 3(2):35, 2019. 1 [43] Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Bj¨ orn Ommer. High-resolution image synthesis with latent diffusion models. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 10684–10695, 2022. 2, 3, 17, 18 [44] Olaf Ronneberger, Philipp Fischer, and Thomas Brox. U-net: Convolutional networks for biomedical image segmen-tation. In International Conference on Medical image com-puting and computer-assisted intervention , pages 234–241. Springer, 2015. 2 [45] Stefan Schubert, Peer Neubert, Johannes P¨ oschmann, and Peter Protzel. Circular convolutional neural networks for panoramic images and laser data. In 2019 IEEE intelligent vehicles symposium (IV) , pages 653–660. IEEE, 2019. 17 [46] SenseTime-FVG. OpenDWM: Open driving world models, 2025. https://github.com/SenseTime-FVG/OpenDWM. 6, 7, 8[47] Shaoshuai Shi, Chaoxu Guo, Li Jiang, Zhe Wang, Jianping Shi, Xiaogang Wang, and Hongsheng Li. Pv-rcnn: Point-voxel feature set abstraction for 3D object detection. In Pro-ceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 10529–10538, 2020. 1 [48] Jianlin Su, Murtadha Ahmed, Yu Lu, Shengfeng Pan, Wen Bo, and Yunfeng Liu. Roformer: Enhanced transformer with rotary position embedding. Neurocomputing , 568:127063, 2024. 5 [49] Pei Sun, Henrik Kretzschmar, Xerxes Dotiwalla, Aurelien Chouard, Vijaysai Patnaik, Paul Tsui, James Guo, Yin Zhou, Yuning Chai, Benjamin Caine, Vijay Vasudevan, Wei Han, Jiquan Ngiam, Hang Zhao, Aleksei Timofeev, Scott Et-tinger, Maxim Krivokon, Amy Gao, Aditya Joshi, Yu Zhang, Jonathon Shlens, Zhifeng Chen, and Dragomir Anguelov. Scalability in perception for autonomous driving: Waymo open dataset. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2020. 2, 3, 6, 12, 17, 20 [50] Thomas Unterthiner, Sjoerd Van Steenkiste, Karol Kurach, Raphael Marinier, Marcin Michalski, and Sylvain Gelly. To-wards accurate generative models of video: A new metric & challenges. arXiv preprint arXiv:1812.01717 , 2018. 6, 17 [51] Aaron van den Oord, Oriol Vinyals, and Koray Kavukcuoglu. Neural discrete representation learning. In Advances in Neural Information Processing Systems (NeurIPS) , 2017. 2 [52] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszko-reit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. Attention is all you need. Advances in neural information processing systems , 30, 2017. 2 [53] Arun Venkatraman, Martial Hebert, and J. Bagnell. Improv-ing multi-step prediction of learned time series models. Pro-ceedings of the AAAI Conference on Artificial Intelligence ,29(1), 2015. 5 [54] Qitai Wang, Lue Fan, Yuqi Wang, Yuntao Chen, and Zhaox-iang Zhang. Freevs: Generative view synthesis on free driv-ing trajectory. In International Conference on Learning Rep-resentations , pages 58640–58662, 2025. 2 [55] Ziyu Wang, Jing Ma, and Edmund MK Lai. A survey of scenario generation for automated vehicle testing and vali-dation. Future Internet , 16(12):480, 2024. 1 [56] Xinshuo Weng, Jianren Wang, Sergey Levine, Kris Kitani, and Nicholas Rhinehart. Inverting the pose forecasting pipeline with spf2: Sequential pointcloud forecasting for se-quential pose forecasting. In Conference on robot learning ,pages 11–20. PMLR, 2021. 3 [57] Xinshuo Weng, Junyu Nan, Kuan-Hui Lee, Rowan McAl-lister, Adrien Gaidon, Nicholas Rhinehart, and Kris M Ki-tani. S2net: Stochastic sequential pointcloud forecasting. In 
+
+European Conference on Computer Vision , pages 549–564. Springer, 2022. 3 [58] Benjamin Wilson, William Qi, Tanmay Agarwal, John Lambert, Jagjeet Singh, Siddhesh Khandelwal, Bowen Pan, Ratnesh Kumar, Andrew Hartnett, Jhony Kaesemodel Pontes, et al. Argoverse 2: Next generation datasets for self-driving perception and forecasting. arXiv preprint arXiv:2301.00493 , 2023. 3 [59] Jin Wu and Chengxi Zhang. Multi-LiDAR registration: A joint sensor-centric optimization approach. IEEE Sensors Letters , 10(2):1–4, 2025. 2 [60] Ziyi Wu, Yulia Rubanova, Rishabh Kabra, Drew A Hud-son, Igor Gilitschenski, Yusuf Aytar, Sjoerd Van Steenkiste, Kelsey R Allen, and Thomas Kipf. Neural assets: 3D-aware multi-object scene synthesis with image diffusion models. 
+
+Advances in Neural Information Processing Systems , 37: 76289–76318, 2024. 3 [61] Yuwen Xiong, Wei-Chiu Ma, Jingkang Wang, and Raquel Urtasun. Learning compact representations for lidar com-pletion and generation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pages 1074–1083, 2023. 2 [62] Xiang Xu, Alan Liang, Youquan Liu, Linfeng Li, Lingdong Kong, Ziwei Liu, and Qingshan Liu. U4d: Uncertainty-aware 4d world modeling from lidar sequences. In Proceed-ings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 10027–10039, 2026. 3 [63] Yinghao Xu, Menglei Chai, Zifan Shi, Sida Peng, Ivan Sko-rokhodov, Aliaksandr Siarohin, Ceyuan Yang, Yujun Shen, Hsin-Ying Lee, Bolei Zhou, et al. Discoscene: Spatially disentangled generative radiance fields for controllable 3D-aware scene synthesis. In Proceedings of the IEEE/CVF con-ference on computer vision and pattern recognition , pages 4402–4412, 2023. 3 [64] Yunzhi Yan, Zhen Xu, Haotong Lin, Haian Jin, Haoyu Guo, Yida Wang, Kun Zhan, Xianpeng Lang, Hujun Bao, Xiaowei Zhou, and Sida Peng. StreetCrafter: Street view synthesis with controllable video diffusion models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2025. 2 [65] Zetong Yang, Li Chen, Yanan Sun, and Hongyang Li. Visual point cloud forecasting enables scalable autonomous driving. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 14673–14684, 2024. 3[66] Tianwei Yin, Xingyi Zhou, and Philipp Krahenbuhl. Center-based 3D object detection and tracking. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 11784–11793, 2021. 1 [67] Zhiyu Yin, Kehai Chen, Xuefeng Bai, Ruili Jiang, Juntao Li, Hongdong Li, Jin Liu, Yang Xiang, Jun Yu, and Min Zhang. ASurvey: Spatiotemporal consistency in video generation. 
+
+arXiv preprint arXiv:2502.17863 , 2025. 17 [68] Mingliang Zhai, Xuezhi Xiang, Ning Lv, and Xiangdong Kong. Optical flow and scene flow estimation: A survey. 
+
+Pattern Recognition , 114:107861, 2021. 3 [69] Ji Zhang, Sanjiv Singh, et al. LOAM: LiDAR odometry and mapping in real-time. In Robotics: Science and systems ,pages 1–9. Berkeley, CA, 2014. 1 [70] Lvmin Zhang, Anyi Rao, and Maneesh Agrawala. Adding conditional control to text-to-image diffusion models. In 
+
+Proceedings of the IEEE/CVF international conference on computer vision , pages 3836–3847, 2023. 2, 4, 5, 14 [71] Jian Zhao, Wenxu Li, Bing Zhu, Peixing Zhang, Zhaozheng Hu, and Jie Meng. Corner case dataset for autonomous ve-hicle testing based on naturalistic driving data. Smart Cities ,8(4):129, 2025. 1 [72] Yunsong Zhou, Michael Simon, Zhenghao Peng, Sicheng Mo, Hongzi Zhu, Minyi Guo, and Bolei Zhou. Simgen: Simulator-conditioned driving scene generation. Advances in Neural Information Processing Systems , 37:48838–48874, 2024. 3 [73] Dekai Zhu, Yixuan Hu, Youquan Liu, Dongyue Lu, Ling-dong Kong, and Slobodan Ilic. Spiral: Semantic-aware pro-gressive lidar scene generation and understanding. In The Thirty-ninth Annual Conference on Neural Information Pro-cessing Systems , 2025. 2 [74] Vlas Zyrianov, Xiyue Zhu, and Shenlong Wang. Learning to generate realistic LiDAR point clouds. In European Confer-ence on Computer Vision , pages 17–35. Springer, 2022. 1, 2, 6, 15, 18 [75] Vlas Zyrianov, Henry Che, Zhijian Liu, and Shenlong Wang. Lidardm: Generative LiDAR simulation in a generated world. In 2025 IEEE International Conference on Robotics and Automation (ICRA) , pages 6055–6062. IEEE, 2025. 18, 20 Appendix 6. Datasets 
+
+We evaluate our approach using two large-scale au-tonomous driving datasets: nuScenes [4] and the Waymo Open Dataset [49]. Each provides multi-modal sensor data together with annotations. In this section, we summarize their overall statistics, sensor configurations, image resolu-tions, and available labels. 
+
+6.1. nuScenes 
+
+The nuScenes dataset [4] provides diverse multimodal sen-sor data collected using two identically instrumented ve-hicles for autonomous driving research. The data were recorded with a surround-view sensor suite comprising one spinning 32-beam LiDAR sensor, six RGB cameras, and five automotive radar sensors. Together, these sensors pro-vide complementary observations with full 360 ◦ coverage around the ego vehicle (specifications in Table 7). The Li-DAR sensor captures point clouds at 20 Hz, with a 360 ◦
+
+horizontal field of view and a vertical field of view from 
+
+−30 ◦ to 10 ◦, producing up to 1.4 million points per sec-ond with an effective range of up to 70 m. In addition, the cameras operate at 12 Hz and the radar sensors at 13 Hz. 
+
+Table 7. LiDAR Sensor Specifications for the nuScenes Dataset . We report the vertical field of view ( VFOV ), horizontal coverage ( HFOV ), range-image resolution (rows ×columns), valid range (m), and intensity range. Sensor VFOV HFOV Resolution Range (m) Intensity Velodyne HDL-32E [+10 ◦; −30 ◦] 360 ◦ (32, 1080) [2 .0; 100 .0] [0; 225] 
+
+nuScenes provides a large corpus of annotated 3D bounding boxes for urban driving scenes captured under diverse traffic, lighting, and weather conditions. The full dataset contains 1,000 scenes, each 20s long, selected from 84 driving logs collected in Boston and Singapore. Al-though the sensor streams are temporally dense, 3D box annotations are provided only for keyframes sampled at 2 Hz. In total, the dataset includes approximately 40,000 an-notated keyframes, about 400,000 LiDAR sweeps, 1.4M camera images, 1.4M radar sweeps, and 1.4M annotated 3D bounding boxes across 23 classes. Annotations are defined in the global coordinate frame and are distributed with cali-brated sensor poses, enabling projection into the ego or sen-sor coordinate frames when needed for model training and evaluation. Beyond object boxes, nuScenes also provides rich scene-level metadata, including location, weather, time of day, and object attributes. 
+
+6.2. Waymo 
+
+The Waymo Open Dataset [49] provides diverse multi-modal sensor data collected from a fleet of self-driving ve-hicles. Each vehicle is equipped with five high-resolution LiDAR sensors: one mounted on the roof (TOP) and four located on the SIDEs: front (F), rear (R), side-left (SL), and side-right (SR). All LiDAR data is provided as range im-ages; detailed specifications 1 are listed in Table 8. 
+
+Table 8. LiDAR Sensor Specifications on Waymo Open Dataset . We report vertical field of view (VFOV), horizontal cov-erage (HFOV), range-image resolution, valid range (m), and inten-sity range for TOP and SIDE sensors.                                  
+
+> Sensor VFOV HFOV Resolution Range (m) Intensity TOP [−17 .6◦,+2 .4◦]360 ◦64 ×2650 [1 .2,75 .0] [7 ×10 −6,4×10 6]
+> F/SL/SR/R [−90 ◦,+30 ◦]—200 ×600 [5 ×10 −3,20 .0] [5 ×10 −6,40 .5]
+
+Figures 4 and 5 show typical range images and corre-sponding point clouds from the TOP sensor, covering 360 ◦
+
+horizontally, up to 75m range, and 64 vertical beams; and from the four SIDE sensors, each with a larger vertical FOV, 200 beams, and a maximum range of 20m. The precise horizontal field of view (FOV) for each SIDE sensor is not specified in the official documentation. We therefore esti-mate each sensor’s effective FOV as the proportion of valid columns (i.e., columns with at least one valid measurement) in the range image, out of 600 columns. Assuming a to-tal sensor FOV of X◦, the effective FOV is computed as  
+
+> #valid columns
+> 600
+
+× X◦.In all experiments, we use only the four side LiDAR sen-sors to emulate a multi-sensor input scenario. Waymo provides a large corpus of high-quality anno-tated 3D LiDAR bounding boxes. We use annotations for three semantic classes: VEHICLE , PEDESTRIAN , and 
+
+CYCLIST . Since boxes are labeled in the vehicle (ego) frame, we project them into the LiDAR frame by inverting the extrinsic calibration matrix. As SIDE LiDAR sensors capture only short-range points, we retain boxes fully con-tained within each sensor’s valid range. The resulting dataset contains approximately 1.45M Li-DAR box annotations across over 1000 scenes from geo-graphically distinct regions. Each scene is 20 seconds at 10Hz, totaling 200 frames per scene. For input construction, each scene is divided into overlapping clips of 17 frames with a stride of 5 frames, so consecutive clips share up to 12 frames. Statistics for our training set using only SIDE LiDAR sensors are provided in Table 9, 10 and Figure 6. 
+
+Point Cloud Densification . The SIDE LiDAR range im-ages in Waymo are sparse and contain many invalid pix-els. Following [18], we apply a fast CPU-based depth-   
+
+> 1https://waymo.com/open/data/perception/#lidar-data Top
+> Front Side-Left Side-Right Rear
+
+Figure 4. Waymo range-image examples. Top: TOP LiDAR range image ( 64 × 2650 ), with 360 ◦ horizontal coverage. Bottom: four SIDE LiDAR range images ( 200 × 600 each), with higher vertical resolution and partial-view coverage. 
+
+Figure 5. Examples of Waymo point-cloud coverage. Left : Point cloud from each SIDE LiDAR sensor, illustrating the partial horizontal coverage provided by each individual sensor. Right : Point cloud obtained by fusing the four SIDE LiDAR sensors, shown in comparison with the TOP LiDAR. The SIDE sensors are color-coded by position: front (yellow), left (pink), rear (blue), and right (green). Table 9. Statistics on annotations. 
+
+TrainVal Test 
+
+Vehicle 941.6K 227K 
+
+Pedestrian 499.1K 121.4K 
+
+Cyclist 11.8K 3.4K Total 1451.6K 352K 
+
+Table 10. Size of the data splits. 
+
+Train Val Test Scenes 798 202 150 Frames 158K 40K 30K Clips 21K 5K 5K completion algorithm to fill invalid pixels with estimated depths. The method first performs nearest-neighbor dila-tion using a diamond-shaped kernel, and then refines the result via smoothing steps that encourage locally planar surfaces and suppress outliers with bilateral filtering. As 
+
+Figure 6. Per-frame annotations. 
+
+shown in Figure 7, densification substantially improves the visual quality of the resulting depth maps and point clouds. 
+
+## 7. Implementation Details 
+
+Data Pre-processing & Post-processing. For point cloud generation, each LiDAR scan is optionally projected to a dense 2D range image using spherical projection: Given a Figure 7. Densification on the Waymo SIDE LiDAR range images . The top row shows the original sparse range images from Waymo, while the bottom row shows the densified results. The densification algorithm [18] fills in missing pixels and significantly enhances the visual quality and completeness of the range images. 
+
+3D point (x, y, z ), the corresponding spherical coordinates are computed as: 
+
+d = px2 + y2 + z2,θ = arcsin 
+
+ zd
+
+
+
+,ϕ = arctan 2( −y, x ).
+
+(2) where d is the measured range, θ is the elevation an-gle, and ϕ is the azimuth angle. For the Waymo dataset, range images are provided directly, and this step is skipped. To address sparsity in the raw range images, we use the 
+
+ip basic implementation 2 for efficient depth completion. Each valid range measurement d is normalized to [−1, 1] 
+
+via linear scaling: 
+
+dnorm = ddmax 
+
+× 2 − 1, (3) where dmax is the maximum valid range for the sensor. For generation, we apply the inverse mapping. Predicted range images are projected back to 3D space using the inverse of the spherical mapping: 
+
+x = d · cos θ · cos ϕ, y = −d · cos θ · sin ϕ, z = d · sin θ, 
+
+(4) where d is the depth value at the pixel, and θ, ϕ are the vertical and horizontal angles for that pixel. Points with range d outside the post-processing interval are filtered out: 
+
+[0 .5, 20 .0] for Waymo SIDE LiDAR, and [2 .0, 95 .0] for nuScenes. For BEV controllable generation, we project 3D bound-ing boxes and other semantic elements from the ego-vehicle frame onto the BEV plane. Given a bounding box with cor-ners {bego  
+
+> i
+
+} in the ego frame, we apply a fixed ego-to-BEV transformation. Boxes and other features are then rasterized onto a discrete 2D grid, where the grid bounds and cell size are chosen according to the dataset. We also incorporate BEV roadmap layers (e.g., road, lanes), which are available from both Waymo and nuScenes. 
+
+> 2https://github.com/kujason/ip_basic
+
+Training Procedures. CrossLiDAR follows a three-stage latent generative training protocol. 
+
+VAE Pretraining . We first pre-train the VAE using a recon-struction objective on range images, encoding each LiDAR sensor independently into a compact latent representation. After convergence, the VAE weights are frozen. 
+
+Latent Rectified Flow Training . We then train a Recti-fied Flow model to learn the dynamics in the latent space. For sequence modeling, latent representations from all time steps ( T ) and sensors ( S) are stacked along the batch dimen-sion ( B), enabling joint spatio-temporal learning directly in latent space. 
+
+ControlNet Training . Finally, we freeze the base Recti-fied Flow model and train a ControlNet branch [70] for conditional generation. Control blocks are inserted into the backbone at a fixed interval (one every three backbone blocks). The model is conditioned on structural inputs, in-cluding BEV maps with projected 3D bounding boxes, en-abling controllable scene generation while preserving the pretrained generative prior. 
+
+Training Hyper-parameters. The VAE is trained for 50 epochs using the AdamW optimizer with a base learning rate of 4.5 × 10 −6 and a batch size of 16. We employ an 
+
+ℓ1 reconstruction objective with a KL regularization weight of 1 × 10 −6. The encoder—decoder architecture uses a la-tent dimensionality of 4 channels, a base channel width of 64 with multipliers [1 , 2, 2, 4] , and two residual blocks per resolution level with SiLU activations. Circular padding is adopted to respect the periodic structure of range im-ages, and no attention layers are used in the VAE. Mixed-precision (FP16) training is used throughout. The rectified flow model is trained with an ℓ2 loss and a log-normal noise schedule for 500000 iterations using a batch size of 16 . We use AdamW optimizer with learning rate 1×10 −4 for nuScenes, 8×10 −5 for Waymo, β1 = 0 .9,
+
+β2 = 0 .999 , ϵ = 10 −8. The learning rate is linearly warmed up over the first 0.01% of steps and then held constant. Gradients are clipped to a maximum norm of 0.1. Mixed-precision (FP16) training is used throughout, with FSDP and zero3 sharding for memory efficiency. During diffusion and ControlNet training, we set the MM-DiT patch size to 1. Multiple conditioning modali-ties are used, including text, images, frame pose, and BEV projections of 3D bounding boxes for explicit scene-level guidance. To enhance robustness and generalization, condi-tion dropout is applied independently to each condition with probability 0.15 ; for short clips (fewer than 5 frames), all conditions are jointly dropped with probability 0.15 . BEV maps are embedded into the VAE latent space using a spatial encoder consisting of 5 layers of 2D convolutional blocks with residual connections. For ControlNet, 30% of the dataset is set aside for train-ing, as reusing the diffusion model data for this stage leads to minimal improvements. 
+
+Sampling and Inference. For generation, we employ rec-tified flow with a linear transport map for the diffusion pro-cess and use the Euler–Maruyama solver for sampling. We run 30 sampling steps with a classifier-free guidance scale of 3.0. Additional sampling hyperparameters are set as needed. 
+
+## 8. Evaluation 
+
+We evaluate LiDAR sequence generation using comple-mentary metrics that capture: (1) Per-scene fidelity , (2) Temporal rollout realism , (3) Temporal consistency across frames, and (4) Video-level quality aggregated over se-quences. Unless stated otherwise, all metrics are computed on Waymo using the four SIDE LiDAR sensors. 
+
+8.1. Scene-level Metrics 
+
+Scene Definition. We define a scene at time t as the fused multi-sensor point cloud obtained by combining the LiDAR point clouds. Specifically, for each sensor s ∈ { 1, . . . , S }
+
+(with S=4 in Waymo and with S=1 in nuScenes), we project points from the sensor frame into the ego-vehicle frame using the provided extrinsics: 
+
+pego  
+
+> s
+
+= Tego ←s ps, s ∈ { 1, . . . , S }, (5) Furthermore, we concatenate the transformed points to form the fused scene point cloud Pego  
+
+> t
+
+= SSs=1 pego  
+
+> t,s
+
+.
+
+Sampling Protocol. For statistical reliability, we evaluate a total of 10000 sensor frames (i.e., per-sensor range images) in all scene-level metrics. Concretely, for models that gen-erate single frames , we generate 10000 scenes; each scene comprises independently generated range images (one per sensor) that are re-projected and fused in the ego frame. For models that generate sequences , we generate 2000 se-quences of length T = 5 (10000 scenes total), and evaluate each time step as an individual scene. 
+
+Distributional Fidelity Metrics. To quantify scene-level fidelity, we adopt standard distributional similarity metrics widely used in LiDAR generative modeling [74]. For each metric, we compute features for real samples and generated samples, fit Gaussians to their distributions, and measure the divergence between the two distributions. 
+
+Fr´ echet Range Distance (FRD). FRD [74] measures the discrepancy between feature distributions of real and gener-ated range images for each sensor. Following prior work, we extract features using a pretrained RangeNet-53 [32] segmentation network 3. Let {f ri }Ni=1 and {f gi }Ni=1 denote features from real and generated samples, with empirical means (μr , μg ) and covariances (Σr , Σg ). FRD is com-puted as the Fr´ echet distance between two Gaussians: 
+
+FRD = ∥μr − μg ∥22 + Tr 
+
+
+
+Σr + Σ g − 2 (Σ r Σg ) 12
+
+
+
+. (6) 
+
+Fr´ echet Point Volume Distance (FPD). To assess real-ism in 3D, we re-project generated range images into point clouds, and extract their features using a pretrained Sparse Point-Voxel Convolution Network [39] 4. We then compute the Fr´ echet distance in the same form as above, using point-cloud feature statistics. 
+
+Jensen-Shannon Divergence (JSD). To compare spatial occupancy patterns, we voxelize each fused ego-frame scene into a BEV occupancy histogram over an H×W grid. Let P and Q denote the marginal BEV occupancy distri-butions obtained by averaging normalized histograms over generated and real scenes. We compute: 
+
+JSD( P ∥Q) = 12 KL( P ∥M ) + 12 KL( Q∥M ),
+
+where M = 12 (P + Q).
+
+(7) 
+
+Maximum Mean Discrepancy (MMD). We additionally compute the maximum mean discrepancy between the BEV occupancy distributions. Given samples {xi}Ni=1 ∼ P (real) and {yj }Nj=1 ∼ Q (generated), MMD with kernel k(·, ·) is: 
+
+MMD 2(P, Q ) = 1
+
+N (N − 1) 
+
+X
+
+> i̸=i′
+
+k(xi, x i′ )+ 1
+
+N (N − 1) 
+
+X 
+
+> j̸=j′
+
+k(yj , y j′ )
+
+− 2
+
+N 2
+
+X
+
+> i,j
+
+k(xi, y j ).
+
+(8) Unless noted otherwise, we use an RBF kernel on the flat-tened BEV histograms. For each fused scene Pego  
+
+> t
+
+, we compute a BEV occu-pancy grid by discretizing the plane into uniform cells and        
+
+> 3The pre-trained RangeNet++ is downloaded from https : / / github.com/PRBonn/lidar-bonnetal
+> 4The pre-trained SPVCNN is downloaded from https://github. com/hancyran/LiDAR-Diffusion/tree/main/lidm/eval
+
+marking a cell occupied if it contains at least one point. The resulting binary occupancy map is normalized into a his-togram and used to form the marginal distributions for JSD and MMD. 
+
+8.2. Temporal Consistency Metrics 
+
+Temporal Transformation Consistency Error (TTCE) 
+
+To measure video generation performance, we follow [22] and inherit the temporal consistency metrics TTCE and CTC, which quantify how consistently generated sequences preserve temporal motion by comparing frame-to-frame rigid transformations with ground truth. Using Iterative Closest Point (ICP), we compute the estimated transforma-tions T pred  
+
+> t
+
+= [ Rpred  
+
+> t
+
+| tpred  
+
+> t
+
+] between consecutive frames and compare them to the true transformations T gt  
+
+> t
+
+= [ Rgt  
+
+> t
+
+| tgt  
+
+> t
+
+]:
+
+TTCE rot = 1
+
+T − 1 
+
+> T−1
+
+X
+
+> t=1
+
+Rpred  
+
+> t
+
+(Rgt  
+
+> t
+
+)⊤ − I F
+
+, (9) TTCE trans = 1
+
+T − 1 
+
+> T−1
+
+X
+
+> t=1
+
+tpred  
+
+> t
+
+− tgt 
+
+> t
+> 22
+
+(10) Smaller TTCE values indicate that the predicted motion closely matches the ground truth, reflecting smoother and more realistic temporal dynamics. 
+
+Chamfer Temporal Consistency (CTC) measures the frame-to-frame geometric smoothness of generated point clouds. Consecutive frames are aligned using the ground-truth transformations: 
+
+˜Pt+1 = ( Rgt  
+
+> t
+
+)−1  Pt+1 − tgt 
+
+> t
+
+ (11) The Chamfer Distance between Pt and the aligned frame 
+
+˜Pt+1 is: 
+
+CD (Pt, ˜Pt+1 ) = 1
+
+|Pt|
+
+X
+
+> x∈Pt
+
+min  
+
+> y∈˜Pt+1
+
+∥x − y∥22
+
++ 1
+
+| ˜Pt+1 |
+
+X 
+
+> y∈˜Pt+1
+
+min 
+
+> x∈Pt
+
+∥y − x∥22
+
+(12) The overall CTC score is the average Chamfer Distance over all consecutive frame pairs: 
+
+CTC = 1
+
+T − 1 
+
+> T−1
+
+X
+
+> t=1
+
+CD (Pt, ˜Pt+1 ) (13) Lower CTC values correspond to smoother temporal transitions and higher frame-to-frame coherence in the gen-erated sequence. 
+
+8.3. Rollout-level Metrics 
+
+To assess temporal consistency and scene fidelity across a sequence altogether, we evaluate the quality of LiDAR roll-outs, i.e. the accumulation of generated LiDAR frames over time. 
+
+Global Alignment and Accumulation. Following the KITTI-360 protocol [23], at each time step t we transform each frame’s generated point cloud Pego  
+
+> t
+
+to the global coor-dinate frame using the ground-truth ego-pose Tt:
+
+bPglobal  
+
+> t
+
+= Ttpego  
+
+> t,s
+
+: pego  
+
+> t,s
+
+∈ P ego  
+
+> t
+
+. (14) A rollout for a sequence of length T is then defined as the set union of the aligned point clouds: 
+
+Prollout gen =
+
+> T
+
+[
+
+> t=1
+
+bPglobal  
+
+> t
+
+. (15) We compare rollout-level statistics using both generated and ground-truth sequences Prollout gen and Prollout real . This procedure captures static scene structure (e.g., buildings, road geome-try) as well as the spatiotemporal evolution of dynamic ob-jects (e.g., vehicles, pedestrians) (Figure 8). We compute the Jensen-Shannon divergence (JSD) and maximum mean discrepancy (MMD) as described in Sec. 8.1, but using BEV histograms aggregated over the combined rollout point cloud. We further quantify geometric fidelity between the ground-truth and generated rollout point clouds using the symmetric Chamfer Distance (CD): 
+
+CD  Preal , Pgen 
+
+ = 1
+
+|P real |
+
+X
+
+> p∈P real
+
+min 
+
+> ˆp∈P gen
+
+∥p − ˆp∥22
+
++ 1
+
+|P gen |
+
+X
+
+> ˆp∈P gen
+
+min 
+
+> p∈P real
+
+∥ˆp − p∥22
+
+(16) where Prollout real and Prollout gen denote the accumulated ground-truth and model-generated rollout point clouds, respec-tively. These rollout-level metrics provide a holistic measure of both structural realism and temporal coherence in genera-tive LiDAR modeling. 
+
+8.4. Video Evaluation Metrics 
+
+The temporal consistency metrics (TTCE and CTC) dis-cussed above primarily assess rigid geometric alignment between consecutive frames. However, these metrics do not adequately capture the quality of dynamic scenes in which objects undergo non-rigid motion or deformation. To address this limitation, we adapt established video quality metrics from the computer vision literature to the LiDAR domain. nuScenes Waymo Figure 8. Rollout examples of temporal consistency on nuScenes and Waymo. For each dataset, we visualize a scene composed of multiple point clouds acquired at different timestamps. The consistent alignment of the colored regions across time indicates that the reconstruction preserves temporal consistency. The highlighted objects include a vehicle (orange), a pedestrian (blue), vegetation (green), and background structures (purple). 
+
+We evaluate video generation quality through three met-rics organized across two complementary dimensions: 
+
+Temporal Consistency. To quantify temporal stability without relying on rigid transformations, we employ an optical-flow warping error Ew and a relative Blind Video temporal Consistency index (BVC) [67]. We estimate dense optical flow [10] between consecutive frames, warp the pre-vious frame toward the current frame using the estimated flow field, and compute a masked photometric discrepancy on non-occluded pixels. We aggregate both short-range er-rors (between consecutive frames) and long-range errors (relative to the first frame) to obtain Ew. The BVC in-dex is defined as BVC = Egt  
+
+> w
+
+/E pred  
+
+> w
+
+, providing a normal-ized measure where BVC > 1 indicates superior temporal smoothness compared to ground truth, BVC = 1 indicates matching stability, and BVC < 1 indicates increased flicker or temporal instability. 
+
+Video-level Realism and Motion. At the distributional level, Fr´ echet Video Distance (FVD) [50] compares real and generated videos in the feature space of an I3D network [5] using 16-frame clips at 224 × 224 resolution. Complement-ing FVD’s appearance-focused evaluation, Fr´ echet Video Motion Distance (FVMD) [24] compares distributions of tracked keypoint trajectories, providing a motion-centric as-sessment of temporal dynamics. 
+
+## 9. Ablation Studies 
+
+We conduct ablations on the VAE design choice, the diffu-sion backbone, and other key designs for their validation. Unless specified, all ablation experiments are conducted on the Waymo Open Dataset [49], for multi-sensor LiDAR scene generation ( t = 1 ) setting. 
+
+9.1. VAE 
+
+Our framework adopts the Latent Diffusion [43] paradigm, employing a VAE for compressing high-dimensional range images into a compact latent space. We base our VAE de-sign on recent state-of-the-art architectures, LiDM [41] and RangeLDM [13], and systematically study the impact of key modeling choices. All ablations are performed with a fixed compression ra-tio f = 64 , a batch size of 16, and 50 training epochs, fol-lowing the default settings for each method’s official imple-mentation. Following [19, 36], we adopt an image-based VAE (2D) instead of a temporal 3D architecture, as the goal here is efficient per-frame compression of range im-ages rather than joint spatiotemporal modeling. This archi-tecture also enables more efficient training and inference, similar to designs in [19, 36]. Table 11 presents quantitative VAE reconstruction re-sults for different configurations on Waymo SIDE LiDAR. We observe the following: (1) The use of Circular Con-volution [45] in RangeLDM leads to improved latent rep-resentations relative to LiDM across all metrics (cf. rows 3–6 vs 1–2), confirming the benefit of circularity for sen-sors with 360 ◦ coverage. (2) Incorporating adversarial loss into VAE training is challenging , with performance highly sensitive to the activation schedule; improper tuning can significantly degrade results (cf. rows 1–2 and 3–4). (3) VAE performance deteriorates with aggressive input resiz-ing, likely due to increased information loss (cf. rows 3–4 vs rows 5–6). Nevertheless, this resizing may be necessary for 
+
+compatibility with U-Net-based diffusion backbones, which constrain input resolution and highlight a limitation of the U-Net design. (4) For SIDE LiDAR on Waymo (range 0–20 m), log compression (Equation (17)) provides little benefit, since the dynamic range is limited and linear normalization (Equation (3)) already preserves the range scale adequately without introducing an additional nonlinear transformation (cf. rows 6–7 and Figure 9). 
+
+9.2. Diffusion Backbone: DiT vs U-Net 
+
+For LiDAR generation in the Latent Diffusion frame-work [43], the choice of diffusion backbone is criti-cal. Range images, representing 360 ◦ LiDAR sweeps as anisotropic 2D panoramas, exhibit a pronounced width–height asymmetry: the width spans the full angu-lar resolution, whereas the limited number of sensor beams constrains the height. This results in unique long-range hor-izontal dependencies that differ fundamentally from those in natural images. In this section, we ablate U-Net and Dif-fusion Transformer (DiT) [38] backbones, comparing their effectiveness in modeling these dependencies and their pa-rameter efficiency. While U-Net architectures remain a popular backbone that preserves local structures, they are inherently limited in modeling the extreme aspect ratios and horizontal con-text of range images. In contrast, DiT leverages global self-attention to capture long-range dependencies directly and offers flexible input resolution via dynamic padding, there-fore avoiding the destructive resizing often required by the U-Net. As observed in Section 9.1 and Figure 10, maintain-ing native resolution is crucial , as resizing artifacts can sig-nificantly degrade downstream point cloud reconstruction. Table 12 reports single-frame LiDAR generation results for state-of-the-art methods LiDM [41] and RangeLDM [13] across multiple backbones. LiDM demon-strates strong performance on Waymo SIDE LiDAR gener-ation, notably outperforming RangeLDM (cf. rows 1 vs. 3), with further gains when employing DiT. We find that the default hyperparameters of RangeLDM require more tun-ing (e.g., learning rates), particularly for side LiDARs with smaller dynamic ranges and higher cross-sensor correla-tion demands. DiT-based models outperform U-Nets across most settings (cf. rows 1 vs. 2 and 3 vs. 4), while using approximately 50% fewer parameters and reducing GPU memory consumption to about two-thirds of that required by U-Net. These results highlight the parameter-efficiency advantages of DiT over U-Nets, validating the benefits of transformer-based backbones for LiDAR range image gen-eration. Finally, we perform two ablation studies on the proposed CrossLiDAR architecture. First, we compare DiT and MM-DiT under the same Naive Stacking strategy, where tempo-ral and multi-sensor latent representations are simply con-catenated before being processed by the backbone. This isolates the contribution of the backbone architecture itself. Second, we compare this Naive Stacking baseline against the proposed LiDAR Sequence and Inter-sensor modules while keeping the MM-DiT backbone fixed, therefore iso-lating the contribution of explicit temporal and cross-sensor modeling. Table 12 shows that replacing DiT with MM-DiT under the same Naive Stacking setting improves the results by an average of 10 .1% across all evaluation met-rics. In contrast, replacing Naive Stacking with the pro-posed LiDAR Sequence and Inter-sensor modules yields substantially larger gains, reducing FRD by 88 .8% , point-cloud FPD by 90 .9% , and BEV JSD by 50 .0% relative to the MM-DiT baseline. These results demonstrate that the improvements reported in the main paper are largely driven by the combined proposed temporal and cross-sensor mod-ules rather than by the MM-DiT backbone alone. 
+
+## 10. Baselines 
+
+We compare CrossLiDAR with a broad suite of recent meth-ods for LiDAR generation. Table 13 summarizes the key characteristics of each baseline, including problem setting, network architecture, generative paradigm, datasets used for training, and the availability of code and pretrained checkpoints at the time of submission . In contrast to prior work, CrossLiDAR is specifically designed for the chal-lenging multi-sensor LiDAR sequence generation setting and supports a wide range of input conditions. Many existing methods [13, 35, 41, 74] are designed for single-sensor LiDAR generation. To ensure fair compari-son, we adapt these methods for multi-sensor LiDAR gen-eration, as detailed in the following sections, which also specify the training hyperparameters we used on Waymo. Certain methods could not be included in our Waymo ex-periments due to design complexity or prohibitive data re-quirements. For example, UniScene [19] requires semantic occupancy annotations, which are not readily available at scale for Waymo. Similarly, LiDARDM [75], a rendering-based technique that relies on Neural Kernel Surface Recon-struction [14] and ray-casting, is not directly comparable to range-image or voxel-based LiDAR generation. 
+
+10.1. R2DM 
+
+Adaptation for Waymo . We adapt R2DM [35] for the Waymo Dataset with four SIDE LiDAR sensors: front, left, rear, and right. The range image resolution is set to 
+
+200 × 600 with a single depth channel, and depth values span between [1 , 20] meters. Ray angles are initialized for a vertical FOV from 30 ◦ (top) to −90 ◦ (bottom). For the SIDE LiDAR sensors, we use the effective horizontal FOV estimated from valid range-image columns, following Sec. 6.2. To handle multiple sensors, we stack their views into a [B, S, C, H, W ] tensor ( S = 4 sensors) and reshape to 
+
+[B × S, C, H, W ] for efficient batch processing as in Fig-ure 11. 
+
+Training Configuration . Following the upstream imple-Table 11. VAE ablation results on Waymo SIDE LiDAR. Reconstruction quality is compared across VAE backbones and normalization strategies. Configuration †: compression rate f = 64 , range densification, and filling invalid points. LDesc denotes the discriminator (adversarial) loss. Performance is evaluated using perceptual metrics: R-FSVD, R-FPVD and statistical metrics: Chamfer Distance (CD), Earth Mover’s Distance (EMD), following [41]. The best result is highlighted in bold and the second-best in underline. 
+
+Method Compression Input Size Transform Variant R-FSVD ↓ R-FPVD ↓ CD (10 −3) ↓ EMD (10 −3) ↓
+
+LiDM[41] fc = 4 , f p = 4 † 208 ×640 LogNorm — 426.71 191.74 505.98 102.68 
+
+fc = 4 , f p = 4 † 208 ×640 LogNorm w/o LDesc 1.83 0.32 2.81 16.25 RangeLDM[13] 
+
+fp = 8 † 224 ×608 LogNorm — 3.94 0.31 3.43 23.96 
+
+fp = 8 † 224 ×608 LogNorm w/o LDesc 1.26 0.19 0.98 7.39 
+
+fp = 8 † 200 ×600 LogNorm — 3.55 0.27 1.27 13.11 
+
+fp = 8 † 200 ×600 LogNorm w/o LDesc 1.44 0.15 0.49 4.40 CrossLiDAR VAE fp = 8 † 200 ×600 Linear w/o LDesc 0.41 0.13 0.48 4.37 
+
+Figure 9. Impact of Logarithmic Transformation on LiDAR range distributions. Left: For TOP LiDAR, the log transform significantly reduces the skewness of high dynamic range values. Right: For SIDE LiDAR on Waymo, where the range values are less skewed and cover a shorter distance, the effect of the log transform is minimal. Table 12. Ablations on Diffusion Backbone on Waymo SIDE LiDAR . Configuration †: compression rate f = 64 , range densification, filling invalid points and without discriminator. The best result is highlighted in bold and the second-best in underline. 
+
+Method Input Size Backbone Range Points BEV FRD ↓ MMD ↓ FPVD ↓ MMD ↓ JSD ↓ MMD ↓
+
+LiDM † [41] 208 ×640 U-Net 2.29 148.83 4.67 65.76 0.19 1.00 200 ×600 DiT 0.45 77.91 2.52 113.33 0.15 1.00 
+
+RangeLDM † [13] 224 ×608 U-Net 10.97 979.33 122.38 1236.59 0.22 1.63 200 ×600 DiT 9.07 938.83 61.47 374.81 0.19 1.16 
+
+CrossLiDAR † (t=5) 200 ×600 DiT + Naive-Stacking 1.66 55.67 14.82 156.55 0.20 1.62 MM-DiT + Naive-Stacking 1.43 51.94 14.48 139.31 0.16 1.51 MM-DiT + LiDAR-Sequence + Inter-Sensor 
+
+0.16 11.89 1.32 6.90 0.08 1.05 mentation 5, we train with AdamW (betas 0.9/0.99, weight decay 0.0, ϵ=10 −8), a base learning rate of 4.5 × 10 −6
+
+scaled to 3.6 × 10 −5. The learning rate follows a cosine annealing schedule with a 10k-step warmup, and training 
+
+> 5https://github.com/kazuto1011/r2dm
+
+proceeds for 300k optimization steps. Training uses gradi-ent clipping with a maximum norm of 1.0 and an exponen-tial moving average (EMA, β = 0 .995 ) with updates every 10 steps. The code is run with Python 3.12 and PyTorch version 2.9.0. Original (200 , 600) Resized (224 , 608) 
+
+Figure 10. Effects of range image resizing on generated point clouds. Resizing the range image from (200 , 600) to (224 , 608) introduces noise and geometric distortions in the resulting point cloud, noticeably affecting object shapes (e.g., trees, cars). Best viewed when zoomed in .Table 13. Summary of existing methods for LiDAR generation. Overview of compared methods, indicating sensor setup, generative model, available modalities, supported input conditions, training datasets ( K: KITTI-360 [23], N: nuScenes [4], W: Waymo [49]), and code/checkpoint availability.                                                                             
+
+> Venue Modality LiDAR Sensors LiDAR Frames Supported Conditions Diffusion Model Dataset Code Checkpoint
+> LiDAR Diffusion[41] CVPR’24 LiDAR 11image,semantic map U-Net KYes KRangeLDM[13] ECCV’24 LiDAR 11inpaint,downsample U-Net K,N Yes K,N R2DM[35] ICRA’24 LiDAR 11—U-Net KYes KLiDARDM[75] ICRA’25 LiDAR 1multi map U-Net K,W Yes K,W UniScene[19] CVPR’25 LiDAR &Camera 1multi BEV →semantic occupancy Sparse U-Net NYes NOpenDWM[36] CVPR’25 LiDAR 1multi BEV,map,text U-Net/DiT NYes NLiDARCrafter[22] AAAI’26 LiDAR 1multi text →layout →object →trajectory U-Net NYes —
+> CrossLiDAR —LiDAR multi multi BEV,object,image,text MM-DiT N,W —
+
+10.2. LiDM 
+
+Adaptation for Waymo . We adapt LiDM [41] to Waymo SIDE LiDAR range images by using depth-only inputs. The range images are resized to 208 × 640 to match the down-sampling constraints of its U-Net backbone. Depth values are clipped to [1 , 20] for compatibility with the LiDM base-line and normalized using the logarithmic mapping from the original work: 
+
+dnorm = log 2(d + 1) log 2(dmax + 1) × 2 − 1. (17) To accommodate multiple sensors, we train a single 2D VAE shared across sensors while encoding each sensor in-dependently (i.e., without cross-sensor interaction). We use a compression setting ( f =64 ) with curve-wise factor fc=4 
+
+and patch-wise factor fp=4 , producing latents of size 16 ×
+
+52 × 40 per sensor. For diffusion training, we stack latents across sensors and time: per-sensor latents are arranged as 
+
+[B, S, 16 , 52 , 40] and reshaped to [B, S ×16 , 52 , 40] ; for se-quences, we additionally fold the temporal dimension T
+
+into the channel axis, yielding [B, T ×S×16 , 52 , 40] , as shown in Figure 11. 
+
+Training configuration . Unless stated otherwise, we fol-Figure 11. Naive sensor stacking for multi-sensor LiDAR generation. Each sensor range image at time step t is independently encoded by the VAE. The diffusion model operates on the stacked multi-sensor latents, enabling generation (or prediction) of joint sensor, and can be extended to sequences by stacking along the temporal dimension. 
+
+low the official implementation 6. We retain the adversar-ial loss in the VAE objective. The VAE (encoder/decoder and discriminator) is trained with Adam (betas 0.5/0.9) and learning rate 4.5 × 10 −6; we train the diffusion model with learning rate 1×10 −6. We train for 300k optimization steps with a batch size of 8, and use EMA with decay β=0 .995 
+
+updated every 10 steps. Experiments are run with Python 3.12 and PyTorch version 2.9.0. 
+
+10.3. RangeLDM 
+
+Adaptation for Waymo . We adapt RangeLDM [13] to Waymo SIDE LiDAR range images following the same multi-sensor stacking strategy as for LiDM (Figure 11). We use the default RangeLDM compression setting with patch factor fp=8 , corresponding to an overall compression ratio 
+
+f =64 .
+
+Training configuration . We follow the official implemen-tation 7 and train for 500k optimization steps (batch size 8 per GPU; Python 3.12; PyTorch 2.9.0). In preliminary ex-periments, we observed training instability when generat-ing Waymo SIDE LiDAR data: although the VAE achieves strong reconstruction performance (Tables 11 and 12), dif-fusion training may collapse mid-training, leading to a sharp degradation in sample quality without obvious nu-merical failures. We attribute this sensitivity primarily to the learning rate. While the original work uses 10 −4, we re-duce the learning rate to 10 −6 for Waymo; with the original setting, training does not reliably progress. 
+
+> 6https://github.com/hancyran/LiDAR-Diffusion
+> 7https://github.com/WoodwindHu/RangeLDM
+
+10.4. OpenDWM 
+
+Adaptation for Waymo . We adapt the LiDAR generation components provided in the OpenDWM codebase 8 to the Waymo SIDE LiDAR setting. Specifically, we use its Li-DAR VAE tokenizer together with the temporal DiT diffu-sion model. Because the released configuration is designed for sequence generation from a single LIDAR TOP stream, we replace the original single-sensor setup with the four SIDE sensors (front, left, rear, right) and apply the same naive multi-sensor stacking strategy used for LiDM and RangeLDM (Figure 11). Each sensor is encoded indepen-dently using a shared VAE. The resulting latent tensors are then stacked along the sensor and temporal dimensions be-fore being processed by the temporal diffusion transformer. We otherwise retain the point-cloud voxelization and latent parameterization from the official release, which voxelizes the scene within a [−50 , 50] × [−50 , 50] × [−3, 5] m vol-ume with voxel sizes (0 .15625 , 0.15625 , 0.125) and uses a 32-channel latent representation. 
+
+Training configuration . We follow the public OpenDWM LiDAR configurations as closely as possible. The released VAE configuration uses AdamW with learning rate 10 −4
+
+and betas (0 .9, 0.95) . The temporal DiT configuration uses AdamW with learning rate 5 × 10 −5, betas (0 .9, 0.99) ,and weight decay 10 −4, together with cosine annealing (Tmax = 100000 , ηmin = 10 −5). The official temporal con-figuration enables gradient checkpointing, uses batch size 1, a FlowMatch Euler scheduler with 1000 training timesteps,        
+
+> 8https://github.com/SenseTime-FVG/OpenDWM R2DM LiDM RangeLDM OpenDWM
+> CrossLiDAR
+> Figure 12. Cross-Sensor Alignment on Waymo. Qualitative comparison between our method (the last two rows) and competing ap-proaches (the first row). While competitors generate each sensor stream independently, leading to misalignment and geometric inconsis-tencies across viewpoints, our Inter-Sensor Module enables coherent multi-view generation with consistent object geometry and spatial alignment across all LiDAR sensors.
+
+and conditions on three reference frames. We note that the released OpenDWM LiDAR models are primarily config-ured for LIDAR TOP data and layout-conditioned genera-tion. As a result, the Waymo SIDE LiDAR setting requires non-trivial adaptation and is not a native training configura-tion in the original release. 
+
+## 11. Waymo Qualitative Results 
+
+In this section, we present qualitative results on the Waymo dataset. We highlight the impact of our architectural mod-ules on the generation quality, demonstrating improvements in cross-sensor alignment, temporal consistency, and con-trollable scene synthesis. 
+
+Inter-sensor Alignment. The Inter-sensor Module pro-vides clear benefits by enabling joint modeling of all Li-DAR sensors within the same temporal frame. Instead of processing each sensor independently, the module al-lows the network to learn direct interactions across view-points through attention. As shown in Figure 12, the mod-ule enables coherent multi-view integration, leading to im-proved alignment and more accurate scene understanding compared to the independent sensor generation of the com-petitors. 
+
+Temporal Consistency. One of the key capabilities of our approach, enabled by the LiDAR Sequence Module , is the modeling of long-range spatio-temporal dependencies within each sensor stream. By jointly attending over spa-tial tokens across multiple time steps under a causal con-straint, the module captures motion patterns and temporal context while preventing information leakage from future frames. This design enforces temporal coherence during generation and improves reasoning over evolving 3D struc-tures. As shown in Figure 13, the LiDAR Sequence Mod-ule yields smoother predictions, more stable object repre-sentations over time, and enhanced dynamic scene under-standing. 
+
+Controllable LiDAR Generation. By conditioning the model on 3D bounding boxes and BEV maps through the 
+
+ControlNet-style branch, we enable precise object-level control during generation. These structural cues guide the generation, allowing the model to accurately place objects according to the specified layout. As shown in Figure 13, this mechanism reliably regulates object presence and spa-tial arrangement, resulting in strong alignment between the input structural constraints and the generated LiDAR scenes. CrossLiDAR 
+
+BEV/3D Box t = 1 t = 3 t = 5 
+
+Figure 13. Temporal Consistency and Controllable Generation on Waymo. Qualitative results demonstrating both temporal coherence and controllable generation. The first column shows BEV and 3D-box conditioning signals, while the remaining columns show generated LiDAR frames at different timesteps. Across consecutive frames, CrossLiDAR preserves stable object geometry and motion consistency while adhering to structural control signals for object placement and scene layout.

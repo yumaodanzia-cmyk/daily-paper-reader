@@ -1,0 +1,1366 @@
+Title: Genie Sim Benchmark: Real-to-Sim Fidelity and Evaluation
+
+URL Source: https://arxiv.org/pdf/2611.15020v1
+
+Published Time: Fri, 13 Nov 2026 01:57:46 GMT
+
+Number of Pages: 27
+
+Markdown Content:
+# Genie Sim Benchmark: Real-to-Sim Fidelity and Evaluation 
+
+Data-Driven Simulation Fidelity and Real-World Robot Evaluation Di Yang ∗ Da Huang ∗ Yang Lv ∗ Fan Yang Yi Lu Zheyuan Xing Linting Guo Jia’en Shen Wenjun Sun Maoqing Yao † Qian Wang †
+
+* First authors † Corresponding authors 
+
+Abstract— We evaluate Genie Sim Benchmark through paired real–simulation tasks and complementary system-identification studies. Across 22 robot–task pairs spanning 16 task names, task-specific π0.5 policies fine-tuned on real-robot data achieve a descriptive Score correlation of 0.9686 (MAE 0.0405; RMSE 0.0520), with simulation–real differences from −0.110 to +0.080. G2 crsB experiments assess long-horizon closed-loop position and joint-side torque agreement, while five representative object cases examine identification and cross-engine contact transfer. A separate 32.6503 s teleoperation trajectory, excluded from mechanical identification and servo-gain search, evaluates external position targets through simulated motion-controller command shaping and a calibrated position servo. Across both arms, per-joint position RMSE spans 0.00614–0.03522 rad and current-derived torque RMSE spans 0.73545–4.00099 N ·m. Native PhysX adaptations recover three recorded interaction tasks, with case-dependent alignment gains. These results support task-specific simulation evaluation through joint assessment of task outcomes and physical-response consistency. Robot-level consistency Benchmark correspondence Real Simulation 
+
+Position · deg Joint-side torque · N·m J1 
+
+-112.1 -6.0 -18.0 12.8 
+
+J2 
+
+-85.4 86.8 -31.4 1.3 
+
+J3 
+
+-110.6 94.5 -1.4 4.3 
+
+J4 
+
+-20.0 56.8 0 20 40 60 Time (s) -7.2 6.7 0 20 40 60 Time (s) Same 60 s Fourier interval · fixed accepted model and controller 
+
+Position error 
+
+° · full-record RMSE Fourier Friction Sine J1 0.459 0.293 0.583 J2 0.850 0.336 1.002 J3 0.164 0.080 0.646 J4 0.199 0.065 0.425 J5 0.156 0.035 0.699 J6 0.074 0.072 0.520 J7 0.058 0.051 0.645 0 1.002 ° 
+
+Sensor-torque error 
+
+N·m · full-record RMSE Fourier Friction Sine J1 0.925 0.377 0.364 J2 1.442 0.634 2.235 J3 0.276 0.342 0.390 J4 0.423 0.659 0.545 J5 0.100 0.136 0.121 J6 0.293 0.272 0.420 J7 0.076 0.090 0.107 Limit (N·m) 108 108 35 35 35 18 18 0 2.235 N·m Real-to-Sim Correlation of Task Scores 
+
+> 0.00 0.00 0.20 0.20 0.40 0.40 0.60 0.60 0.80 0.80 1.00 1.00
+> Grasp Target Object Grasp Target Object
+> Select by Color Select by Color
+> Recognize Size Recognize Size
+> Place Object Into Box Color Place Object Into Box Color
+> Pack In Supermarket Pack In Supermarket
+> Sort Fruit Sort Fruit
+> Place Block Into Drawer Place Block Into Drawer
+> Bimanual Chip Handover Bimanual Chip Handover
+> Grasp Target Object Grasp Target Object
+> Select by Color Select by Color
+> Recognize Size Recognize Size
+> Apply Common Sense Apply Common Sense
+> Follow Logic (OR) Follow Logic (OR)
+> Fold Cloth Fold Cloth
+> Place Bottle On Coaster Place Bottle On Coaster
+> Grasp Target Object Grasp Target Object
+> Select by Color Select by Color
+> Recognize Size Recognize Size
+> Stack Blocks Stack Blocks
+> Fold Towel Fold Towel
+> Fold The Clothes In Half Fold The Clothes In Half
+> Folding Clothes Folding Clothes
+
+y = 0.913x + 0.054, R² = 0.938 
+
+> Sim = Real
+> Real Environment Score Simulation Environment Score
+
+G1 · Omnipicker G2 · Swiftpicker G2 · Wuji Arx X5 
+
+Pearson r = 0.9686 
+
+Fig. 1. Robot- and task-level real–sim evidence. Left: 60 s J1–J4 closed-loop replay and seven-joint RMSE across three excitation families; errors are uncentred and torque limits are URDF references, not hardware ratings (Section IV-A; Figure 5). Right: correspondence across 22 final task-Score pairs. Pearson r = 0.9686, MAE 0.0405 and RMSE 0.0520 (Table B1). Before/after comparisons: Table B2. 
+
+REAL –S IM CONSISTENCY ACROSS BENCHMARK TASKS 
+
+Genie Sim Benchmark connects simulation evaluation with real-robot performance through paired manipulation tasks. Across 22 robot–task pairs spanning 16 task names, the evaluated Scores show strong real–simulation correspon-dence (Pearson r = 0.9686), with signed simulation–real differences from −0.110 to +0.080. Together with robot-and object-level physical validation, these results establish an evidence-led basis for assessing simulation fidelity at both the task and interaction levels. The report begins with this task-level correspondence, then develops the Real2Sim pipeline and system-identification methods that support it. Section II details the evaluation protocol and task coverage; Sections III–IV examine execu-tion and contact consistency. Complete Scores, identification comparisons and test quantities are retained in Tables B1– B2. I. I NTRODUCTION 
+
+A simulation benchmark is useful only when its task outcomes remain informative about real robots. 1arXiv:2611.15020v1 [cs.RO] 11 Nov 2026 TABLE 1 REAL 2S IM EVALUATION COVERAGE FOR THE FOUR ROBOT CONFIGURATIONS ILLUSTRATED IN FIGURE 2. T ASKS ARE DISTINCT EVALUATED TASK NAMES ; ROBOT COLUMNS COUNT COMPLETED TASKS FOR EACH CONFIGURATION . F IGURE 2 PRESENTS REPRESENTATIVE PAIRED SCENES .                              
+
+> Task family Tasks G1 Omnipicker G2 Swiftpicker G2 Wuji Arx X5
+> Selection & reasoning 53503Placement & sorting 54010Bimanual handover 11000Stacking 10001Textile manipulation 40103
+
+Matching joint and gripper behavior addresses only one part of the reality gap. Object geometry, contact response, rotational resistance and initial state can determine whether a grasp, handover or placement succeeds. We organize the report around Genie Sim Benchmark: which task families are covered, which execution and interaction errors can change their outcomes, and whether frozen real–simulation evaluations preserve task scores and failure stages. Section II presents benchmark coverage, the paired-evaluation protocol, reported scores and failure boundaries. Sections III and IV then explain the Real2Sim pipeline and the robot/object identification methods supporting this evaluation. We examine 22 final Score pairs and 14 G2/Arx before/after system-identification comparisons. Robot-identification replay and five G2 object recordings provide complementary evidence on execution and contact response. The evaluation compares real and simulated task Scores and physical responses, and examines how these discrepancies change after system identification [1], [4], [5]. II. G ENIE SIM BENCHMARK : P ROTOCOL , C OVERAGE AND REAL –S IM EVALUATION 
+
+A. Genie Sim Benchmark: platform and capability dimen-sions 
+
+Genie Sim Benchmark is an embodied-model evaluation platform built around a systematic, multidimensional as-sessment framework [27]. It uses high-fidelity simulation evaluation closely aligned with real-robot performance to help developers identify model strengths and weaknesses and guide continuous improvement. The platform reports 78 simulation tasks across four capability dimensions. Per-dimension results, completed substeps and failure-stage di-agnostics help developers localize limitations and prioritize model and training-data improvements. 
+
+a) Platform capability dimensions: Instruction Fol-lowing. Colour, quantity, shape, size, category, logic and common-sense instructions test whether a model selects the intended target and executes the requested action. 
+
+Spatial Reasoning. Absolute position, relative relations, size and ordinal ordering, stacking and spatial alignment test the interpretation of object arrangements. 
+
+Robustness. Changes in background, lighting, material, robot initial state, camera pose, image quality and instruction wording probe performance under perturbations. 
+
+General Manipulation. Door opening, pouring, scooping, stocking, sorting, table clearing and bimanual coordination test the composition of atomic skills in multi-step tasks. The platform description organizes its 78 tasks into these four capability dimensions and records completed substeps and failure stages. It describes diverse samples, domain ran-domization, separate training and test sets, and in-distribution and out-of-distribution tests as evaluation design mecha-nisms. 
+
+B. Real2Sim task selection and embodiment coverage 
+
+To examine real–simulation consistency across robot em-bodiments and end effectors, the evaluation covers G1 Om-nipicker, G2 Swiftpicker, G2 Wuji and Arx X5. The newly added G2 and Arx tasks cover rigid-object manipulation and deformable textile manipulation. Figure 2 presents representative real–simulation scene pairs for all four configurations, illustrating the robot embodiments, ob-ject arrangements and interaction contexts used in the exper-iments. The evaluation spans five task families. Selection &reasoning tests instruction-conditioned target selection and grasp execution. Placement & sorting tests object trans-port and release into containers, drawers or onto supports. 
+
+Bimanual handover examines coordinated transfer between hands, while Stacking examines alignment and stable place-ment. Textile manipulation extends the evaluation to towels and clothing, whose deformation changes the object con-figuration during manipulation. Together, these tasks assess real–simulation correspondence across target selection, rigid-object contact and deformable-object interaction. Table 1 summarizes the complete task coverage; Figure 2 illustrates representative scenes from this evaluation. Per-task Scores and test quantities are provided in Table B1, and the matched identification comparisons are reported in Table B2. 
+
+C. Scene and evaluation specification 
+
+Paired layouts and scoring. Simulation evaluation uses a fixed Genie Sim experimental branch. Each simulation layout corresponds to a real-robot test layout instance by instance. Evaluation criteria, scene layouts, test conditions and test settings are aligned between the two environments. Test personnel participate throughout real-robot testing, assign the scores manually and adjudicate failures and timeouts. Sim-ulation scores are assigned automatically using the aligned evaluation criteria. 2G2 Swiftpicker G2 Swiftpicker G2 Swiftpicker G2 Swiftpicker Fig. 2. Representative scenes from the Real2Sim experiments summarized in Table 1: sixteen scene pairs across G1 Omnipicker, G2 Swiftpicker, G2 Wuji and Arx X5 configurations. Rows 1 and 3 are real scenes; rows 2 and 4 are their simulation counterparts. Corresponding columns preserve the paired object arrangements and interaction context. 
+
+Identification comparison. G2 Swiftpicker, G2 Wuji and Arx X5 have simulation Scores reported before and after system identification. G1 Omnipicker data are taken from the experiments reported in Genie Sim 3.0 [28]; we did not perform system identification specifically for G1 in this study. All newly added experiments underwent system identification. The 22 final pairs use the G1 reference Scores and the post-identification Scores of the other configurations; the 14 before/after comparisons revisit existing robot–task pairs (Tables B1–B2). Section IV details representative robot and object studies; the X5 study retains its simplified-model scope. The evaluator distinguishes stage-averaged Score from its separate E2E field. Task families and instruction modes can use different scored stages. We retain the final results table’s Score label and report ∆ = Sim − Real. Within a fixed layout of S scored stages and N recorded episodes, Score = 1
+
+> N S
+
+P
+
+> i
+
+P 
+
+> s
+
+cis before implementation rounding. The evaluator rounds instruction-level stage means, weights them by recorded episode counts and rounds the result to four decimals. Full-instruction selection scores Fol-low and PickUpOnGripper; subtask mode can use a different layout. A separate E2E field is one when the last recorded scored entry is one. Score, E2E and binary task success are distinct; the formula does not pool heterogeneous layouts. 
+
+D. Experimental coverage and settings 
+
+The current results contain 22 robot–task pairs across G1 Omnipicker (8), G2 Swiftpicker (6), G2 Wuji (1) and Arx X5 (7). The other 14 pairs have before/after simulation Scores; these are repeated conditions of existing tasks, not additional task coverage. Real and simulation evaluations use the same number of trials. Experimental settings are summarized in Table B1. Model training and inference. The newly added experi-ments use the π0.5 [29] baseline with supervised fine-tuning (SFT) on real-robot data collected for the corresponding task. The resulting task-specific models are evaluated by inference in both the real and simulated environments. The paired study tests whether a real-data-trained model exhibits corresponding task performance in simulation and on the physical robot. 
+
+E. Paired Scores and identification comparison 
+
+Absolute Score agreement. Across the 22 final pairs in Table B1, MAE = 0.0405, RMSE = 0.0520 and mean signed gap = -0.0068. With ∆i = Sim i − Real i, these are mean (| ∆i|), √mean( ∆i2) and mean( ∆i), respectively. All 22 pairs have equal weight (Table B1). These describe task-specific Score differences, not success-rate differences or uncertainty intervals. Paired identification results. Across the 14 G2/Arx com-parisons, task-level MAE decreases from 0.0554 to 0.0443 (20.0%), and RMSE decreases from 0.0653 to 0.0551 (15.6%). The mean signed gap shifts from -0.0004 to -0.0086. G2 Swiftpicker MAE decreases from 0.0583 to 0.0392; G2 Wuji decreases from 0.0750 to 0.0500. Arx MAE decreases from 0.0500 to 0.0479, while RMSE remains approximately 0.0601. These equal-weight task comparisons use the same Real reference (Table B2). Arx X5 shows mixed effects of system identification: some task gaps decrease, others remain unchanged, and size recognition worsens. Table B2 provides the full task-level comparisons. Before/after comparison. Among the 14 G2/Arx pairs, eight have smaller absolute Sim–Real gaps after identifi-cation or calibration, one has a larger gap, and five are unchanged. G2 Swiftpicker has four improvements and two unchanged pairs; G2 Wuji improves; Arx X5 has three improvements, one deterioration and three unchanged pairs. 3Table B2 retains all conditions, including the worsened Arx size result. Conclusion for the completed Real2Sim experiments. The evaluated G2 and Arx tasks already show strong real– simulation correspondence before identification. Across these 14 pairs, correspondence improves overall after identifica-tion: Pearson r increases from 0.9518 to 0.9669, while MAE and RMSE decrease by 20.0% and 15.6%, respectively (Table B2). Across all 22 final robot–task pairs, Pearson r = 0.9686 (Table B1). Across the 22 final robot–task pairs, real and simulated Scores show strong consistency: Pearson r = 0.9686, MAE = 0.0405 and RMSE = 0.0520 (Table B1). This agreement supports using simulation as a reference for real-robot per-formance across the evaluated embodiments, end effectors and task families. III. G ENIE SIM & R EAL 2S IM PIPELINE 
+
+Real2Sim connects benchmark task construction with physical-response validation: define paired tasks, instantiate robot and interacting assets, reproduce recorded commands, identify robot and object response, and evaluate simula-tion against real observations and task Scores. This report presents complementary evidence from G2 crsB system iden-tification, five signature-asset object studies and 22 paired robot–task evaluations. 
+
+A. Real2Sim construction and execution 
+
+The object-replay study uses the full G2 model, initializing robot and mimic joints from real feedback and applying 22 joint-position targets and two gripper-position targets. Commands originate from HAL and end-effector command messages; the H5 action channel is not substituted. Recorded targets are held at approximately 100 Hz while physics advances in 1 ms substeps. Objects remain free rigid bodies throughout integration: there is no grasp attachment, frame-wise object-pose overwrite or inverse-kinematics rewrite. Newton in this study uses SolverMuJoCo / MuJoCo-Warp to load the frozen MJB. MuJoCo and MJWarp share contact semantics; PhysX provides a distinct contact implementation. Table 2 identifies the three execution stacks used for the object comparisons. 
+
+B. Fixed-parameter replay and evidence alignment 
+
+The object study fixes robot execution settings while comparing candidate object parameters and execution stacks. Command response, object behavior, stage events and task Score are measured separately. Five signature-asset record-ings examine representative interaction families; 22 bench-mark pairs evaluate task outcomes. The excitation-family robot diagnostics compare joint-side sensor torque with sensor-observer predictions. The independent teleoperation replay instead compares simulated motor-side joint torque with current-derived joint torque. External position targets pass through simulated motion-controller (MC) command shaping and the calibrated position servo, with mechanical parameters and servo gains fixed. Each study retains its own experimental units and denominator. The object replay retains its own G2 simulation priors and Swiftpicker settings; Table D1 records the object-replay and excitation-family robot-diagnostic configurations. 
+
+C. What is measured? 
+
+We distinguish real-observation alignment , cross-engine trajectory agreement , and physical task completion . The observation error is RMSE = √[mean( ∥psim − pobs ∥2)], measured in mm for 3D points or px for image points. It is evaluated at the valid observation timestamps. Neither the feature points nor their visibility are common across tasks, so their errors are not pooled into a single accuracy score. RGB-D centres are model-assisted observations rather than motion-capture ground truth. Native simulated contact forces use different readback semantics, and no real contact-force reference is supplied. The “held-out” time windows are later segments of the same recording; whole-trajectory feasibility gates and development inspection mean they are not blind independent tests. IV. S YSTEM IDENTIFICATION 
+
+Benchmark fidelity depends on two separately testable responses: robot command execution and object interaction under a fixed robot and scene configuration. The independent G2 crsB teleoperation replay applies external position targets through simulated MC command shaping and a calibrated position servo, evaluating position and current-derived joint torque with fixed dynamics and gains. The excitation-family sensor diagnostics and G2–Swiftpicker object replays retain their own frozen configurations (Appendices C and D). These studies provide complementary execution- and interaction-level evidence under their respective configurations. 
+
+A. Robot Dual-Arm System Identification: G2 crsB 
+
+The G2 crsB study identifies both seven-joint arms using friction, sine and Fourier experiments. Sections IV-A.1–IV-A.3 describe the model, staged estimation and recorded-data reconstruction; Section IV-A.4 tests an unused teleoperation recording. These robot-level evaluations do not establish an asset-linked benchmark benefit. The earlier Simulation Closed-Loop Validation in Figure 5 comprises one 60 s coupled Fourier run, seven 30 s single-joint friction runs and seven 30 s single-joint sine runs, all for the left arm. The 15 runs yield 21 joint–excitation cells (J1–J7 × Fourier/friction/sine), with only the designated driven joint scored in each single-joint run. Position RMSE spans 0.035 ◦–1.002 ◦ (median 0.293 ◦), and all runs complete without numerical warnings. Position tracking and torque agreement are separate evidence. Common torque residuals and reversal/cross-frequency failures remain in Appendix C. These are same-recording diagnostics under stated control/posture assump-tions, not independent benchmark task validation. 4TABLE 2 REPORTED EXECUTION STACKS IN THE OBJECT STUDY .
+
+Stack Version / path Model route Interpretation 
+
+MuJoCo 3.10.0 CPU Frozen native G2 + task model Source fit; soft contact settings Newton / MJWarp MuJoCo-Warp 3.10.0 CUDA; Newton 1.4.0 Frozen MJB via SolverMuJoCo Same contact family; GPU repeat variation PhysX Isaac Sim 6.0.0 RC · CPU TGS USD built from frozen numeric arrays Original hard-contact transfer; updated native contact/damping adaptations (Appendix D) From paired tasks to physical-response and task-level evidence 
+
+1. Tasks + pairing 2. Real2Sim 3. Identification 4. Frozen replay 5. Task evaluation Paired task set 
+
+> 16 scored task names Aligned real / sim layouts Shared scoring criteria
+
+Recorded execution 
+
+> G2 model + commands Joint / gripper response RGB-D observations
+
+Robot SysID 
+
+> G2 crsB dual arms 36 recorded captures Position + sensor torque
+
+Object identification 
+
+> 5 signature-asset cases Bounded parameter search Three execution stacks
+
+Fixed-parameter replay 
+
+> Accepted robot settings Frozen object candidates Cross-stack comparison
+
+Task correspondence 
+
+> 22 robot-task pairs Stage-based Scores Real-sim comparison Arrows organize workflow stages. Identification studies and task Scores are separate experiments.
+
+Fig. 3. Implemented Real2Sim workflow and corresponding evidence. Robot identification, object replay and paired task evaluation provide complementary measurements; arrows organize the process rather than denote a single end-to-end experiment. 01 / EXECUTION 
+
+Robot-response consistency 
+
+G2 crsB dual-arm SysID Closed-loop position and torque 
+
+36 recorded captures 02 / INTERACTION 
+
+Object-response alignment 
+
+Five signature-asset cases Three execution stacks 
+
+Observation error + completion 03 / EVALUATION 
+
+Task-level correspondence 
+
+22 robot–task Score pairs 16 scored task names 
+
+Paired real / simulation Fig. 4. Three complementary evidence layers: robot execution, object interaction and task outcomes. Each layer has its own metrics and experimental units. Author-created schematic; quantitative results appear in Sections II and IV. 
+
+1) Dynamics model and identifiable parameter groups: 
+
+We identify the seven active joints of each arm under a fixed-base model. Joint position, velocity and acceleration are q,
+
+˙q and ¨q ∈ R7, in rad, rad/s and rad/s 2. The observation τI ∈
+
+R7 is motor current converted to joint-side torque; joint-side and end-effector force sensors do not enter the fit. 
+
+τ I,k = Ykπ + diag(¨ qk)Ja + τ f ( ˙ qk) + bτ + ϵk (1) Here j indexes joints J1–J7 and k indexes time samples. The jth torque component is τI,j,k = pj Kt,j nj ij,k , where ij,k is current in A, Kt,j the fixed motor torque constant in N ·m/A, 
+
+nj the reduction ratio, and pj ∈ {−1,1} the joint-coordinate sign. Yk = Y (qk, ˙qk,¨qk) ∈ R7×70 is the Pinocchio rigid-body torque regressor, π ∈ R70 the link inertial parameter vector, and diag forms a diagonal matrix. Ja ∈ R7 is armature in kg ·m2, bτ ∈ R7 a constant current-to-torque offset in N ·m, and ϵk ∈ R7 the torque residual. The friction vector has components τf,j,k = fc,j tanh( ˙qj,k /C 0) + fv,j ˙qj,k ; fc,j and 
+
+fv,j are nonnegative Coulomb and viscous coefficients, in N·m and N ·m·s/rad. C 0 = 0.001 rad/s is the smoothing scale. Armature denotes inertia reflected to the joint coordinate, including rotor and approximately acceleration-proportional transmission effects. It is installed directly in the simulator without another reduction-ratio-squared factor. The bias is a calibration/compensation term, separate from link inertia. 
+
+πi = [ mi, h x,i , h y,i , h z,i , I xx,i , I xy,i ,Iyy,i , I xz,i , I yz,i , I zz,i ]T (2) Here i indexes the seven links, and πi contains the ten standard inertial parameters of link i: mass m i (kg), three first moments hx,i , hy,i and hz,i (kg ·m), and six independent entries of the symmetric inertia tensor IO,i (kg ·m2). The 5Closed-loop consistency across seven joints and three excitation families 
+
+> 15 continuous runs · 60 s Fourier / 30 s dedicated sweeps and sine · fixed accepted parameters
+
+Position RMSE (deg)                        
+
+> Fourier Friction Sine
+> J1 0.459 0.293 0.583 J2 0.850 0.336 1.002 J3 0.164 0.080 0.646 J4 0.199 0.065 0.425 J5 0.156 0.035 0.699 J6 0.074 0.072 0.520 J7 0.058 0.051 0.645
+> Each cell uses full native rows; heatmap scales are separate.
+
+Joint-side torque RMSE (Nm)                        
+
+> Fourier Friction Sine
+> J1 0.925 0.377 0.364 J2 1.442 0.634 2.235 J3 0.276 0.342 0.390 J4 0.423 0.659 0.545 J5 0.100 0.136 0.121 J6 0.293 0.272 0.420 J7 0.076 0.090 0.107
+> Each cell uses full native rows; heatmap scales are separate.
+
+Absolute position error CDF    
+
+> 0% 50% 100% 0.001 0.01 0.1 1
+> Absolute error (log scale; deg)
+
+Absolute torque error CDF           
+
+> 0% 50% 100% 0.001 0.01 0.1 110
+> Absolute error (log scale; Nm) J1 J2 J3 J4 J5 J6 J7
+
+Fig. 5. Long-horizon closed-loop consistency with frozen parameters. Top: seven-joint RMSE across three excitation families, with separate position/torque scales. Bottom: absolute-error CDFs, equally weighted by family per joint; logarithmic error axes include the full observed upper tail. Full native rows score each cell; time samples are correlated. Torque is uncentred, and the J2 mismatch remains visible. Separate joint-side sensor diagnostics appear in Appendix C.4. 
+
+first-moment vector is hi = m ici, where ci is the centre of mass relative to the link-local origin; x, y and z denote the local coordinate axes. IO,i is about that origin, expressed in the same axes, and the superscript T denotes transpose. The full π concatenates these seven link blocks. Thus the model has 70 inertial, seven armature, fourteen friction and seven bias unknowns: 98 scalars per arm. These 98 coordinates are not all independently observable from joint torque. Rigid-body regressors contain structural dependencies, while limited excitation can further correlate inertia, armature and friction columns. A simultaneous fit therefore cannot generally recover a unique full physical parameter vector. We separate the experiments and regularize physically feasible estimates; this reduces coupling without claiming unique identification of every link property [12–16]. Both dynamic stages require each link’s pseudo-inertia matrix to be positive semidefinite, constrain mass to 50%– 150% of its original URDF/CAD reference, and enforce nonnegative armature/friction; bias signs are unrestricted. 
+
+2) Staged excitation and constrained estimation: Each arm contributes 18 recordings: seven single-joint constant-speed friction sweeps, ten single-joint sine recordings, and one synchronous seven-joint Fourier recording. J1–J3 sine recordings each use two background postures (zero posture and J4 approximately −π/2); J4–J7 each use one zero-posture background. This gives 7 + (3 ×2 + 4) + 1 = 18, rather than eighteen distinct trajectories per joint. 
+
+Stage 1: friction. Twenty speed levels span 0.0087–3.0 rad/s, with forward/reverse plateaus. Samples must be within 1% of the prescribed speed and satisfy | ¨q| ≤ 0.15 rad/s 2.Adjacent opposite-direction plateaus are matched over their common position interval and divided into ten bins, each retaining at least five samples per direction. 
+
+vℓ = [med( ˙ q+) − med( ˙ q−)] /2,zℓ = [med( τI, +) − med( τI, −)] /2,rℓ = fc,j tanh( vℓ/C 0) + fv,j vℓ − zℓ
+
+(3) Here med denotes the median; + and − denote positive-and negative-direction samples in paired position bin ℓ. vℓ
+
+is the paired speed, zℓ the paired torque difference, and 
+
+rℓ the friction-fit residual. Position matching approximately cancels gravity, static load and constant bias. Nonnegative Huber iteratively reweighted least squares yields f (1)  
+
+> j
+
+=[fc,j ,fv,j ]T , where the superscript (1) denotes the first-stage output, with zero prior, ridge weight 10 -6, and adaptive threshold δf = 2 ×1.4826 ×MAD(r). MAD is the median absolute deviation of residuals from their median; δf has torque units. 
+
+Stage 2: armature. Each target joint is excited at 0.5, 0.7, 1.0, 1.3 and 1.5 Hz for at least 10 s per frequency. Amplitude is limited by the safe position interval and 80% of joint velocity/acceleration limits. Transitions and waits are excluded; continuous segments are cropped by 0.5 s at each 6end. Different frequencies and background postures help sep-arate acceleration-proportional armature from configuration-dependent link inertia. 
+
+min 1
+
+Nj
+
+X
+
+> k
+
+ρ1(ej,k )+ λπ ∥Dπ (π − πURDF )∥22
+
++ λf ∥Df (fj − f (1)  
+
+> j
+
+)∥22
+
+(4) Here N j counts retained time samples for target joint j, and 
+
+ej,k is predicted minus current-derived measured torque at sample k. Prediction follows the dynamics model above, with a separate constant nuisance offset bseg j,s for each continuous segment s in place of the final bτ,j . The first term averages the Huber loss ρ1 over samples: for residual e and threshold 
+
+δ = 1 N ·m, it equals e 2 when |e| ≤ δ and 2 δ|e| − δ2
+
+otherwise. The second and third terms penalize deviations from the original inertia prior πURDF and first-stage friction estimate f (1)  
+
+> j
+
+. The friction pair is fj = [ fc,j ,fv,j ]T ; λπ =1.0 and λf = 0.1 are regularization weights, ∥·∥ 2 is the Euclidean norm, and Dπ /Df are diagonal inverse-prior-magnitude scaling matrices. Inertia scales are floored at 10 -3
+
+times their positive-scale median; friction scales at 10 -3. Each solve estimates a temporary full π, one Ja,j , fj and the segment offsets; armature has no prior penalty. After seven solves, only the ten inertial parameters of the target joint’s link are retained from each temporary π. These blocks form π(2) , while the seven armature and fourteen friction estimates form J(2)  
+
+> a
+
+and f (2) . The superscript (2) denotes the second-stage output. 
+
+Stage 3: coupled Fourier dynamics. All seven joints execute a five-harmonic Fourier trajectory with a 20 s pe-riod for five cycles (approximately 100 s). Coefficients are optimized for the nonzero-singular-value conditioning of the normalized rigid-body regressor, subject to safe joint position and 90% velocity/acceleration limits. Cycle 1 is skipped, cycles 2–4 fit the model, and cycle 5 is reserved in the identification procedure. The full-recording diagnostic below deliberately scores the original recording, including its fitting intervals. 
+
+min 
+
+> π,bτ
+
+1
+
+Nτ
+
+X
+
+> r
+
+ρ1(ur )+ 0 .5∥Dπ (π − π(2) )∥22
+
+(5) Here r indexes stacked sample–joint rows, N τ is their training count, and ur is predicted minus current-derived measured torque for row r. Prediction follows the dynamics model above, with armature J(2)  
+
+> a
+
+and friction f (2) fixed at their second-stage estimates; only π and bτ are optimized. The first term is the mean Huber loss with the same 1 N ·mthreshold. The second term regularizes inertia toward π(2) 
+
+with weight 0.5. Dπ now scales by π(2) , with a floor of 10 -3 times the positive-scale median and an absolute floor of 10 -8. CLARABEL is preferred, with SCS as fallback; only optimal or optimal_inaccurate solver statuses are accepted.             
+
+> TABLE 3 FINAL -MODEL FOURIER TORQUE RECONSTRUCTION ,APPROXIMATELY
+> 100 S. O NE RECORDING PER ARM ;ALL SEVEN JOINTS ;OWN -OFFSET
+> RMS. S AME -RECORDING DIAGNOSTICS ,INCLUDING FITTING INTERVALS .
+> Arm Torque RMS (N ·m) Scored joint-time rows
+> Left 0.7709 6,986 Right 0.9698 6,986
+
+Identification data are time-sorted, deduplicated, split at gaps longer than 0.10 s and linearly resampled. General dynamic processing uses 100 Hz with a 0.11 s, second-order Savitzky–Golay velocity/acceleration window; sine processing uses 200 Hz with a 0.035 s, third-order window. These method settings are separate from the archived scoring harness and display sampling described in Appendix C. 
+
+3) Identified parameters and Fourier reconstruction: 
+
+Table 3 reports the final identified model on the original approximately 100 s Fourier recording only. Its current-derived torque RMS retains the model’s own constant offset; no new per-recording centring is fitted for this score. For an arm, RMS = √(Pr=1 Ner 2/N), where er is predicted minus measured joint torque and N = 6,986 scored joint-time rows (998 time rows × seven joints). The supplied scoring rows are temporally correlated; they are neither independent trials nor plot vertices. Figure C3 shows the full left-arm torque reconstruction. Its plotted curves use the archived recording/joint centring, while its Own RMS annotations follow Table 3’s own-offset convention. Tables C1–C2 preserve the complete joint/family breakdown. The full-recording archive does not supply a matching approximately 100 s simulated-position score; position and torque response on an unused trajectory are evaluated together in Section IV-A.4. Both arms show armature groups near 1.5 kg ·m2 for J1– J2, 0.57 kg ·m2 for J3–J4 and 0.29 kg ·m2 for J5–J7. This is a plausibility check, not an independent rotor measurement. Link inertias, armature, motor friction and current-to-torque bias remain distinct from the joint-side sensor observation terms examined in Appendix C.4. Those diagnostics retain their original simulation PD configuration in Table D1 and their seven-joint results in Table C6. 
+
+Reading the parameter groups. These parameter groups describe complementary contributions to the simulated execution chain. The regressor represents configuration-dependent link dynamics, armature represents acceleration-proportional drive effects, and friction represents velocity-dependent resistance. Keeping them separate makes the estimated model directly usable for replay and control. Fourier reconstruction inspects their combined response during coupled motion, while the independent teleoperation recording evaluates identified mechanics within the cali-brated command-to-motion chain. 7TABLE 4 IDENTIFIED JOINT PARAMETERS FOR BOTH ARMS , J1–J7. A RMATURE Ja : KG ·M2 ; C OULOMB F _C AND BIAS B τ : N ·M; VISCOUS F _V: N ·M·S/RAD .VALUES RETAIN THE SUPPLIED FOUR -DECIMAL PRECISION .                                                                           
+
+> Arm Joint Armature J aCoulomb f_c Viscous f_v Bias b τ
+> Left J1 1.5165 5.2766 4.1386 0.0246 Left J2 1.5031 5.4307 2.7398 1.1140 Left J3 0.5690 1.8589 1.2645 0.0177 Left J4 0.5717 1.6363 1.9437 0.2242 Left J5 0.2869 1.3225 0.6124 0.0111 Left J6 0.2871 1.9650 0.6518 0.0568 Left J7 0.2850 1.5350 0.8837 0.0392 Right J1 1.5565 5.2096 3.7917 -0.1226 Right J2 1.5503 4.2864 2.6620 0.2514 Right J3 0.5763 2.2484 1.4317 0.0192 Right J4 0.5877 2.1654 2.0767 -0.0021 Right J5 0.2878 1.2849 0.6122 -0.0168 Right J6 0.2856 1.4960 0.5621 0.0372 Right J7 0.2925 1.4512 0.7401 -0.0369
+
+4) Independent teleoperation validation: 
+
+A separate 32.6503 s teleoperation recording was excluded from mechanical identification and servo-gain search. Ex-ternal position targets pass through simulated motion-controller (MC) command shaping before an equivalent joint PD servo drives the identified MuJoCo model. The servo uses both shaped position and velocity commands: 
+
+τPD ,j = Kp,j (qcj − qj )+ Kd,j ( ˙ qcj − ˙qj ).
+
+Here superscript c denotes the MC command and the un-marked variables are simulated states. The derivative term tracks commanded velocity; it is not zero-target damping. Mechanics and servo gains remain fixed for this recording. Appendix C.3 specifies the execution chain and gains; Table C3 retains both arms. Across both arms, per-joint position RMSE spans 0.00614–0.03522 rad and current-derived torque RMSE spans 0.73545–4.00099 N ·m. Scores use 3,165 measured-time samples after excluding the first 1 s of warmup. Figure C4 shows the complete left-arm recording; Table C3 retains all fourteen arm/joint results. This single-recording test evaluates the combined execution chain rather than isolating the contribution of mechanical identification. 
+
+a) Supplementary result: simplified X5 identification: 
+
+X5-related platform and simulation references include LeggedManip_Lab [9], DISCOVERSE [10], and SIM1 [11]; repository-level references do not establish which assets were reused. X5 lacks force control, so we use a simplified model for its Real2Sim parameter identification. This is a supplementary result; the detailed robot SysID study focuses on G2 crsB. 
+
+B. Object Identification and Cross-Engine Diagnostics 
+
+We deliberately select five signature assets from Genie Sim Benchmark to validate representative interaction families: a kettle and gum box for grasping and carrying, a sponge for effective compliant contact, and a shuttlecock and pen for handover and rotational resistance. This is a category-level validation of how our simulator performs object identifica-tion, rather than an exhaustive, identical experiment on every benchmark asset. 
+
+1) Representative assets and identification workflow: 
+
+With the G2–Swiftpicker execution configuration fixed, we fit bounded effective object parameters against recorded real interactions. The original study freezes each MuJoCo candidate for transfer to MJWarp and PhysX; separate native PhysX adaptation is reported in Section IV-B.2. Kettle fitting adjusts geometry, COM, initial yaw and contact; other cases emphasize contact, with an additional pen-radius search. Object mass priors remain fixed. Observation and fitting protocol. Each asset has one recorded real interaction. Observations are compared at valid timestamps. For the gum box and sponge, the reported objective combines training centre RMSE e3D and holding-gripper RMSE ehold: 
+
+J3D =
+
+ e3D 
+
+0.01 m 
+
+2
+
++ 0 .1
+
+ ehold 
+
+0.03 rad 
+
+2
+
+. (6) Handover fitting uses RGB error and dual-gripper feedback. Full-trajectory task gates and development inspection make the later segment a same-episode temporal check. Table D2 gives all six search rows, objectives, time windows and selection scope; Table D3 retains all 15 case–stack results. 
+
+2) Replay results and native PhysX recovery: Section IV-B.1 describes the original frozen-parameter transfer study. Recorded real joint and gripper position commands drive each replay. The later native PhysX comparisons use separate engine adaptations; the sponge additionally uses a declared native friction refit. Figure 7 distinguishes these two proto-cols. 
+
+Original cross-engine results. Kettle lid-centre RMSE decreases from 39.56 to 25.24 mm in MuJoCo, 40.98 to 8TABLE 5 SIGNATURE BENCHMARK ASSETS , OBSERVATION COVERAGE AND IDENTIFICATION SCOPE .
+
+Asset Real observations Search and adjusted quantities 
+
+Kettle 260 RGB-D lid observations Geometry, COM, yaw, contact; 3 grid rounds Gum box 127 RGB-D centre observations Contact; 100 candidates Sponge 92 RGB-D centre observations Effective contact; 120 MuJoCo candidates Shuttlecock 12 RGB points; 3 valid depths Sliding/rotational contact; 81 candidates Pen 11 RGB points and valid depths 81 contact + 42 radius candidates; rejected Observation RMSE · mm · log scale              
+
+> 10 20 50 100 500
+> Kettle / MuJoCo 39.56 → 25.24
+> Kettle / MJWarp 40.98 → 25.12
+> Kettle / PhysX 38.66 → 26.23
+> Gum box / MuJoCo 12.78 → 12.23
+> Gum box / MJWarp 13.37 → 13.58
+> Gum box / PhysX 10.99 → 11.46
+> Sponge / MuJoCo 34.99 → 20.84
+> Sponge / MJWarp 59.85 → 21.77
+> Sponge / PhysX† 41.54 → 26.73
+
+Observation RMSE · px · log scale                    
+
+> 10 20 50 100 250
+> Shuttlecock / MuJoCo 19.71 → 11.15
+> Shuttlecock / MJWarp 19.81 → 11.34
+> Shuttlecock / PhysX† 20.47 → 21.05
+> Pen candidate / MuJoCo 9.30 → 9.50
+> Pen candidate / MJWarp 9.21 → 9.52
+> Pen candidate / PhysX† 9.72 → 9.31
+> ◦Before · • After / candidate ·Red: higher error. †Adapted PhysX. Source pen candidate not accepted. Fig. 6. Fifteen case–stack mean pairs, compacted for the main text. PhysX †uses the matched native configurations in Table D3; other rows retain source results. Hollow markers are baseline, filled markers are fitted / candidate models; red marks increased error. The source pen candidate remains unaccepted. Units and log axes differ between panels. Historical repeat ranges and failures remain in Appendix D; no confidence intervals are inferred.
+
+25.12 mm in MJWarp, and 38.66 to 26.23 mm in PhysX. The gum box improves slightly in MuJoCo (12.78 → 12.23 mm), while errors increase in MJWarp (13.37 → 13.58 mm) and PhysX (10.99 → 11.46 mm). The source pen candidate remains rejected. Figure 6 and Table D3 retain all fifteen case–stack comparisons, including these mixed outcomes. 
+
+Contact-transfer failures and recovery. The original sponge transfer increases PhysX error from 25.50 to 524.61 mm and fails to lift the object; the original PhysX shuttlecock and pen roll away before closure. Native recovery applies common finger-contact settings to both sponge models (800 N/m stiffness, 5 N ·s/m damping), and common angular damping to both handover models (20 s -1 for shuttlecock, 500 s -1 for pen). Both parameter sets then complete their respective tasks: sponge 2/2 → 4/4, shuttlecock 2/2 → 2/2, and pen 2/2 → 2/2 replays. Historical failures and the earlier separate sponge fit remain in D.1–D.3. 
+
+Identification under matched settings. Native sponge friction fitting reduces full centre RMSE 41.54 → 26.73 mm (+35.64%) , although vertical error increases 13.40 
+
+→ 19.38 mm. Shuttlecock RGB error increases 20.47 →
+
+21.05 px (−2.84% improvement), so its baseline remains recommended. Pen RGB error decreases 9.72 → 9.31 px (+4.20%) , a 0.408 px change below approximately 3 px annotation uncertainty. Table D3 gives full, training and later-time errors; Figures D1 and D2 show the native trajectories and valid-time residuals. 
+
+3) Findings and scope: Task recovery and identification gain are distinct outcomes. The matched native compar-isons show that feasible contact execution can be restored for both baseline and fitted models. The remaining parameter changes improve one object overall, worsen another, and produce a pen change smaller than annotation uncertainty. Successful execution alone therefore cannot establish an identification benefit, and improved aggregate error does not imply improvement along every coordinate. 
+
+Scope of the evidence. These five single-episode stud-ies demonstrate recorded-command object identification and contact diagnostics. Repeated simulations and temporal sub-sets of those recordings do not establish independent-episode generalization. MuJoCo/MJWarp agreement involves related backends; fixed mass priors, approximate geometry, effective penetration and strong damping also limit physical-parameter interpretation. The current results do not establish a causal reduction in benchmark task-score discrepancy. 
+
+Reading the evidence together. The paired task evaluation measures correspondence of outcomes, while the robot and object studies expose the physical responses behind those outcomes. Their complementary views make simulation agreement inspectable at the task, motion and contact levels, linking benchmark results to concrete execution and interaction evidence. 9Object replay: evaluated protocols and future extension 
+
+> Original frozen-transfer study Native PhysX recovery experiments
+> Recorded G2 interaction
+> Joint / gripper commands + features Robot, camera and scoring records
+> MuJoCo identification
+> Baseline / fitted object models Bounded search; fixed mass priors
+> Original three-stack transfer
+> MuJoCo / MJWarp / PhysX Frozen candidates; failures retained
+> Shared PhysX adaptations
+> Same settings for both models Sponge friction refit declared
+> Matched native comparison
+> Sponge / shuttlecock / pen Completion + observation error Same-episode replay: task completion and valid-time observation error are evaluated separately.
+> Future extension — not executed
+> VLM priors
+> Geometry / material hypotheses
+> Agent-selected interactions
+> Collect informative data; refit
+> Independent real evaluation
+> Freeze model; test on new episodes
+
+Fig. 7. Two evaluated object-replay protocols. The source study freezes the MuJoCo candidate for three-stack comparison. The native PhysX experiments apply the same accepted engine settings to both parameter sets and separately declare the sponge friction refit. Both protocols evaluate task completion and observation error. The dashed strip outlines future VLM priors, agent-selected interactions and independent real evaluation; these steps have not been executed. Author-created schematic, not an additional experiment. 
+
+Complete results: Appendix D, Tables D1–D9 and Fig-ures D1–D9. 
+
+Future work. VLM-based priors and agent-selected in-teractions are proposed extensions, not yet validated in this study. V. C ONCLUSION 
+
+Task-level consistency. We present Genie Sim Benchmark through paired real–simulation evaluation. This report de-tails selected robot- and object-level identification evidence. Across 22 robot–task pairs spanning 16 task names and four configurations, the evaluated Scores exhibit strong correspon-dence, with a descriptive Pearson correlation of 0.9686 and signed simulation–real differences from −0.110 to +0.080. These results demonstrate close task-level correspondence within the evaluated conditions and support the use of simu-lation as an informative reference for real-robot performance. 
+
+Physical-response evidence. Beyond task Scores, this re-port examines the physical responses underlying benchmark interactions. G2 crsB identification and excitation-family closed-loop diagnostics assess coupled robot motion through position and joint-side sensor torque. A separate 32.6503 s teleoperation trajectory, excluded from mechanical iden-tification and servo-gain search, evaluates external position targets through simulated MC command shaping, the cali-brated position servo and fixed robot dynamics. Across both arms, per-joint position RMSE spans 0.00614–0.03522 rad and current-derived torque RMSE spans 0.73545–4.00099 N·m. This single-recording validation supports transfer of the combined execution model to the evaluated motion; it does not isolate the contribution of mechanical identification or establish benchmark task-level gains. Five signature-asset studies examine representative grasping, carrying, contact and handover mechanics. Fixed-parameter replay across Mu-JoCo, MJWarp and PhysX exposes the influence of object parameters and contact representations, while native PhysX adaptations recover recorded interactions. Together, these studies provide complementary evidence at the execution, interaction and task levels. 
+
+Evaluation value. A central contribution is the connec-tion between real-data-driven calibration and measurable simulation behavior. Task outcomes establish whether an interaction succeeds; motion, torque and object observations characterize how closely its physical response follows real-ity. Evaluating both distinguishes successful execution from trajectory alignment and makes model differences actionable for simulator development. By organizing paired task eval-uation alongside targeted physical diagnostics, Genie Sim Benchmark provides an evidence-led approach to assessing and improving simulation fidelity for robot manipulation. 10 REFERENCES [1] Li et al. Evaluating Real-World Robot Manipulation Policies in Simulation. 2024. Link ↗
+
+[2] Acosta, Yang and Posa. Validating Robotics Simulators on Real-World Impacts. 2022 version. Link ↗
+
+[3] Mehta et al. A User’s Guide to Calibrating Robotic Simulators. CoRL 2020 / PMLR 2021. Link ↗
+
+[4] Kadian et al. Sim2Real Predictivity: Does Evaluation in Simulation Predict Real-World Performance? 2019 preprint. Link ↗
+
+[5] Manda Robotics. Comparing physics engines for robotics simulation. October 5, 2026. Link ↗
+
+[6] Manda Robotics. Understanding the Limits of Open-Source General Robotics Policies. September 17, 2026. Link ↗
+
+[7] He et al. RigPI: Dynamic Parameter Identification of Rigid Body via VLM-Seeded Differentiable Simulation. 2026, v2. Link ↗
+
+[8] K. Chen et al. RoboSimStudio: An Interactive Toolkit for Hu-man and Agent Rapid Real2Sim of Robot Manipulation Tasks. arXiv:2610.18835v2, 2026. Link ↗
+
+[9] LeggedManip_Lab. Software repository. Accessed 20 October 2026. Link ↗
+
+[10] DISCOVERSE. Software repository. Accessed 20 October 2026. Link 
+
+↗
+
+[11] SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in De-formable Worlds. Software repository. Accessed 20 October 2026. Link ↗
+
+[12] P. M. Wensing, S. Kim and J.-J. Slotine. Linear Matrix Inequal-ities for Physically-Consistent Inertial Parameter Identification: A Statistical Perspective on the Mass Distribution. IEEE Robotics and Automation Letters, 3(1):60–67, 2018. Link ↗
+
+[13] C. D. Sousa and R. Cortesão. Physical feasibility of robot base inertial parameter identification: A linear matrix inequality approach. The International Journal of Robotics Research, 33(6):931–944, 2014. Link ↗
+
+[14] J. Swevers, C. Ganseman, D. B. Tükel, J. De Schutter and H. Van Brussel. Optimal robot excitation and identification. IEEE Transactions on Robotics and Automation, 13(5):730–740, 1997. Link ↗
+
+[15] P. M. Wensing, G. Niemeyer and J.-J. E. Slotine. A geometric characterization of observability in inertial parameter identification. The International Journal of Robotics Research, 2024. Link ↗
+
+[16] T. Lee, P. M. Wensing and F. C. Park. Geometric Robot Dynamic Identification: A Convex Programming Approach. IEEE Transac-tions on Robotics, 36(2):348–365, 2020. Link ↗
+
+[17] dynamic_calibration. Software repository. Accessed 20 October 2026. Link ↗
+
+[18] figaroh-plus. Software repository. Accessed 20 October 2026. Link ↗
+
+[19] PACE. Software repository. Accessed 20 October 2026. Link ↗
+
+[20] BAM. Software repository. Accessed 20 October 2026. Link ↗
+
+[21] M. Gautier and S. Briot. New method for global identification of the joint drive gains of robots using a known payload mass. IEEE/RSJ International Conference on Intelligent Robots and Systems, pp. 3728–3733, 2011. Link ↗
+
+[22] A. Jubien and M. Gautier. Global identification of spring balancer, dynamic parameters and drive gains of heavy industrial robots. IEEE/RSJ International Conference on Intelligent Robots and Sys-tems, pp. 1355–1360, 2013. Link ↗
+
+[23] S. Briot and M. Gautier. Global identification of joint drive gains and dynamic parameters of parallel robots. Multibody System Dynamics, 33(1):3–26, 2015. Link ↗
+
+[24] M. Gautier and S. Briot. Global identification of joint drive gains and dynamic parameters of robots. Journal of Dynamic Systems, Measurement, and Control, 136(5):051025, 2014. Link ↗
+
+[25] C. D. Sousa and R. Cortesão. Physically feasible dynamic parameter identification of the 7-DOF WAM robot. IEEE/RSJ International Conference on Intelligent Robots and Systems, pp. 2868–2873, 2013. Link ↗
+
+[26] RPNA. Software repository. Accessed 20 October 2026. Link ↗
+
+[27] Genie Sim Benchmark. Platform specification: scope, capability dimensions and evaluation workflow. Unpublished project documen-tation; accessed 22 October 2026. [28] Yin et al. Genie Sim 3.0: A High-Fidelity Comprehensive Simulation Platform for Humanoid Robot. arXiv:2601.02078, 2026, v4. Link ↗
+
+[29] Physical Intelligence et al. π0.5: a Vision-Language-Action Model with Open-World Generalization. arXiv:2504.16054, 2025. Link ↗
+
+APPENDIX ATASK INVENTORY AND PAIRING COVERAGE TABLE A1 THE 16 EVALUATED TASK NAMES REPRESENTED IN THE PAIRED BENCHMARK RESULTS .
+
+Source task name Editorial family Evidence status 
+
+Grasp Target Object Selection & reasoning Score available Select by Color Selection & reasoning Score available Recognize Size Selection & reasoning Score available Stack Blocks Stacking Score available Fold Towel Textile manipulation Score available Fold The Clothes In Half Textile manipulation Score available Folding Clothes Textile manipulation Score available Place Object Into Box Color Placement & sorting Score available Pack In Supermarket Placement & sorting Score available Sort Fruit Placement & sorting Score available Place Block Into Drawer Placement & sorting Score available Bimanual Chip Handover Bimanual handover Score available Apply Common Sense Selection & reasoning Score available Follow Logic (OR) Selection & reasoning Score available Place Bottle On Coaster Placement & sorting Score available Fold Cloth Textile manipulation Score available 
+
+11 APPENDIX BCOMPLETE BENCHMARK EVALUATION RESULTS TABLE B1 FINAL BENCHMARK SCORES FOR ALL 22 ROBOT –TASK PAIRS . ∆ = S IM − REAL . M INI -PLOTS SHOW THE FINAL GAP ON A COMMON −0.12 TO +0.12 
+
+> SCALE
+
+, NOT UNCERTAINTY INTERVALS . OP = O MNIPICKER ; SP = S WIFTPICKER . R OLLOUTS ARE THE EVALUATION COUNTS IN EACH ENVIRONMENT ;
+
+> REAL AND SIMULATION USE EQUAL COUNTS
+
+. S CORES AND GAPS IN TABLES B1–B2 ARE DISPLAYED TO TWO DECIMALS ; CALCULATIONS USE FULL PRECISION .
+
+Config. Task Real Sim ∆ Score Rollouts 
+
+G1 OP Grasp Target Object 0.58 0.54 -0.04 50 G1 OP Select by Color 0.73 0.75 +0.02 50 G1 OP Recognize Size 0.75 0.75 +0.00 50 G1 OP Place Object Into Box Color 0.40 0.45 +0.05 50 G1 OP Pack In Supermarket 0.95 1.00 +0.05 50 G1 OP Sort Fruit 1.00 0.90 -0.10 50 G1 OP Place Block Into Drawer 0.90 0.90 +0.00 50 G1 OP Bimanual Chip Handover 0.71 0.70 -0.01 50 G2 SP Grasp Target Object 0.83 0.82 -0.02 100 G2 SP Select by Color 0.86 0.76 -0.10 100 G2 SP Recognize Size 0.42 0.47 +0.05 50 G2 SP Apply Common Sense 0.49 0.46 -0.03 100 G2 SP Follow Logic (OR) 0.74 0.73 -0.01 100 G2 SP Fold Cloth 0.30 0.33 +0.03 30 G2 Wuji Place Bottle On Coaster 0.68 0.73 +0.05 30 Arx X5 Grasp Target Object 0.85 0.79 -0.06 100 Arx X5 Select by Color 0.91 0.90 -0.01 100 Arx X5 Recognize Size 0.77 0.66 -0.11 50 Arx X5 Stack Blocks 0.24 0.24 +0.00 30 Arx X5 Fold Towel 0.82 0.86 +0.04 50 Arx X5 Fold The Clothes In Half 0.84 0.80 -0.04 50 Arx X5 Folding Clothes 0.72 0.80 +0.08 50 
+
+TABLE B2 ALL 14 G2/A RX BEFORE /AFTER IDENTIFICATION OR CALIBRATION COMPARISONS . T HE REAL REFERENCE IS THE SAME IN THE TWO SOURCE COLUMNS . C HANGE IN |GAP | = |S IM − REAL |AFTER − |S IM − REAL |BEFORE ; NEGATIVE DENOTES A SMALLER DISCREPANCY . M INI -PLOTS SHARE THE −0.12 TO +0.12 SCALE OF TABLE B1: OPEN CIRCLES SHOW BEFORE , FILLED CIRCLES AFTER .
+
+Config. Task Real Sim before → after Gap before → after Change in |gap| 
+
+G2 SP Grasp Target Object 0.83 0.81 → 0.82 -0.02 → -0.02 -0.01 G2 SP Select by Color 0.86 0.75 → 0.76 -0.11 → -0.10 -0.01 G2 SP Recognize Size 0.42 0.47 → 0.47 +0.05 → +0.05 +0.00 G2 SP Apply Common Sense 0.49 0.43 → 0.46 -0.06 → -0.03 -0.03 G2 SP Follow Logic (OR) 0.74 0.73 → 0.73 -0.01 → -0.01 +0.00 G2 SP Fold Cloth 0.30 0.40 → 0.33 +0.10 → +0.03 -0.07 G2 Wuji Place Bottle On Coaster 0.68 0.76 → 0.73 +0.08 → +0.05 -0.03 Arx X5 Grasp Target Object 0.85 0.79 → 0.79 -0.06 → -0.06 +0.00 Arx X5 Select by Color 0.91 0.90 → 0.90 -0.01 → -0.01 -0.01 Arx X5 Recognize Size 0.77 0.69 → 0.66 -0.08 → -0.11 +0.03 Arx X5 Stack Blocks 0.24 0.24 → 0.24 +0.00 → +0.00 +0.00 Arx X5 Fold Towel 0.82 0.88 → 0.86 +0.06 → +0.04 -0.02 Arx X5 Fold The Clothes In Half 0.84 0.80 → 0.80 -0.04 → -0.04 +0.00 Arx X5 Folding Clothes 0.72 0.82 → 0.80 +0.10 → +0.08 -0.02 
+
+Result definitions and reporting convention. Table B1 reports final Scores; Table B2 separates all 14 G2/Arx before/after conditions. Stage-rate records retain their own definitions and are excluded from the final paired correspon-dence statistics. Score is task-specific and distinct from the stage-level rates in Figure E1. Figure 1 displays the 22 final pairs in Table B1, with all 14 G2/Arx comparisons in Table B2. 12 APPENDIX CG2 CRS B IDENTIFICATION EVIDENCE 
+
+1. Evaluation data and metric conventions 
+
+Each arm has 18 identification recordings: seven single-joint friction recordings, ten sine recordings and one cou-pled Fourier recording. J1–J3 sine recordings cover two background postures; J4–J7 cover one. The three-stage mechanical-identification method is described in Section IV-A and is not repeated here. The recorded-data summaries use 3,696 scored time rows per arm: 25,872 all-joint rows and 9,684 driven-joint rows. Tables C1–C2 retain the complete joint/family breakdown, including held joints. These are correlated recording diag-nostics, not independent trials. Centred residuals remove one constant per recording and joint; their RMS and pooled R 2
+
+are not validation-set scores. Friction conventions differ across the archived evaluations. Mechanical identification uses tanh(v/C 0), where v is joint speed and C 0 = 0.001 rad/s. The recorded-data scoring harness uses sign(v) for |v| ≥ 0.02 rad/s and zero otherwise. The joint-side sensor diagnostics use motor-side sign(v), with sign(0) = 0 and no finite dead zone. Constant offsets remain in forward simulation; sensor errors are evaluated without centring.                                                                       
+
+> TABLE C1 PER -JOINT CENTRED TORQUE RESIDUALS ;ALL RECORDED MOTIONS ,INCLUDING UNEXCITED ROWS .
+> Joint Left RMS (N ·m) Left R 2Right RMS (N ·m) Right R 2
+> J1 1.0177 0.9814 1.0415 0.9698 J2 1.0885 0.9872 1.2345 0.9836 J3 0.4120 0.9783 0.4808 0.9707 J4 0.4367 0.9745 0.5697 0.9563 J5 0.3360 0.9174 0.3608 0.9172 J6 0.4225 0.9410 0.3308 0.9273 J7 0.3518 0.9370 0.3086 0.9473
+> TABLE C2 EXCITATION -FAMILY BREAKDOWN . J OINT SAMPLES ARE CORRELATED TIME -SERIES ROWS ,NOT INDEPENDENT TRIALS .
+> Excitation Arm Joint samples RMS (N ·m) R2Max |error| (N ·m)
+> friction left 15386 0.6144 0.9413 6.2807 friction right 15386 0.5752 0.9516 5.9243 sine left 3500 0.5665 0.9943 3.7197 sine right 3500 0.6057 0.9930 4.8681 fourier left 6986 0.7700 0.9874 7.6106 fourier right 6986 0.9689 0.9795 7.3545
+
+Figures C1–C2 retain the left-arm friction and sine record-ing diagnostics, showing source-designated driven joints only. Displayed curves are centred per recording/joint; Own RMS labels use full-row residuals with the identified constant offset. The displayed curves and labels therefore use different offset conventions. 
+
+Joint and excitation-family views 
+
+The two tables organize the identification archive along complementary axes. The per-joint view makes the distri-bution of residual error across the arm visible, whereas the excitation-family view shows how that distribution changes with the imposed motion. Friction sweeps, sine excita-tion and coupled Fourier motion therefore remain separate entries instead of being collapsed into a single apparent accuracy. The RMS and R 2 columns are read together: one measures error in torque units, while the other describes agreement relative to the variation in the recorded signal. Maximum error further identifies departures that an average can soften. Together, these views connect the compact pa-rameter summary in the main text to the complete recording-level evidence behind the following diagnostic figures. 13 Left arm · Friction excitation · driven joints 
+
+Solid blue: measured Dashed orange: simulated / identi fi ed        
+
+> J1 · Own RMS 2.442 (N·m) -16.63 2.55 21.74 0.0 s 320.0 s J2 · Own RMS 2.420 (N·m) -12.84 6.54 25.93 0.0 s 320.0 s J3 · Own RMS 1.031 (N·m) -6.22 0.57 7.35 0.0 s 320.0 s J4 · Own RMS 0.892 (N·m) -6.99 0.19 7.36 0.0 s 297.0 s J5 · Own RMS 0.986 (N·m) -4.65 0.19 5.03 0.0 s 320.0 s J6 · Own RMS 1.060 (N·m) -4.44 0.06 4.55 0.0 s 297.0 s J7 · Own RMS 1.081 (N·m) -6.12 -0.15 5.81 0.0 s 317.0 s
+
+Fig. C1. Left-arm friction recording diagnostics, driven joints only. Curves use recording/joint centring; Own RMS labels use full-row own-offset scores. These are fitting-recording diagnostics. Left arm · Sine excitation · driven joints 
+
+Solid blue: measured Dashed orange: simulated / identi fi ed           
+
+> J1 / 0p0 · Own RMS 1.324 (N·m) -35.17 -1.81 31.54 0.0 s 49.0 s J1 / 0p1 · Own RMS 1.299 (N·m) -43.42 -7.75 27.92 0.0 s 49.0 s J2 / 1p0 · Own RMS 1.888 (N·m) -49.59 0.24 50.08 0.0 s 49.0 s J2 / 1p1 · Own RMS 1.501 (N·m) -44.42 0.47 45.35 0.0 s 49.0 s J3 / 2p0 · Own RMS 0.488 (N·m) -13.24 -0.18 12.89 0.0 s 49.0 s J3 / 2p1 · Own RMS 0.635 (N·m) -20.97 -4.09 12.79 0.0 s 49.0 s J4 / 3p0 · Own RMS 0.649 (N·m) -17.48 -0.80 15.89 0.0 s 49.0 s J5 / 4p0 · Own RMS 0.438 (N·m) -7.31 -0.12 7.07 0.0 s 49.0 s J6 / 5p0 · Own RMS 0.213 (N·m) -7.57 0.01 7.59 0.0 s 49.0 s J7 / 6p0 · Own RMS 0.650 (N·m) -7.28 0.33 7.94 0.0 s 49.0 s
+
+Fig. C2. Left-arm sine recording diagnostics, driven joints only. All background postures and driven joints are retained. Curves use recording/joint centring; Own RMS labels use full-row own-offset scores. 
+
+Interpreting the recording overlays 
+
+Each panel pairs the recorded and identified-model torque over the displayed source interval. Their common time axis makes repeated periods, reversals and waveform shape directly comparable. The panels retain the driven joints and background-posture variants used by the source exper-iments, so the reader can inspect a collection of motions rather than one selected instant. The overlays and their numeric annotations answer related questions: the centred curves expose temporal structure, while the Own RMS labels retain the scoring convention stated in the caption. Reading both avoids attributing a constant display alignment to improved absolute torque calibration. All shown joints and the complete metrics remain part of the comparison. 14 2. Full-recording Fourier reconstruction 
+
+The approximately 100 s Fourier recording is evaluated over its full recorded interval. Figure C3 shows all seven driven left-arm joints, comparing current-derived torque with inverse-dynamics reconstruction. Curves use recording/joint centring; Own RMS labels retain full-row own-offset scores. This is a same-recording reconstruction diagnostic, not an independent holdout test. Tables C1–C2 retain both arms and their complete metric denominators. Left arm · Fourier excitation · driven joints          
+
+> Solid blue: measured Dashed orange: simulated / identi fi ed
+> J1 · Own RMS 1.146 (N·m) -24.21 -3.65 16.91 0.0 s 99.7 s J2 · Own RMS 1.354 (N·m) -27.79 -12.70 2.40 0.0 s 99.7 s J3 · Own RMS 0.414 (N·m) -4.20 1.68 7.56 0.0 s 99.7 s J4 · Own RMS 0.612 (N·m) -8.12 -0.21 7.69 0.0 s 99.7 s J5 · Own RMS 0.296 (N·m) -2.94 -0.34 2.26 0.0 s 99.7 s J6 · Own RMS 0.567 (N·m) -3.14 -0.02 3.11 0.0 s 99.7 s J7 · Own RMS 0.241 (N·m) -2.79 0.04 2.87 0.0 s 99.7 s
+> Fig. C3. Full-recording Fourier torque reconstruction, left-arm J1–J7, approximately 100 s (display samples span 0–99.7 s). Solid blue: current-derived measured torque; dashed orange: identified model. Curves use recording/joint centring; Own RMS labels use full-row own-offset scores. These are same-recording diagnostics.
+
+3. Independent teleoperation validation 
+
+The teleoperation replay uses external position targets, MC command shaping and the joint PD law in Section IV-A.4. Both arms use separate identified gains (Table C3). The mechanical model, armature and torque-bias parameters remain fixed. Native MuJoCo Coulomb frictionloss and linear damping are active; this replay does not evaluate the exact fitted smooth friction function. MC settings. Position–velocity–time (PVT) interpolation, configured position/velocity/acceleration and coupling lim-its, and a second-order 5 Hz Butterworth low-pass filter are enabled. The optional joint-delay filter and position-lead compensation are disabled. The documented command publication order includes one control-tick staging. Simula-tion control and physics run at 1 kHz (1 ms steps). The MC control-period scale is 1.1; the validation summary records an 11 ms command period. This command-period setting is distinct from the 1 ms simulation step. Sampling and scoring. Recorded external targets average 90.625 Hz; recorded joint commands and states are approx-imately 100 Hz. Simulated position and motor torque are linearly interpolated to measured receive timestamps, with no further centring or filtering of the published comparison. Torque compares current converted to joint-side units with simulated PD motor torque; it is not the joint-side sensor channel used in the older diagnostics. All 3,265 aligned rows are shown, while RMSE uses 3,165 rows after the first 1 s. Implementation details pending. Exact limiter thresholds, coupling rules and filter recurrences/initial states, actuator-limit settings, full-robot initialisation and teleoperation hand/payload configuration still require executable con-figuration records. The available summary and method description do not establish these details. Table C3 reports raw, uncentred per-joint position RMSE in radians and simulated motor-side joint torque RMSE against current-derived joint torque in N ·m. Both arms are retained; no joint-side or end-effector force sensor correction is applied. There are no independent repeated real trials or uncertainty intervals in the supplied results. 
+
+Connecting configuration and response. Table C3 and Figure C4 form a paired view of this execution chain: the table retains each arm’s gains and errors, while the curves show when error occurs. The recorded inputs and accepted settings remain fixed throughout the replay. 15 TABLE C3 INDEPENDENT TELEOPERATION REPLAY , 32.6503 S: FROZEN PD GAINS AND ALL FOURTEEN ARM /JOINT RESULTS . P OSITION /TORQUE RMSE 
+
+UNITS ARE RAD /N ·M; K P/K D UNITS ARE N·M/RAD AND N·M·S/RAD . F IVE -DECIMAL RMSE USES 3,165 ALIGNED MEASURED -TIME ROWS AFTER THE FIRST 1 S OF WARMUP , WITHOUT CENTRING OR POOLING . T HESE GAINS BELONG TO THIS TELEOPERATION SERVO , NOT THE OLDER SENSOR -DIAGNOSTIC CONTROLLER .
+
+Joint Left arm Right arm 
+
+Kp Kd q RMSE τ RMSE Kp Kd q RMSE τ RMSE J1 925 177.5 0.01377 2.46279 1375 267.5 0.01914 4.00099 J2 850 307.5 0.00881 2.11839 975 382.5 0.00614 1.95315 J3 400 70 0.00945 0.73545 600 92.5 0.00933 0.97216 J4 375 85 0.01832 1.23392 675 135 0.02902 1.92842 J5 150 35 0.01819 1.28795 200 45 0.02057 1.52118 J6 200 30 0.01777 1.00963 225 37.5 0.01990 1.13422 J7 200 32.5 0.03522 1.36333 225 45 0.02067 0.87570 1.0 1.5 
+
+> J1 · RMSE 0.01377 rad
+
+Position (rad)  
+
+> −50 050 J1 · RMSE 2.46279 N·m
+
+Current-derived / motor torque (N·m)                    
+
+> −1.4 −1.2 −1.0 J2 · RMSE 0.00881 rad 050 J2 · RMSE 2.11839 N·m −2 −1 J3 · RMSE 0.00945 rad −20 0
+> J3 · RMSE 0.73545 N·m −2.0 −1.5 −1.0
+> J4 · RMSE 0.01832 rad −20 0
+> J4 · RMSE 1.23392 N·m −0.5 0.0 0.5 J5 · RMSE 0.01819 rad −10 010 J5 · RMSE 1.28795 N·m −1 0
+> J6 · RMSE 0.01777 rad −10 010 J6 · RMSE 1.00963 N·m 0510 15 20 25 30
+> Time (s)
+> −1 0
+> J7 · RMSE 0.03522 rad 0510 15 20 25 30
+> Time (s)
+> −10 010 J7 · RMSE 1.36333 N·m
+
+Independent teleoperation · left arm   
+
+> Measured Simulation First 1 s: excluded from RMSE
+
+Fig. C4. Independent teleoperation validation, left-arm J1–J7: position and torque over the complete approximately 32.65 s recording. Measured traces are blue/solid; simulation is orange/dashed. Torque compares current-derived measurements with simulated PD motor torque in joint-side units. All 3,265 aligned rows are displayed; RMSE excludes the grey first 1 s and uses 3,165 rows. Right-arm results remain in Table C3. 
+
+16 4. Joint-side sensor diagnostics under the original configuration 
+
+These sensor diagnostics retain their separately frozen, gripper-free full-robot configuration. They use joint-side sen-sor torque rather than the current-derived torque of Sec-tion C.3. Both grippers are removed; remaining degrees of freedom remain live, with XML-rest non-arm targets and a compliant base fixture. The original controller uses Kp = 1000 N ·m/rad and Kd = [1,5,1,1,1,1,1] N ·m·s/rad, with damping on simulated velocity and no target-velocity term. Table D1 retains these gains alongside the object-replay settings. At each 1 ms step, the controller applies position-error torque minus velocity damping. No explicit drive saturation is applied. Motor-side Coulomb friction and the fixed offset are subtracted once from applied force; viscous friction is installed once as joint damping and armature once as joint inertia. The six live base coordinates use fixture gains of 200000 N/m and 20000 N ·s/m for translation, and 200000 N·m/rad and 20000 N ·m·s/rad for rotation, relative to the ini-tial base state. These are simulation boundary assumptions. Torque readback. Before integration, simulated link torque is the arm components of qfrc_actuator + qfrc_applied + qfrc_passive minus armature times simulated joint acceler-ation. These are MuJoCo generalized-force arrays. Sensor-side sign or memory terms are added only to predicted readback and never to plant force or control. Observation-model changes leave full states, control and forces bitwise identical. These examined recordings are not a blind inde-pendent episode test. 
+
+TABLE C4 UNCENTRED PREDICTION ERRORS IN THE GRIPPER -FREE FULL -ROBOT CONFIGURATION . T EN -SECOND WINDOWS , 1 MS PHYSICS .FREQUENCY -GROUP SENSOR TRANSFER IS SEPARATELY REPORTED BELOW ; ITS WINDOWS DIFFER FROM THIS ORIGINAL -WINDOW PREDICTION .
+
+Window Joint Time rows Position RMSE (deg) Sensor RMSE (Nm) Sensor RMS (Nm) 
+
+Fourier, proximal J1 10000 0.5406 0.9409 6.7965 Fourier, proximal J2 10000 0.8747 1.2271 15.2108 Fourier, proximal J3 10000 0.2083 0.3429 1.7336 Fourier, proximal J4 10000 0.1835 0.3908 3.5386 Fourier, wrist J5 10000 0.1825 0.0994 0.1468 Fourier, wrist J6 10000 0.0785 0.2813 0.6234 Fourier, wrist J7 10000 0.0570 0.0762 0.0892 Friction, J2 J2 10000 0.3650 1.2704 0.8130 Sine, J1 J1 10000 0.5830 0.4066 0.3600 
+
+TABLE C5 CONSOLIDATED JOINT -SIDE SENSOR DIAGNOSTICS FOR WRIST , SPEED -GROUP AND FREQUENCY TESTS . S IGN / MEMORY VALUES ARE PAIRED 
+
+RMSE S, IN THAT ORDER . P OSITION RMSE USES DEGREES ; TORQUE RMSE, MEAN ERROR AND SENSOR COEFFICIENTS USE N·M. F REQUENCY ROWS REPORT FULL -WINDOW AND SEPARATE NEAR -ZERO RMSE. S PEED GROUPS AND TIME ROWS ARE DIFFERENT DENOMINATORS ; A DASH MEANS THE SOURCE TABLE DID NOT REPORT THAT METRIC .
+
+Wrist and speed-group diagnostics Joint / check Position RMSE Torque RMSE sign / memory Additional values / rows Wrist, 10 s · 10000 rows per joint · sign / memory observers 
+
+J5 0.1825 0.0994 / 0.0993 Mean -0.0830 J6 0.0785 0.2813 / 0.3277 Mean +0.2427 J7 0.0570 0.0762 / 0.0790 Mean -0.0670 
+
+Posture-matched wrist sweeps · frozen sign observer · 7 training / 6 held-out speed groups per joint 
+
+J5 — — Coeff. 0.09094 J6 — — Coeff. 0.47542 J7 — — Coeff. 0.11322 
+
+Wrist failure check · sign / memory observers 
+
+J5 near zero — 0.1274 / 0.1133 637 rows; reversal-error cases retained J6 full — 0.2813 / 0.3277 Memory worse than sign J7 full — 0.0762 / 0.0790 Memory worse than sign 
+
+Frequency holdout · torque RMSE Hz Observer Full rows Near-zero rows Full RMSE Near-zero RMSE 
+
+0.7 sign 1000 6 0.3104 0.4697 0.7 smooth 1000 6 0.3072 0.3843 0.7 lag_memory 1000 6 0.2712 0.2027 0.7 schmitt_ memory 1000 6 0.3056 0.1879 1.3 sign 1000 9 0.2737 0.1330 1.3 smooth 1000 9 0.2751 0.0937 1.3 lag_memory 1000 9 0.3625 0.0921 1.3 schmitt_ memory 1000 9 0.3091 0.1330 Position RMSE is not reported for the speed and frequency rows. The wrist-failure rows report torque errors; no additional position RMSE is supplied. 
+
+Wrist sensor coefficients use seven training and six held-out speed groups per joint, matched within 1 degree across all seven arm angles, with no intercept. Near-zero checks use measured |joint speed| < 0.02 rad/s. J5 reversal errors remain; wrist memory worsens full-window J6/J7 error. The J1 lag model improves 0.7 Hz and degrades 1.3 Hz; only six and nine near-zero rows are available, respectively. Mounting, filtering and zeroing are incompletely documented, so these residuals have no uniquely established mechanical cause. 17 Cross-frequency trade-offs · frozen sensor observers   
+
+> ● 0.7 Hz ◇1.3 Hz Lower RMSE is better; lines connect the same observer, not temporal changes.
+
+Full window · 1000 rows/group          
+
+> 0.0 0.1 0.2 0.3 0.4 0.5
+> sign 0.3104 0.2737
+> smooth 0.3072 0.2751
+> lag 0.2712 0.3625
+> Schmitt 0.3056 0.3091
+> Torque RMSE (N·m)
+
+Near zero · 6 / 9 rows          
+
+> 0.0 0.1 0.2 0.3 0.4 0.5
+> sign 0.4697 0.1330
+> smooth 0.3843 0.0937
+> lag 0.2027 0.0921
+> Schmitt 0.1879 0.1330
+> Torque RMSE (N·m)
+
+Fig. C5. Joint-side sensor frequency-transfer diagnostic. All sign, smooth, lag and Schmitt observer families retain full-window and near-zero metrics, including cross-frequency degradation. These are sensor-output models, not changes to robot dynamics. TABLE C6 ADOPTED SIMULATION PD GAINS AND COMPLETE SEVEN -JOINT FOURIER -WINDOW RESULTS : 10000 NATIVE ROWS PER JOINT , 10 S. M EAN ERROR IS PREDICTION MINUS JOINT -SIDE SENSOR . T HE GAIN VECTOR IS RETAINED AFTER TRAINING -ONLY SEARCH , NOT A NEW PERFORMANCE IMPROVEMENT ; THE MOTOR GROUP DOES NOT IMPLY EQUAL HARDWARE CONTROLLER GAINS .
+
+Motor group Joint Kp (Nm/rad) Kd (Nm s/rad) Position RMSE (deg) Sensor RMSE (Nm) Mean error (Nm) 
+
+J1–J2 J1 1000 1 0.54059 0.94089 +0.54830 J1–J2 J2 1000 5 0.87469 1.22713 +0.82437 J3–J4 J3 1000 1 0.20833 0.34289 +0.12997 J3–J4 J4 1000 1 0.18353 0.39084 +0.04318 J5–J7 J5 1000 1 0.18246 0.09937 -0.08298 J5–J7 J6 1000 1 0.07850 0.28130 +0.24271 J5–J7 J7 1000 1 0.05699 0.07619 -0.06697 
+
+The original gain search used 29 training windows and position-preservation guards. No tested alternative passed all guards; the original gains were retained. Table C6 preserves all seven-joint results. This controller belongs to these sensor diagnostics and the separately documented configurations; it is not substituted for the calibrated teleoperation servo. APPENDIX DOBJECT DATA , MODEL CHOICES AND IDENTIFIABILITY TABLE D1 SEPARATELY FROZEN ROBOT CONFIGURATIONS . O BJECT ARM ARRAYS ARE VERIFIED IN THE 14 ARCHIVED NATIVE PHYS X MAPPINGS FOR SPONGE AND HANDOVERS ; ORIGINAL FIVE -CASE COVERAGE IS REPORT -LEVEL .
+
+Setting G2 crsB robot validation G2–Swiftpicker object replay 
+
+Robot and load G2 crsB; both grippers removed; flange frames retained G2 with both Swiftpicker grippers; fixed within the object study Dynamics / drive source Identified arm inertials and A/F/D/b; explicit simulation PD (Appendix C) G2 simulation priors; accepted gripper settings reported below Arm Kp (N ·m/rad) Left: [1000, 1000, 1000, 1000, 1000, 1000, 1000] Each arm: [13500, 13500, 7200, 7200, 7200, 1800, 1800] Arm Kd (N ·m·s/rad) Left: [1, 5, 1, 1, 1, 1, 1] Each arm: [360, 360, 138, 138, 138, 74, 74] Passive / effort settings Frozen identified A/F/D/b; no explicit drive saturation in the validation controller Native armature: [0.05, 0.05, 0.05, 0.05, 0.05, 0.02, 0.02]; native friction tuple ≈[0.3, 0.3, 1]; arm effort limit 10 7 N·m(simulation prior) Initialization / integration Left measured q/v initialized once; other joints at XML rest; compliant base fixture; 1 ms Recorded initial robot feedback; 22 joint + 2 gripper targets; ≈100 Hz zero-order hold; 1 ms Observation Joint-side torque sensor; wrist direction term only in predicted sensor output Object RGB/RGB-D and gripper feedback; sponge/handover camera adjustment uses finger geometry and real-feedback FK Gripper Kp / Kd Grippers absent 202.026337 / 13.345311 Gripper effort / damping Grippers absent 18 N ·m / 1.253346 (source setting) Gripper armature / friction loss Grippers absent 0.008019 / 0.072053 (source settings) 
+
+18 Configuration scope. The 14 mappings have identical joint names, drive gains, armatures, native friction tuples and ef-fort limits, with parameter readback verified. This establishes fixed settings within those replays, not equality with the gripper-free configuration. Model-to-PhysX FK agreement is a numerical mapping check; the rendering camera is separate from the scoring camera. Simulation effort limits are not measured hardware ratings.                  
+
+> Configuration records pending. The original gripper-calibration dataset/version, original per-case robot/model bindings (including kettle and gum box), and scoring-camera, finger-geometry and FK versions remain to be archived. Complete run/asset manifests are needed for parameter-level traceability. Fixed use does not exclude robot-model error. TABLE D2 ORIGINAL OBJECT SEARCHES AND SAME -EPISODE WINDOWS :ORIGINAL RECORDING TIME FOR KETTLE ,ELAPSED TIME FROM THE RETAINED COMMAND START FOR OTHER CASES . T HE 41-CANDIDATE PHYS XFIT IS SEPARATE FROM THE LATER MATCHED ADAPTATION .
+
+Case / engine Search budget Train / later (s) Adjusted quantities Objective / decision 
+
+Kettle · MuJoCo 3 bounded coordinate-grid rounds 6–19 / 19–24 Geometry, initial yaw, COM, contact Lid-position squared error + right-gripper feedback Gum box · MuJoCo 100 candidates 3.260–7.120 / 7.120–8.620 Friction, contact time, impedance J3D 
+
+Sponge · MuJoCo 120 candidates 1.430–4.870 / 4.870–6.370 Effective contact J3D + task-feasibility gate Sponge · original native PhysX 41 candidates 1.430–4.870 / 4.870–6.370 Stiffness, damping, friction, contact scope  
+
+> J3D
+
++ grasp / release / target-placement gate Shuttlecock · MuJoCo 81 candidates 1–8.5 / 8.5–end Sliding / rotational friction, contact time, impedance 
+
+> JRGB
+
+Pen · MuJoCo 81 contact + 42 radius candidates 1–6.2 / 6.2–end Contact parameters and radius JRGB ; source candidate rejected 
+
+Configuration and search scope. The configuration table describes the robot and load assumptions; the search table describes what was varied in the object study. Keeping these records together separates fixed execution settings from fitted effective object parameters. The following results retain the original observation units and compare each candidate within its stated replay protocol. Objective definitions. 
+
+J3D =
+
+ e3D 
+
+0.01 m 
+
+2
+
++ 0 .1
+
+ ehold 
+
+0.03 rad 
+
+2
+
+. (7) Here e3D is training centre RMSE and ehold is holding-gripper RMSE. JRGB = eRGB + 150 edual , with training RGB RMSE in pixels and dual-gripper RMSE in radians; 150 is the reported numerical weight. Later-segment error is excluded from the documented J3D and JRGB objectives; development checks, including kettle inspection and full-trajectory feasibility, are not independent blind tests. The pen candidate is rejected because its small training gain accompanies worse full/later error. Reported completion checks. Kettle: lift >50 mm, airborne hand-contact samples >100, held tilt >25 ◦, and after original t>25 s, no hand contact with table-support samples >100. Pick-and-place: lift >30 mm, hand normal force >0.1 N, unsupported samples >30, post-release support samples >30, and endpoint inside the target. Handovers: at least 20/3/20/20 samples for left hold / dual contact / right hold / released container support in preset windows, lift >25 mm, hand normal force >0.02 N, with endpoint centre and conservative horizontal envelope inside the opening. These are replay predicates, not measured real contact forces. Separate native selection. The original 41-candidate sponge search accepts 400 N/m and 1 N ·s/m. The later matched comparison uses 800 N/m and 5 N ·s/m for both models with a separate friction refit. Its archived training ob-jective recomputes to 7.97275 → 6.76392. Another archived 400/1 candidate scores 5.63802, so the later accepted setup is not a global minimum of that objective across these records. The two experiments retain separate results in Table D9. 
+
+> Search records pending. Exact bounds/grids, candidate generation and per-candidate losses/gates, acceptance, tie-breaking and stopping rules, kettle weights, holding masks and dual-gripper aggregation remain to be archived. Reported completion thresholds do not specify executable gate bindings, all window/region definitions or sample cadence. Local archives contain plotting code and references to search artifacts, not the search implementations. The later native selection rationale cannot be inferred from its final settings or later-segment performance.
+
+Reading the search protocol. The objectives use different observation channels, so their magnitudes are interpreted within each case. Compare each candidate with its own baseline under the stated configuration. This keeps contact-model adaptation, trajectory alignment and completion checks distinct while retaining a common route from observation to replay. 19 TABLE D3 OBJECT ALIGNMENT BEFORE AND AFTER IDENTIFICATION . P HYS X† DENOTES THE UPDATED NATIVE COMPARISONS ; OTHER ROWS RETAIN SOURCE RESULTS . T HE SOURCE PEN CANDIDATE REMAINS UNACCEPTED .
+
+Case Execution stack Unit Full replay: before → after Training: before 
+
+→ after Later-time: before → after Full-replay improve-ment Completed replays 
+
+Kettle motion MuJoCo mm 39.56 → 25.24 46.47 → 29.15 32.65 → 22.68 +36.2% 1/1 → 1/1 Kettle motion Newton / MJWarp mm 40.98 → 25.12 46.98 → 29.05 38.63 → 22.68 +38.7% 3/3 → 3/3 Kettle motion PhysX mm 38.66 → 26.23 46.54 → 32.11 33.07 → 24.01 +32.2% 1/1 → 2/2 Gum-box pick and place MuJoCo mm 12.78 → 12.23 12.44 → 11.75 15.38 → 14.51 +4.3% 1/1 → 1/1 Gum-box pick and place Newton / MJWarp mm 13.37 → 13.58 12.92 → 12.85 16.13 → 16.09 -1.5% 3/3 → 3/3 Gum-box pick and place PhysX mm 10.99 → 11.46 12.98 → 12.86 13.00 → 13.41 -4.2% 1/1 → 1/1 Sponge pick and place MuJoCo mm 34.99 → 20.84 47.85 → 28.40 23.31 → 20.81 +40.5% 1/1 → 1/1 Sponge pick and place Newton / MJWarp mm 59.85 → 21.77 61.83 → 28.27 64.90 → 21.06 +63.6% 3/3 → 3/3 Sponge pick and place PhysX † mm 41.54 → 26.73 27.84 → 25.89 38.58 → 26.80 +35.64% 2/2 → 4/4 Shuttlecock handover MuJoCo px 19.71 → 11.15 18.29 → 9.93 25.45 → 14.83 +43.4% 1/1 → 1/1 Shuttlecock handover Newton / MJWarp px 19.81 → 11.34 18.41 → 10.11 25.52 → 15.07 +42.8% 3/3 → 3/3 Shuttlecock handover PhysX † px 20.47 → 21.05 18.88 → 18.91 26.67 → 28.37 -2.84% 2/2 → 2/2 Pen handover MuJoCo px 9.30 → 9.50 8.59 → 8.50 11.27 → 11.83 -2.2% 1/1 → 1/1 Pen handover Newton / MJWarp px 9.21 → 9.52 8.58 → 8.51 11.08 → 11.86 -3.4% 3/3 → 3/3 Whiteboard-pen handover PhysX † px 9.72 → 9.31 8.50 → 8.43 12.30 → 11.47 +4.20% 2/2 → 2/2  
+
+> †
+
+Both baseline and identified models receive the same accepted PhysX settings within each case. Sponge friction is fitted separately in native PhysX; handovers compare the source parameter sets with shared angular damping. See the configuration notes below and D.1–D.3. Historical failures remain in the diagnostics and source figures; these rows do not claim unchanged-parameter equivalence across engines. 
+
+TABLE D4 SOURCE RECORDINGS AND OBSERVATION COVERAGE .
+
+Case Real episode Command samples Replay duration Object observations Task goal 
+
+Kettle motion 2959360 2621 26.199 s 260 valid RGB-D lid centres Grasp, lift, tilt, return and release Gum box 4244905 1270 12.690 s 127 RGB-D box-fit centres Move to yellow hexagonal tray Sponge 4247312 922 9.210 s 92 RGB-D box-fit centres Place in target area right of white bottle Yellow shuttlecock 4246265 1320 13.190 s 12 RGB head points; only 3 valid depth points Left grasp, right receive, place in red container Whiteboard pen 4257003 1098 10.970 s 11 RGB body centres and 11 valid depth points Left grasp, right receive, place in blue container 
+
+Connecting alignment and observation coverage 
+
+The coverage table identifies which observations support each trajectory metric. Dense command streams drive com-plete replays, while object error is evaluated where the recorded feature is available. Missing depth for most shut-tlecock annotations therefore does not become a fabricated three-dimensional path. Keeping observation counts next to replay durations makes the measurement basis visible. Across engines, completion and feature alignment remain separate evidence: a model can execute the interaction while following a different object path. Reading the tables together preserves both outcomes and gives the trajectory figures a concrete source, time range and unit. 20 TABLE D5 MODEL CHOICES , FIXED MASS PRIORS AND LIMITATIONS .
+
+Object Asset / geometry source Model and fixed mass prior Main limitations 
+
+Green-lid kettle Video-based approximate reconstruction Cylinder body, spout, green lid, hollow five-segment handle; 0.8 kg Approximate CAD; exact object match not established; water and kettle form an effective rigid body; liquid COM shifts omitted Gum box building_blocks/benchmark_building_ blocks_090 50 mm blue-cube proxy; 0.1 kg Cube proxy; exact physical-object geometry not established Sponge bowl_sponge/benchmark_bowl_ sponge_001 Scaled from static RGB-D to approximately 118.4 ×82.6 ×31.8 mm; 0.1 kg Free rigid box with effective soft contact; no volumetric deformation Whiteboard pen pen/benchmark_pen_006 143.2 mm cylinder with black cap appearance; diameter approximately 15 mm; 0.1 kg Category proxy; exact physical-object geometry not established Shuttlecock Approximate yellow-shuttlecock reconstruction Solid head plus 16 convex skirt sectors with openings; length 75 mm, skirt diameter 62 mm; 0.005 kg Exact object match not established; no skirt deformation or aerodynamics; equivalent-cylinder inertia prior 
+
+These representative and approximate models support an object-identification workflow across interaction families. They do not establish exact asset identity for every scored benchmark task, coverage of all benchmark assets, or an independent robot × object ablation.    
+
+> TABLE D6 ORIGINAL MUJOCO IDENTIFICATION PARAMETERS . N ATIVE PHYS XSETTINGS ARE GIVEN BELOW AND BELONG TO SEPARATE EXPERIMENTS .
+
+Case Fixed mass (kg) Sliding friction: before → after MuJoCo contact time (s): before → after Impedance: before  
+
+> →
+
+after Other changes 
+
+Kettle motion 0.8 0.6 →1.2 0.004 →0.008 Model default retained Geometry, COM and initial yaw jointly adjusted Gum box 0.1 0.5 →0.8380273 0.004 →0.0039090 0.95 →0.98 Geometry / inertia strategy fixed Sponge 0.1 3.0 →1.5380 0.004 →0.018283 0.5 →0.95 Effective soft finger-pad contact; stiffer table support Shuttlecock 0.005 0.5 →0.499165 0.004 →0.004626972 0.95 →0.9387749 Torsional friction 0.005 →0.0003694332 m; rolling 0.003 →0.0003632741 m Pen candidate 0.1 0.5 →0.6440305 0.004 →0.002277796 0.95 →0.9004645 Radius 7.5 →7.4 mm; torsional 0.005 →0.004163496 m; rolling 0.003 →0.001974794 m 
+
+Updated native PhysX configuration. Both baseline and identified models share the accepted engine settings and initial state within each case. Native integration uses CPU TGS, 32/1 solver iterations and a 1 ms step; recorded real joint and gripper position commands, robot settings, camera calibration and scoring times are retained. 
+
+Sponge: right-finger contact stiffness 800 N/m and damp-ing 5 N ·s/m for both models; native object sliding friction 3.0 → 1.2. Shuttlecock: target angular damping 20 s -1 for both models; sliding friction 0.500000 → 0.499165, with fixed geometry and a 5 g mass prior. Pen: target angular damping 500 s -1 and the same frozen baseline initial state; sliding friction 0.500000 → 0.644031, radius 7.5 → 7.4 mm with associated source inertia, and a fixed 100 g mass prior. Unmapped MuJoCo contact terms are not counted as applied native differences. 
+
+Evaluation windows and repetition. For the updated native comparisons, full / training / later-time primary-observation counts are 92 / 34 / 15 for sponge, 12 / 8 / 3 for shuttlecock, and 11 / 6 / 4 for pen. Relative to replay start, sponge training is [1.430, 4.870) s and later-time is [4.870, 6.370) s (boundaries rounded to 1 ms); shuttlecock training is [1, 8.5) s and later-time is ≥ 8.5 s; pen training is [1, 6.2) s and later-time is ≥ 6.2 s, within each replay. Full errors include additional valid early or released observations and are not averages of the two subset errors. These temporal subsets were inspected during development and are not blind independent tests. Recorded-state repeat checks find identical trajectories within each handover condition; repetition counts therefore do not support confidence intervals or population success rates. 21 TABLE D7 MASS SENSITIVITY WITH FIXED CONTACT SETTINGS .           
+
+> Mass varied with accepted contact settings fixed Mass (kg) Training 3D RMSE (mm) Interpretation
+> Kettle motion 0.2 / 0.4 / 0.8 / 1.2 / 1.6 30.07 / 29.21 / 29.15 / 29.23 / 29.43 Similar errors over 0.4–1.6 kg; insufficient mass excitation Gum box 0.01 / 0.03 / 0.1 / 0.3 14.2 / 11.6 / 11.8 / 12.8 All complete; 0.1 kg is not uniquely identified Sponge 0.01 / 0.03 / 0.1 / 0.3 421.9 / 396.2 / 28.4 / 30.3 First two settings fail; parameter coupling does not establish unique mass identification
+
+Contact time and impedance are MuJoCo settings, not in-dependent stiffness measurements. Rotational-friction terms follow MuJoCo’s length-unit convention. Pen settings are a rejected candidate. 
+
+1. Handover diagnostics and task stages 
+
+Shuttlecock and pen left-to-right replays expose hold-ing, simultaneous contact and receiver-grasp stages relevant to the bimanual benchmark family. These are representa-tive handover-interaction probes, evaluated separately from robot dynamics identification. MuJoCo/MJWarp complete the recorded sequences. Original unadapted PhysX objects roll away before grasp; each task has historical completion counts of 0/1 → 0/2. The updated native pairs complete both tasks under shared angular damping. This separates contact-stage recovery from changes in observation error.                                
+
+> TABLE D8 HANDOVER COMPLETION COUNTS ;BASELINE →IDENTIFIED /CANDIDATE . P HYS X†USES SHARED ADAPTED SETTINGS ;SOURCE FAILURES ARE RETAINED ABOVE .
+> Case Observations MuJoCo MJWarp PhysX †
+> Shuttlecock 12 RGB / 3 depth points 1/1 →1/1 3/3 →3/3 2/2 →2/2 Whiteboard pen 11 RGB / 11 depth points 1/1 →1/1 3/3 →3/3 2/2 →2/2
+
+2. A separate rotational-resistance diagnostic 
+
+The rotational-resistance ablation reproduces pre-grasp rolling in MuJoCo, supporting a contact-representation ex-planation for the shuttlecock and pen failures. It does not rule out other model and solver differences. The identification study did not flatten the table to hide the failure or claim an independent PhysX identification for these two objects. 
+
+Updated native rotational damping. Applying target angular damping to both object parameter sets prevents pre-grasp roll-away without changing the recorded commands, task geometry or success predicates. Historical full RGB errors were 97.38 → 97.36 px for the shuttlecock and 203.52 
+
+→ 251.12 px for the pen; these failures remain archived. With shared 20 s -1 damping, both shuttlecock models com-plete the handover and container placement, but full RGB error rises 20.47 → 21.05 px and later-time error rises 26.67 
+
+→ 28.37 px. There is no matched-setting identification gain; the baseline remains recommended. With shared 500 s-1 damping, both pen models also complete the task. Full RGB error falls 9.72 → 9.31 px, only 0.408 px; this is below approximately 3 px annotation uncertainty. Auxiliary full 3D error is nearly unchanged at 19.39 → 19.35 mm, while training 3D error worsens 17.15 
+
+→ 18.01 mm. Strong damping is an effective engine adapta-tion rather than measured rolling friction. A fixed 100 g mass prior, unvalidated contact forces and approximately 0.8–0.9 mm final conservative clearance limit physical conclusions. Each updated handover pair completes 2/2 → 2/2 replays of one real episode. Later-time segments were inspected during recovery; they are not blind independent tests. Mu-JoCo/MJWarp values are archived source results, not newly integrated runs. Task recovery and identification gains are reported separately. 
+
+3. Historical transfer failure and native PhysX recovery 
+
+Historical question and observation. Can an effective contact model fitted in MuJoCo preserve a sponge grasp after fixed transfer? The G2 source recording contains 92 RGB-D centre observations over 9.210 s, from one real episode (4247312). After a 120-candidate MuJoCo search, full-replay centre RMSE falls from 34.99 to 20.84 mm in MuJoCo and 59.85 to 21.77 mm in MJWarp. PhysX instead rises from 25.50 to 524.61 mm ; completed replays change from 1/1 to 0/1, with failure to lift. These are replay counts, not population success rates. 
+
+Working hypothesis. The fitted effective compliant con-tact is not represented equivalently in the PhysX transfer. The source path does not express MuJoCo solref/solimp equivalently. This supports investigating contact representa-tion and parameter mapping; it does not uniquely identify the cause. Geometry, initialization, robot/observation calibration 22 and numerical differences remain potential contributors. 
+
+Earlier correction attempt — a separate experiment. 
+
+A native PhysX round searches 41 candidates with effective compliant finger-pad contact, while holding the accepted robot settings fixed. Its baseline already completes 3/3 re-plays and its fitted model completes 4/4. Therefore this round cannot be described as rescuing the failed fixed-transfer baseline. A · Sponge trajectories and sensor-observation residuals                 
+
+> 03690.60 0.75
+> x (m) (a) Centre x
+> 0369−0.4 −0.2 0.0 0.2
+> y (m) (b) Centre y
+> 0369
+> Replay time (s)
+> 0.72 0.78 0.84 0.90
+> z (m) (c) Centre z
+> 0369
+> Replay time (s)
+> 20 40 60
+> Error (mm) (d) Centre residual
+> Full centre RMSE: 41.54 →26.73 mm. 92 real observations; residuals shown only at valid times.
+> Before identi fi cation After / candidate Real observations
+
+B · Rotational-resistance mechanism: shuttlecock and pen                       
+
+> 0.0 0.5 1.0 1.5 2.0 2.5 3.0 050 100
+> Horizontal drift (mm)  (a) Shuttlecock · before closure
+> 0.0 0.5 1.0 1.5 0200 400 600
+> (b) Whiteboard pen · before closure
+> 0.0 0.5 1.0 1.5 2.0 2.5 3.0
+> Elapsed time (s)
+> −1.5 −1.0 −0.5 0.0
+> Height change (mm)  (c) Vertical motion
+> 0.0 0.5 1.0 1.5
+> Elapsed time (s)
+> −600 −400 −200 0
+> (d) Vertical motion
+> MuJoCo PhysX MuJoCo, no roll/spin
+> Baseline Post-fi t / candidate Closure time
+
+Fig. D1. Sponge motion under shared native contact settings. Complete simulated x/y/z centre trajectories are curves; 92 valid real observations and Euclidean centre residuals retain their sampled times. Blue dashed / crosses: baseline; teal solid / circles: fitted model; charcoal: real observations. Units are metres for coordinates and millimetres for residuals. No dense real trajectory or independent validation interval is inferred. Historical experiment. Removing MuJoCo rotational resistance reproduces pre-grasp rolling for the shuttlecock and pen; this supports a mechanism without excluding other causes. TABLE D9 NATIVE PHYS X SPONGE COMPARISONS , SEPARATED BY EXPERIMENT . M ATCHED 800/5 DENOTES SHARED CONTACT STIFFNESS 800 N/ M AND DAMPING 5 N ·S/M.
+
+Experiment and metric Before After Unit 
+
+Earlier native fit: full centre RMSE 25.5031 24.8778 mm Earlier native fit: training centre RMSE 26.3395 23.7108 mm Earlier native fit: later-time centre RMSE 27.2964 29.5705 mm Earlier native fit: holding-gripper RMSE 0.8221 0.0120 rad Earlier native fit: completed replays 3/3 4/4 count Matched 800/5: full centre RMSE 41.54 26.73 mm Matched 800/5: training centre RMSE 27.84 25.89 mm Matched 800/5: later-time centre RMSE 38.58 26.80 mm Matched 800/5: full-replay improvement — +35.64 %Matched 800/5: completed replays 2/2 4/4 count 
+
+23 What the earlier correction establishes. Holding-gripper RMSE improves from 0.8221 to 0.0120 rad, while full-replay centre error changes only from 25.5031 to 24.8778 mm. Later-time error worsens from 27.2964 to 29.5705 mm. Reported finger-pad penetration changes from about 0.10 to 35.92 mm. The model can approximate compression through effective contact; it does not validate real volumetric deformation, generalization or measured material stiffness. 
+
+Updated matched-contact comparison. Both models complete grasp, lift, transport and release onto the specified support. Under the same 800 N/m stiffness and 5 N ·s/m damping, native friction refitting from 3.0 to 1.2 reduces full centre RMSE by 35.64%; training and later-time errors also decrease (Table D9). The full-trajectory gain is driven mainly by horizontal x alignment (38.31 → 16.79 mm axis RMSE); vertical z error worsens from 13.40 to 19.38 mm, so lift-height agreement does not improve. Maximum effective hand penetration remains 35.82 → 32.79 mm, so successful rigid-contact motion does not validate volumetric deformation or measured material stiffness. Common engine recovery is not included in the identification improvement. The earlier baseline belongs to a different contact configuration and is not substituted into this matched pair. 0 4 8 12 0.65 0.70 0.75                     
+
+> x (m) (a) Shuttlecock · x
+> 04812 0.78 0.84 0.90 0.96
+> z (m) (b) Shuttlecock · z
+> 04812 816 24 32
+> RGB error (px) (c) RGB residual
+> 048
+> Replay time (s)
+> 0.56 0.64 0.72
+> x (m) (d) Whiteboard pen · x
+> 048
+> Replay time (s)
+> 0.72 0.80 0.88 0.96
+> z (m) (e) Whiteboard pen · z
+> 0369
+> Replay time (s)
+> 0612 18
+> RGB error (px) (f) RGB residual
+> Full RGB RMSE: shuttlecock 20.47 →21.05 px; pen 9.72 →9.31 px. Sparse residuals are not joined.
+> Before identi fi cation After / candidate Real observations
+> Fig. D2. Handover recovery and alignment diagnostics: shuttlecock (top) and whiteboard pen (bottom) under shared native angular damping. Task completion is recovered in both conditions; the shuttlecock error increases and the pen gain is below annotation uncertainty. Complete tracked-feature horizontal x and vertical z trajectories are curves; valid real depth points remain scatter. The right column shows Euclidean RGB residuals only at valid annotation times: 12 for the shuttlecock and 11 for the pen. Full x/y/z data are retained in the editable snapshots. Blue dashed / crosses: baseline; teal solid / circles: after / candidate; charcoal: real observations. The shuttlecock has only three valid depth points. Sparse residuals are not joined.
+
+4. Original identification and fixed-parameter transfer 
+
+Reading Figures D3 and D5–D7. Each cell retains before 
+
+→ after means, signed error reduction and repeat ranges; logarithmic RMSE axes are shared across engines within each object row, with units shown per row. Crosses mark incomplete tasks; pen after-results use an unaccepted candi-date. Repeat ranges are all-repeat min–max, not confidence intervals. Reduction = 100 × (1 − after/before); millimetre and pixel errors are not pooled. 
+
+Reading recovery alongside alignment 
+
+The trajectory panels make a distinction that a comple-tion label alone cannot show. With shared native settings, both parameter sets can carry out a handover, while their predicted feature paths remain distinguishable. The real points provide the same visual anchor for judging each path; residual panels retain errors only at the available annotations. In particular, smooth simulated curves do not increase the number of real observations. The supplemen-tary matrices that follow widen this view from individual trajectories to the recorded case–stack comparisons. They preserve increases as well as reductions in error and keep the original transfer study separate from the adapted native comparisons. Together, these presentations connect the re-covered interaction to its measured path instead of reducing the result to a single success indicator. 24 20 50 
+
+39.56 → 25.24 
+
++36.2% error reduction 
+
+MuJoCo  
+
+> 20 50
+
+40.98 → 25.12 
+
++38.7% error reduction 
+
+MJWarp  
+
+> 20 50
+
+38.66 → 26.23 
+
++32.2% error reduction 
+
+PhysX  
+
+> 10 15
+
+12.78 → 12.23 
+
++4.3% error reduction  
+
+> 10 15
+
+13.37 → 13.58 
+
+-1.5% error reduction  
+
+> 10 15
+
+10.99 → 11.46 
+
+-4.2% error reduction   
+
+> 20 50 500
+
+34.99 → 20.84 
+
++40.5% error reduction   
+
+> 20 50 500
+
+59.85 → 21.77 
+
++63.6% error reduction   
+
+> 20 50 500
+
+25.50 → 524.61 × 
+
+-1957.1% error reduction   
+
+> 10 20 100
+
+19.71 → 11.15 
+
++43.4% error reduction   
+
+> 10 20 100
+
+19.81 → 11.34 
+
++42.8% error reduction   
+
+> 10 20 100
+
+97.38 × → 97.36 × 
+
++0.020% error reduction   
+
+> 10 20 200
+
+9.30 → 9.50 
+
+-2.2% error reduction   
+
+> 10 20 200
+
+9.21 → 9.52 
+
+-3.4% error reduction   
+
+> 10 20 200
+
+203.52 × → 251.12 × 
+
+-23.4% error reduction 
+
+Kettle 
+
+> RMSE (mm) · log
+
+Gum box 
+
+> RMSE (mm) · log
+
+Sponge 
+
+> RMSE (mm) · log
+
+Shuttlecock 
+
+> RMSE (px) · log
+
+Whiteboard pen 
+
+> RMSE (px) · log
+
+Before After / candidate Task incomplete Fig. D3. Original identification: object-observation RMSE across three stacks, including repeat ranges and incomplete replays. 
+
+Case MuJoCo: before → after MJWarp: before → after PhysX: before → after 
+
+Kettle 1/1 → 1/1 3/3 → 3/3 1/1 → 2/2 Gum box 1/1 → 1/1 3/3 → 3/3 1/1 → 1/1 Sponge 1/1 → 1/1 3/3 → 3/3 1/1 → 0/1 Shuttlecock 1/1 → 1/1 3/3 → 3/3 0/1 → 0/2 Pen candidate (not accepted) 1/1 → 1/1 3/3 → 3/3 0/1 → 0/2 
+
+Fig. D4. Original fixed-transfer completion counts, before → after. All 30 source fractions are retained; the pen uses an unaccepted candidate. Command repeats are not independent real trials; the separate PhysX refit is excluded. 1 2 20 
+
+19.87 → 2.14 
+
++89.3% error reduction 
+
+MJWarp   
+
+> 1220
+
+6.12 → 17.99 
+
+-193.9% error reduction 
+
+PhysX   
+
+> 0.5 15
+
+0.75 → 1.72 
+
+-128.8% error reduction   
+
+> 0.5 15
+
+4.91 → 5.60 
+
+-13.9% error reduction   
+
+> 520 500
+
+40.04 → 4.13 
+
++89.7% error reduction   
+
+> 520 500
+
+41.13 → 530.66 × 
+
+-1190.1% error reduction   
+
+> 0.5 5200
+
+1.00 → 1.46 
+
+-45.2% error reduction   
+
+> 0.5 5200
+
+228.19 × → 236.58 × 
+
+-3.7% error reduction   
+
+> 0.5 51000
+
+0.81 → 0.99 
+
+-22.2% error reduction   
+
+> 0.5 51000
+
+866.69 × → 938.12 × 
+
+-8.2% error reduction 
+
+Kettle 
+
+> RMSE (mm) · log
+
+Gum box 
+
+> RMSE (mm) · log
+
+Sponge 
+
+> RMSE (mm) · log
+
+Shuttlecock 
+
+> RMSE (mm) · log
+
+Whiteboard pen 
+
+> RMSE (mm) · log
+
+Before After / candidate Task incomplete 
+
+Fig. D5. Same-parameter trajectory differences relative to MuJoCo: cross-stack agreement, rather than real-observation accuracy. 
+
+25 5. Later-time evaluation and gripper response 20 50 
+
+32.65 → 22.68 
+
++30.5% error reduction 
+
+MuJoCo  
+
+> 20 50
+
+38.63 → 22.68 
+
++41.3% error reduction 
+
+MJWarp  
+
+> 20 50
+
+33.07 → 24.01 
+
++27.4% error reduction 
+
+PhysX  
+
+> 10 20
+
+15.38 → 14.51 
+
++5.7% error reduction  
+
+> 10 20
+
+16.13 → 16.09 
+
++0.2% error reduction  
+
+> 10 20
+
+13.00 → 13.41 
+
+-3.2% error reduction   
+
+> 20 50 500
+
+23.31 → 20.81 
+
++10.7% error reduction   
+
+> 20 50 500
+
+64.90 → 21.06 
+
++67.5% error reduction   
+
+> 20 50 500
+
+27.30 → 671.96 × 
+
+-2361.7% error reduction   
+
+> 20 50 200
+
+25.45 → 14.83 
+
++41.7% error reduction   
+
+> 20 50 200
+
+25.52 → 15.07 
+
++41.0% error reduction   
+
+> 20 50 200
+
+174.98 × → 174.97 × 
+
++0.006% error reduction   
+
+> 10 20 200
+
+11.27 → 11.83 
+
+-5.0% error reduction   
+
+> 10 20 200
+
+11.08 → 11.86 
+
+-7.0% error reduction   
+
+> 10 20 200
+
+203.59 × → 254.17 × 
+
+-24.8% error reduction 
+
+Kettle 
+
+> RMSE (mm) · log
+
+Gum box 
+
+> RMSE (mm) · log
+
+Sponge 
+
+> RMSE (mm) · log
+
+Shuttlecock 
+
+> RMSE (px) · log
+
+Whiteboard pen 
+
+> RMSE (px) · log
+
+Before After / candidate Task incomplete 
+
+Fig. D6. Later-time observation errors from the same recorded episodes; these temporal checks are not independent-episode tests. 0.02 0.05 
+
+0.0191 → 0.0181 
+
++5.4% error reduction 
+
+MuJoCo  
+
+> 0.02 0.05
+
+0.0324 → 0.0181 
+
++44.1% error reduction 
+
+MJWarp  
+
+> 0.02 0.05
+
+0.0178 → 0.0262 
+
+-47.3% error reduction 
+
+PhysX   
+
+> 0.04 0.06 0.08
+
+0.0640 → 0.0472 
+
++26.2% error reduction   
+
+> 0.04 0.06 0.08
+
+0.0637 → 0.0512 
+
++19.6% error reduction   
+
+> 0.04 0.06 0.08
+
+0.0282 → 0.0376 
+
+-33.3% error reduction   
+
+> 0.1 0.2 1
+
+0.3211 → 0.0835 
+
++74.0% error reduction   
+
+> 0.1 0.2 1
+
+0.3121 → 0.0764 
+
++75.5% error reduction   
+
+> 0.1 0.2 1
+
+0.8221 → 0.0949 × 
+
++88.5% error reduction   
+
+> 0.02 0.05 0.1
+
+0.0420 → 0.0238 
+
++43.4% error reduction   
+
+> 0.02 0.05 0.1
+
+0.0421 → 0.0238 
+
++43.5% error reduction   
+
+> 0.02 0.05 0.1
+
+0.0892 × → 0.0892 × 
+
++0.000% error reduction   
+
+> 0.04 0.06 0.08
+
+0.0297 → 0.0297 
+
+-0.012% error reduction   
+
+> 0.04 0.06 0.08
+
+0.0297 → 0.0297 
+
+-0.021% error reduction   
+
+> 0.04 0.06 0.08
+
+0.0673 × → 0.0673 × 
+
++0.000% error reduction 
+
+Kettle 
+
+> RMSE (rad) · log
+
+Gum box 
+
+> RMSE (rad) · log
+> Holding phase
+
+Sponge 
+
+> RMSE (rad) · log
+> Holding phase
+
+Shuttlecock 
+
+> RMSE (rad) · log
+
+Whiteboard pen 
+
+> RMSE (rad) · log
+
+Before After / candidate Task incomplete 
+
+Fig. D7. Gripper-feedback errors across the original replays. Gum box and sponge use the holding phase; other cases use full replay. A missed grasp may still produce a small angle error. 
+
+Two complementary error views. The upper matrix re-ports object-observation error later in each recorded episode; the lower matrix reports gripper feedback over its stated phase. Their units, time windows and denominators differ. A small gripper-angle error can occur even when object contact fails, so it is read alongside the retained completion counts and object trajectories rather than as a substitute for them. These panels also preserve cases where the candidate increases error. 
+
+Cross-reading the two matrices. Cross-read the matrices by object, retaining each panel’s units and phase. Their complementary view distinguishes gripper feedback from object-path agreement and keeps unsuccessful contacts visible even when an angle-based error is small. 26 6. Separate native PhysX re-identification Full replay centre (mm)   
+
+> 015 30
+> Before
+> 25.5031
+> Refit
+> 24.8778
+
+Later-time centre (mm)   
+
+> 017.5 35
+> Before
+> 27.2964
+> Refit
+> 29.5705
+
+Holding gripper (rad)   
+
+> 00.5 1
+> Before
+> 0.8221
+> Refit
+> 0.0120
+
+Fig. D8. Separate native PhysX sponge re-fit: full/later-time centre RMSE and holding-gripper RMSE. Completed replays: baseline 3/3, refit 4/4; lin-ear axes start at zero. Later-time error increases. The training-centre metric remains in the supplementary table and was not an original panel. 
+
+7. Recorded observations and trajectories 
+
+Fig. D9. Recorded 3D feature observations and corresponding simulated trajectories. Only valid observations are plotted; the shuttlecock has three valid depth observations. 
+
+APPENDIX ESUPPLEMENTARY REAL 2S IM EVALUATION RESULTS 
+
+This appendix reports stage-level success rates and supplementary task Scores for Real2Sim evaluation. Complete benchmark results are reported in Appendix B. Table values are displayed to two decimal places; calculations use full precision. 
+
+Source task Capability Real follow Real grasp Sim follow Sim grasp 
+
+Select by Color Color 0.87 0.84 0.84 0.79 Grasp Target Object Semantics 1.00 0.66 0.83 0.68 Recognize Size Size 0.47 0.37 0.52 0.42 Follow Logic (OR) Logic 0.84 0.63 0.79 0.66 Apply Common Sense Common sense 0.54 0.44 0.50 0.42 
+
+Fig. E1. G2 stage-level instruction-following and grasping success rates across five capability categories. Each cell shows the final reported value. These stage rates are distinct from the task-level benchmark Score in Table B1. The source provides neither evaluation counts nor exact phase definitions. 
+
+Task Capability Real Score Sim Score 
+
+Select by Color Color 0.91 0.90 Recognize Size Size 0.77 0.66 Grasp Target Object Semantics 0.85 0.79 Stack Blocks Precision 0.24 0.24 
+
+Fig. E2. Arx X5 final task-level Scores for four representative capabilities, using the final results table’s after-identification columns. Full before/after comparisons for all seven tasks appear in Table B2. Score retains its task-specific definition and is distinct from stage-level success rate. 
+
+27

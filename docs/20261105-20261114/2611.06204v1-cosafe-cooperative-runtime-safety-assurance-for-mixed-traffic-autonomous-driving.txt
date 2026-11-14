@@ -1,0 +1,899 @@
+Title: CoSafe: Cooperative Runtime Safety Assurance for Mixed-Traffic Autonomous Driving
+
+URL Source: https://arxiv.org/pdf/2611.06204v1
+
+Published Time: Thu, 05 Nov 2026 02:26:54 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# COSAFE : Cooperative Runtime Safety Assurance for Mixed-Traffic Autonomous Driving 
+
+Dingji Wang ∗, You Lu ∗, Haowen Jiang ∗, Yanggang Chen ∗, Yuyang Bi ∗,Bihuan Chen ∗‡ , Shenglin Bao †, Xin Peng ∗∗College of Computer Science and Artificial Intelligence, Fudan University, Shanghai, China 
+
+†East China Institute of Computing Technology, Shanghai, China 
+
+‡Corresponding Author 
+
+Abstract —With the rapid development of autonomous driving systems (ADSes), real-world roads are evolving into mixed-traffic environments where autonomous vehicles (AVs) and other traffic participants ( e.g., human-driven vehicles (HDVs), cyclists, and pedestrians) coexist and interact with each other. How-ever, current ADSes still incur various safety violations in mixed traffic scenarios, raising a strong demand for runtime safety assurance frameworks that can continuously monitor hazards and prevent potential violations. Existing ego-centric assurance approaches are insufficient for mixed traffic, where violations often arise from locally reasonable yet jointly incompatible decisions among multiple vehicles and cannot be reliably resolved through independent takeover. To bridge this gap, we propose C OSAFE , a modular and ADS-agnostic cooperative runtime safety assurance framework for mixed-traffic autonomous driving to extend runtime safety assur-ance from ego-centric takeover to scene-level cooperative interven-tion. C OSAFE leverages vehicle-to-everything (V2X) communica-tion to enable roadside units (RSUs) to monitor scene-level hazards and jointly mitigate hazards involving multiple vehicles. We integrate C OSAFE with seven state-of-the-art ADSes, and our eval-uation on the InterDrive benchmark demonstrates that C OSAFE 
+
+improves the driving score of AVs by 70.03% on average, reduces safety violations by 87.80%, and accurately identifies unsafe AVs with an F 3 score of 0.930, while satisfying real-time constraints. 
+
+I. I NTRODUCTION 
+
+With the rapid development of ADSes, real-world roads are increasingly evolving into mixed-traffic environments where AVs ( i.e., vehicles equipped with ADSes) and other traffic participants ( e.g., HDVs, cyclists, and pedestrians) coexist and interact [54]. However, the performance of AVs in open-road mixed traffic remains far from satisfactory. Scenario-based testing approaches [12, 43, 66] have indicated that even advanced ADSes may still incur safety violations in mixed-traffic environments. Besides, a 2024 U.S. Department of Transportation analysis of California ADS disengagement reports [31] found that 69% of disengagements were caused by ADS insufficiency. These limitations underscore the need for runtime safety assurance frameworks to prevent safety violations in mixed-traffic environments. Runtime safety assurance [53] for ADSes aims to con-tinuously monitor driving hazards, intervene before poten-tial safety violations occur, and maintain safe operation at run-time. To prevent safety violations, several approaches moni-tor basic safety properties and trigger emergency braking [33, 65] or conservative fallback maneuvers [10, 44] before these 💥 
+
+AV1: Turn left. AV2: Go straight. 
+
+AV1 AV2 
+
+> HDV
+
+(a) ADS Conflict AV1 AV2 
+
+# 🔒 
+
+Deadlock 
+
+AV1: Stop and yield. AV2: Stop and yield.  
+
+> HDV
+
+(b) Ego-centric Takeover AV1: Slow down and yield. AV2: Go straight. 
+
+AV1 AV2  
+
+> HDV
+
+(c) Scene-level Intervention 
+
+Fig. 1: Motivation of Cooperative Runtime Safety Assurance properties are violated. However, these approaches rely on predetermined emergency interventions rather than adapting to the specific hazardous scenarios encountered. To intervene more adaptively, REDriver [52] intervenes in the planning process by refining ADS-generated planned trajectories to enforce specification compliance, but it requires intrusive modifications to the original ADS stack, and is tied to Apollo [3]. Without modifying the underlying ADSes, A RGUS [53] formulates runtime assurance as a hazard-aware takeover-and-recovery process for the trajectory of one single AV. However, these ego-centric approaches assess and mitigate hazards on a per-vehicle basis, treating each AV as an inde-pendent takeover target rather than viewing mixed traffic as a software-intensive cyber-physical system of interacting AVs, other traffic participants, and RSUs [46]. As shown in Fig. 1a, two ADS-controlled AVs may generate trajectories that conflict at an unsignalized intersection. Although independently taking over each AV can avoid an immediate collision, the two AVs may enter a circular wait-for chain because neither vehicle has a scene-level view to determine yield priority, causing a deadlock in Fig. 1b. Mixed-traffic safety violations often arise from lo-cally reasonable yet jointly incompatible decisions among mul-tiple vehicles, which cannot be reliably resolved via ego-centric takeover. As shown in Fig. 1c, resolving this interaction-induced safety violation requires scene-level intervention, where one AV is assigned to proceed while the other slows down and yields. Such intervention, which no single AV can reliably produce on its own, requires a scene-level view across multiple vehicles. arXiv:2611.06204v1 [cs.SE] 4 Nov 2026 V2X communication provides a practical foundation for this view, allowing AVs to exchange state, intent, and agreement-seeking information with RSUs. However, most existing V2X-enabled cooperative driving approaches still leave the driving decisions to individual vehicles, which may incur safety vio-lations in mixed traffic. Representative work includes shared perception [15, 37, 42, 55, 62], decentralized multi-vehicle plan-ning [8, 68, 69], and LLM-mediated negotiation [18, 20, 36]. In contrast, centralized multi-vehicle planning approaches [25, 26, 39] coordinate traffic behavior at the scene level, but they typically assume an AV-dominated fleet with homogeneous ADSes under direct centralized control, a setting at odds with real-world mixed traffic, where AVs run heterogeneous, vendor-specific ADSes. Migrating such coordination into a safety assurance layer is non-trivial, as ADSes are black boxes and mixed traffic is only partially controllable ( i.e., HDVs and pedestrians cannot be overridden, and safe AVs should not be). In summary, existing work lacks V2X-enabled scene-level safety assurance for mixed traffic with heterogeneous AVs. To the best of our knowledge, no existing work monitors scene-level hazards and jointly intervenes on unsafe AVs without modifying their underlying planning logic. To bridge this gap, we present C OSAFE , a modular and ADS-agnostic cooperative runtime safety assurance framework for mixed-traffic autonomous driving that extends runtime safety assurance from ego-centric takeover to scene-level cooperative intervention. Specifically, C OSAFE consists of three RSU-side modules, namely cooperative perception , hazard assessment ,and joint hazard mitigation , together with an AV-side control switch module. Within the coverage area of an RSU, the cooper-ative perception aggregates V2X information from participating AVs with RSU-side observations to construct the scene-level traffic information. Based on this information, the hazard as-sessment detects potential driving hazards, and identifies cor-responding unsafe AVs; and the joint hazard mitigation jointly generates safe reference trajectories for unsafe AVs. For each participating AV, the control switch either passes through the original ADS-generated planned trajectory if no intervention is needed, or executes the generated safe reference trajectory. We conduct large-scale experiments to evaluate the effective-ness and efficiency of C OSAFE in mixed-traffic environments. We integrate COSAFE with seven state-of-the-art ADSes spanning five families, and evaluate them on the InterDrive benchmark [36]. Our experiments demonstrate that C OSAFE 
+
+effectively improves the driving score of AVs by 70.03%, while reducing safety violations by 87.80% on average, with runtime latency satisfying real-time constraints. In addition, C OSAFE 
+
+accurately identifies unsafe AVs with an F 3 score of 0.930; and our ablation and mixed-deployment results demonstrate that each module contributes distinctly and that C OSAFE remains effective when coexisting AVs run heterogeneous ADSes. The main contributions of our work are as follows.  
+
+> •
+
+We formulate cooperative runtime safety assurance as a scene-level pass-through-or-override safety layer over multiple ADSes, shifting the safety assurance paradigm from ego-centric takeover to scene-level cooperative intervention.  
+
+> •
+
+We design C OSAFE , a modular cooperative runtime safety assurance framework, which can be integrated with hetero-geneous AVs without modifying their underlying ADSes.  
+
+> •
+
+We develop a scene-level hazard assessment and joint miti-gation mechanism that identifies unsafe AVs and generates coordinated safe reference trajectories to resolve hazards.  
+
+> •
+
+We integrate C OSAFE with seven state-of-the-art ADSes, and conduct experiments on the InterDrive benchmark to demon-strate its effectiveness, efficiency, and generality. II. B ACKGROUND AND PROBLEM FORMULATION 
+
+A. Autonomous Driving Systems 
+
+ADSes provide the underlying planning logic of AVs, deter-mining how vehicles behave in dynamic traffic environments [9]. Existing ADSes are heterogeneous in their internal archi-tectures, including modular ADSes that separate perception, prediction, planning, and control [19], end-to-end ADSes that directly map sensor observations to trajectories or control commands [24, 30, 56], LLM-driven ADSes that incorporate language-based reasoning [48], and V2X-enabled cooperative ADSes that exploit shared perception [37] or negotiation information [36]. Despite their architectural differences, they share a functional interface that maps traffic observations to intended driving behaviors. In this work, we abstract an ADS ADS i as a black-box mapping from sensor observations oti and auxiliary planning information ati (e.g., target point and high-level maneuver command) to an ADS-generated planned trajectory τ ti at each discrete time step t. Since modern ADSes commonly construct bird’s-eye-view (BEV) representations for perception, prediction, or planning, we denote the BEV feature available to C OSAFE as BEV ti, as defined by Eq. 1,           
+
+> τti=ADS i(oti, a ti),BEV ti=fBEV (oti),(1)
+
+where τ ti is represented as desired waypoints with associated speeds, and BEV ti captures the perceived local traffic scene in a BEV representation. fBEV denotes the encoder used to obtain 
+
+BEV ti from raw sensor observations. The trajectory is finally translated by a vehicle controller [5] into control commands. 
+
+B. Vehicle-to-Everything Communication 
+
+V2X communication enables AVs, RSUs, and other traffic participants to exchange information for cooperative driving. The SAE J3216 standard [2] divides cooperative driving into four classes, i.e., status-sharing, intent-sharing, agreement-seeking, and prescriptive cooperation, where prescriptive coop-eration allows an authorized entity, e.g., a fleet operations center or an infrastructure unit, to direct specific actions to selected AVs, with the receiving AVs adhering to the prescribed actions. In this work, we consider an RSU-assisted V2X that in-stantiates the prescriptive cooperation only on AVs flagged as unsafe. Within the RSU’s coverage area, at each time step 
+
+t, each AV av i, running its native ADS ADS i, uploads its BEV feature BEV ti, vehicle state sti (i.e., position pti, heading 
+
+θti , and speed vti ), and ADS intention ( i.e., ADS-generated planned trajectory τ ti and auxiliary planning information ati)Safe Reference Trajectories (for unsafe AVs) 
+
+🔒 
+
+💥 
+
+Cooperative Perception 
+
+> BEV Feature Aggregation
+
+Hazard Assessment Joint Hazard Mitigation   
+
+> Scene-level Motion Prediction Collision Hazard Deadlock Hazard Stalling Hazard
+> Stop-Signal Hazard
+> BnB-based Joint Selection Ego-level Candidate Generation
+> Autonomous Vehicle Human-driven Vehicle Roadside Unit
+> ADS Pass-through
+
+🔒 
+
+💥 
+
+> BEV, State, Intention Safe Reference Trajectory BEVs, States, Intentions
+> Unsafe
+> Reference-guided Override
+> Safe
+
+Control Switch   
+
+> V2X Communication RSU-side modules AV-side module
+
+🔒 Fig. 2: Approach Overview of C OSAFE 
+
+to the RSU, and the RSU returns a safe reference trajectory 
+
+ˆτ ti to each flagged unsafe AV. 
+
+C. Problem Formulation 
+
+Runtime safety assurance for ADSes refers to online mecha-nisms that monitor ADS behavior and intervene when potential safety violations are predicted. In this work, we formulate run-time safety assurance as a pass-through-or-override safety layer over multiple ADSes. Formally, the executed trajectory of each AV av i is defined by Eq. 2, 
+
+˜τ ti =
+
+(
+
+ˆτ ti , av i ∈ U t,τ ti , av i /∈ U t, (2) 
+
+where Ut denotes the set of unsafe AVs re-identified at every time step t, and thus av i is overridden only when it is deemed unsafe. Throughout this paper, we distinguish three trajectories of av i, i.e., the ADS-generated planned trajectory τ ti output by its native ADS, the safe reference trajectory ˆτ ti generated by the safety layer, and the finally executed trajectory ˜τ ti , which equals ˆτ ti if av i is unsafe and τ ti otherwise. Considering a mixed-traffic scene within the coverage area of an RSU, we denote the set of participating AVs at time step t as Vt
+
+> AV
+
+, and all observed traffic participants ( e.g., 
+
+HDVs, cyclists, pedestrians, as well as AVs) as T P t. Co-operative runtime safety assurance monitors multiple AVs and their scene-level interactions, identifies the unsafe AVs 
+
+Ut ⊆ V t 
+
+> AV
+
+whose ADS-generated planned trajectories may lead to safety violations, and generates coordinated safe reference trajectories for these AVs. Formally, this problem is formulated by Eq. 3, 
+
+ Ut, {ˆτ ti }av i∈U t
+
+ = R
+
+
+
+{(BEV ti , s ti , τ ti , a ti )}av i∈V t 
+
+> AV
+
+, It
+
+
+
+, (3) 
+
+where R denotes a cooperative runtime safety assurance mech-anism, and It = (BEV t
+
+> RSU
+
+, MRSU , St
+
+> RSU
+
+) represents RSU-side scene information, including the RSU-side BEV feature 
+
+BEV t
+
+> RSU
+
+, the HD map of the RSU’s coverage area MRSU , and dynamic infrastructure states St 
+
+> RSU
+
+(e.g., traffic signal states). This formulation shifts the safety assurance paradigm from ego-centric takeover to scene-level cooperative intervention. While ego-centric runtime assurance decides whether a single ADS trajectory should be passed through or overridden, co-operative runtime assurance operates over multiple AVs, and produces a coordinated assignment that ensures the resulting scene-level behavior is mutually compatible. III. M ETHODOLOGY 
+
+To address the scene-level safety assurance problem defined in Sec. II-C, we propose C OSAFE , a cooperative runtime safety assurance framework for heterogeneous ADSes in mixed-traffic environments, to identify unsafe AVs and generate coordinated safe reference trajectories at runtime. The key idea of C OSAFE 
+
+is to extend runtime safety assurance from ego-centric takeover to scene-level cooperative intervention. Instead of assessing each AV in isolation, C OSAFE jointly evaluates the intentions of multiple AVs under shared scene-level information, identifies the unsafe AVs involved in potential violations, and coordinates their safe reference trajectories. AVs with safe intentions con-tinue to execute their ADS-generated planned trajectories, while only unsafe AVs are selected to override. C OSAFE is ADS-agnostic, which does not require modifying or retraining the native ADS, and only relies on the standardized V2X interfaces for state, intention, and scene-feature exchange. 
+
+A. Framework Overview 
+
+Fig. 2 shows the approach overview of C OSAFE . Overall, it is designed to preserve a scene-level safety invariant Φt
+
+> safe
+
+, defined as the absence of four hazards ( i.e., the collision hazard, the stop-signal hazard, the deadlock hazard and the stalling hazard). COSAFE has four modules, including three RSU-side modules, 
+
+i.e., cooperative perception , hazard assessment , and joint haz-ard mitigation , and one AV-side module, i.e., control switch .At each time step t, each participating AV av i first executes its native ADS ADS i, and obtains a BEV feature BEV ti and an ADS-generated planned trajectory τ ti . Then, the AV uploads its BEV feature BEV ti, vehicle state sti, and ADS intention, including τ ti and ati, to the RSU through V2X communication. On the RSU side, the cooperative perception aggregates the uploaded AV-side information with RSU-side observations to construct the scene-level information of the traffic environment and predict the future motions of observed traffic participants (see Sec. III-B). Based on the resulting scene-level information, the hazard assessment evaluates the driving hazards using a set of hazard oracles that capture different types of potential safety violations, and identifies the unsafe AV set Ut that requires intervention (see Sec. III-C). Then, the joint hazard mitigation generates candidate trajectories for each unsafe AV, and performs branch-and-bound (BnB)-based joint selection to choose a coordinated safe reference trajectory set {ˆτ ti }av i∈U t
+
+(see Sec. III-D). Finally, the RSU sends the generated safe reference trajectories back to the corresponding unsafe AVs. For an AV that does not receive a safe reference trajectory, the ADS-generated planned trajectory τ ti is passed through and executed by the vehicle controller. Receiving a safe reference trajectory indicates that the RSU has identified the AV as unsafe, and the control switch tracks the assigned trajectory ˆτ ti
+
+by a reference-guided override to produce control commands that mitigate the potential driving hazards (see Sec. III-E). In summary, at each time step t, the hazard assessment identi-fies AVs whose intended trajectories may violate Φt
+
+> safe
+
+, the joint hazard mitigation selects coordinated safe reference trajectories from a finite candidate pool, with conservative braking as a fallback, and the control switch executes the assigned safe ref-erence trajectories on unsafe AVs. Given accurate cooperative perception and motion prediction, and bounded tracking error, this closed loop aims to carry the scene from Φt 
+
+> safe
+
+to Φt+1 safe .
+
+B. Cooperative Perception 
+
+To construct the scene-level information, i.e., the states ¯stk
+
+and future trajectories ¯τ tk of all observed traffic participants to-gether with the surrounding infrastructure states, we implement a cooperative perception module at the RSU side. At each time step t, the BEV feature aggregation warps and fuses AV-side and RSU-side BEV features into an aggregated BEV feature. Then, the scene-level motion prediction predicts the future motions of all observed traffic participants from the aggregated BEV feature, and constructs the scene-level information. 
+
+BEV Feature Aggregation. At each time step t, the RSU produces a BEV feature BEV t 
+
+> RSU
+
+from its own sensors, and receives a set of AV-side BEV features {BEV ti}av i∈V t 
+
+> AV
+
+con-forming to a shared BEV representation schema ( i.e., channel dimensions and spatial grid). Since each AV-side BEV feature 
+
+BEV ti is generated in the ego coordinate frame of av i, C OSAFE 
+
+first warps it to the RSU coordinate frame by the rigid trans-formation T ti→RSU from av i to the RSU [59], producing the AV-observed features BEV ti→RSU in the RSU coordinate frame. Then, C OSAFE fuses all warped BEV features with the RSU-side BEV feature into an aggregated BEV feature by Eq. 4,      
+
+> BEV t
+> agg =F
+> 
+> {BEV ti→RSU }av i∈V t
+> AV ,BEV t
+> RSU
+> 
+> ,(4)
+
+where F denotes a V2X fusion model in the RSU coordinate frame, instantiated as a CoBEVT-based transformer fuser [58] that jointly attends across the participating AVs and the RSU. 
+
+Scene-level Motion Prediction. Following BEVerse [67], COSAFE predicts the future motions of all observed traffic participants from the aggregated BEV feature BEV t 
+
+> agg
+
+by Eq. 5,       
+
+> {(¯ stk,¯mtk)}Kk=1 =fmot (BEV t
+> agg ),(5)
+
+where K is the number of observed traffic participants T P t =
+
+{tp k}Kk=1 , and ¯stk and ¯mtk denote the estimated state and the predicted future motion of the k-th participant tp k. The scene-level motion prediction head fmot predicts a per-pixel latent map from BEV t
+
+> agg
+
+, iteratively warps it forward via predicted flows to generate H-time-step BEV outputs (where H is the pre-diction horizon set to 12 (i.e., 3 seconds) by default [55]), and post-processes them via per-instance segmentation and cross-time-step linking into the state-motion pairs {(¯ stk, ¯mtk)}Kk=1 .Because fmot operates only on BEV features, its predictions cover all detected traffic participants, but carry no V2X identity. Hence, C OSAFE matches these predictions with V2X-reported AVs by Hungarian assignment [32], where the matching cost is computed from the position and heading discrepancies between detected and reported states. Matched predictions are consid-ered as AVs, while the remaining predictions are treated as other traffic participants. Then, C OSAFE constructs the scene-level in-formation St = ( {(¯ stk, ¯τ tk)}Kk=1 , MRSU , St
+
+> RSU
+
+), comprising per-participant state-trajectory pairs {(¯ stk, ¯τ tk)}Kk=1 , the HD map MRSU , and the dynamic infrastructure states St
+
+> RSU
+
+. Each pair (¯ stk, ¯τ tk) is populated according to the participant’s V2X identity. Specifically, for matched AVs, C OSAFE sets ¯stk to the V2X-reported state sti, and ¯τ tk to the uploaded ADS-generated planned trajectory τ ti . For other traffic participants, C OSAFE 
+
+retains ¯stk as fmot ’s output, and sets ¯τ tk to the predicted motion 
+
+¯mtk.
+
+C. Hazard Assessment 
+
+To identify the unsafe AV set Ut, C OSAFE evaluates four hazard oracles on the scene-level information St, i.e., the col-lision hazard , the stop-signal hazard , the deadlock hazard , and the stalling hazard . These four hazards cover the most common safety violations in mixed traffic. Among them, the deadlock oracle explicitly detects interaction-induced hazards across mul-tiple AVs, complementing the per-vehicle collision and stop-signal oracles in prior ego-centric runtime assurance approaches [52, 53]. C OSAFE aggregates the flagged AVs into a current-time-step unsafe AV set Ut
+
+> cur
+
+. To mitigate temporal flickering caused by perception and prediction noise, C OSAFE further augments Ut 
+
+> cur
+
+with a cooldown set Ut
+
+> cool
+
+, which retains AVs flagged in recent time steps, yielding the unsafe AV set Ut.COSAFE first constructs a per-participant bounding box set 
+
+¯Bt over the assessment horizon, defined by Eq. 6,                    
+
+> ¯Bt=¯Bt′
+> ktp k∈ T P t, t ′∈ { t, . . . , t +H},
+> where ¯Bt′
+> k= ¯pt′
+> k,¯θt′
+> k,¯vt′
+> k, L k, W k
+> ,(6)
+
+where H is the prediction horizon from the motion prediction head (Sec. III-B), also serving as the assessment horizon. ¯pt′ 
+
+> k
+
+,
+
+¯θt′ 
+
+> k
+
+, and ¯vt′ 
+
+> k
+
+are the position, heading, and speed of the traffic participant tp k at time step t′ sampled from the future trajectory ¯τ tk; and Lk and Wk are its body length and width. Then, we evaluate the following four hazard oracles. 
+
+Collision Hazard. For each av i ∈ V t
+
+> AV
+
+, the collision oracle tests whether its predicted bounding boxes { ¯Bt′ 
+
+> i
+
+}t′∈{ t,...,t +H}
+
+overlap with those of any other traffic participant at any future time step t′. Specifically, IS( ¯Bt′ 
+
+> a
+
+, ¯Bt′ 
+
+> b
+
+) tests whether two bounding boxes intersect after each is inflated by a safety margin δ to tolerate perception and prediction errors [53]. Following [22], we instantiate it by the separating axis theorem, which determines IS( ·) = True if and only if the projections of the two boxes overlap on each of their four edge normals. We then define the collision-unsafe AV set Ut 
+
+> col
+
+by Eq. 7, 
+
+Ut 
+
+> col
+
+=  av i ∈ V t 
+
+> AV
+
+∃ tp k ∈ T P t \ { av i},
+
+∃ t′ ∈ { t, . . . , t + H}, IS( ¯Bt′ 
+
+> i
+
+, ¯Bt′ 
+
+> k
+
+) = True , (7) 
+
+where tp k ranges over all perceived traffic participants except 
+
+av i, ensuring that each AV is checked for potential collisions with other perceived participants within the assessment horizon. 
+
+Stop-Signal Hazard. A stop-signal violation occurs when an AV fails to come to a complete stop within the influence region of an active stop signal ( e.g., a stop sign or a red light). We represent the influence region of each stop signal as a virtual static bounding box, and construct the set of currently active influence boxes Bt 
+
+> stop
+
+from MRSU and St
+
+> RSU
+
+. Then, we define the stop-signal-unsafe AV set Ut 
+
+> stop
+
+by Eq. 8, 
+
+Ut 
+
+> stop
+
+= av i ∈ V t 
+
+> AV
+
+∃B ∈ B t
+
+> stop
+
+, Enter ti (B) ∧ ¬ Stop ti (B) , (8) 
+
+where Enter ti (B) = ∃ t′ ∈ { t, . . . , t + H}, IS( ¯Bt′ 
+
+> i
+
+, B ) = True in-dicates that av i’s predicted trajectory enters the active stop signal’s influence box B, and Stop ti (B) = ∃ t′ ∈ { t, . . . , t +
+
+H}, IS( ¯Bt′ 
+
+> i
+
+, B ) = True ∧ ¯vt′ 
+
+> i
+
+≤ vcreep indicates that av i comes to a complete stop while inside B, where vcreep is the creep speed threshold, set to 0.1 m/s by default. 
+
+Deadlock Hazard. Deadlock is an interaction-induced live-ness hazard whose detection requires a scene-level view of the wait-for relations across multiple AVs. Inspired by the Coffman conditions [11, 13], a deadlock hazard occurs when a set of AVs form a circular wait-for chain such that each AV is blocked by the next AV’s currently occupied or planned road region, leaving none able to make forward progress unless at least one changes its intention. To this end, we detect deadlocks in two steps, i.e., identifying persistently stalled AVs, and determining whether their wait-for relations form a directed cycle. We first define a stalling indicator Stall tk that marks whether 
+
+tp k ∈ T P t has been persistently stationary without legitimate cause, as formalized in Eq. 9, 
+
+Stall tk = 1
+
+h
+
+∀t′ ∈ T W , v t′ 
+
+> k
+
+< v creep ∧ ¬ ValidStop(tp k , t ′)
+
+i
+
+, (9) 
+
+where 1[·] is the indicator function, TW = {t−W +1 , . . . , t } is a past-time-step window of length W , and vt′ 
+
+> k
+
+is tp k’s speed at past time step t′. ValidStop(tp k, t ′) checks whether tp k is in the influence region of an active stop signal at time step t′.Then, we define an intent indicator Φintent (tp i, tp j ) that cap-tures intent conflicts between participants tp i, tp j ∈ T P t, for-malized as spatial overlap of their future trajectories by Eq. 10, 
+
+Φintent (tp i, tp j ) = 1IS(Ω ti , Ωtj ) , (10) 
+
+where Ωti = S 
+
+> t′∈{ t,...,t +H}
+
+¯Bt′ 
+
+> i
+
+denotes the trajectory corridor of tp i, i.e., the union of the predicted bounding boxes over the assessment horizon [17]. In practice, when tp i is a stalled AV with stationary predicted future trajectory ¯τ ti , naively building 
+
+Ωti from ¯τ ti would collapse the corridor to tp i’s current location and lose its forward intent. We therefore populate Ωti with tp i’s trajectory corridor computed just before the stall, so that Φintent 
+
+can still flag intent conflicts involving tp i.Combining the stalling indicator and the intent indicator, we define the wait-for relation Et by Eq. 11, 
+
+Et = (tp i, tp j ) ∈ T P t ×T P t Stall ti ∧ Φintent (tp i, tp j ) . (11) 
+
+where an edge (tp i, tp j ) ∈ E t indicates that the stalled tp i is blocked by tp j ’s conflicting trajectory corridor. Finally, we construct the wait-for graph Gt = ( T P t, Et), and define the deadlock-unsafe AV set Ut 
+
+> dead
+
+by Eq. 12, 
+
+Ut 
+
+> dead
+
+=  av i ∈ V t 
+
+> AV
+
+av i ∈ Cycles( Gt) , (12) 
+
+where Cycles( Gt) represents the set of AVs lying on directed cycles in Gt, identified via depth-first search. Fig. 1b shows an example of a deadlock, in which AV1 and AV2 both stall at the unsignalized intersection, and their trajectory corridors computed before the stall overlap. Hence, Et contains edges in both directions between them, which form a directed cycle, and both AVs are flagged as deadlock-unsafe. 
+
+Stalling Hazard. A stalling hazard arises when an AV re-mains persistently stationary without any legitimate cause, e.g., 
+
+failing to resume after a green light or blocked by spurious ob-stacles. We define the stalling-unsafe AV set Ut 
+
+> stall
+
+by Eq. 13, 
+
+Ut 
+
+> stall
+
+= av i ∈ V t 
+
+> AV
+
+Stall ti ∧ deg + 
+
+> Gt
+
+(av i) = 0 , (13) 
+
+where deg + 
+
+> Gt
+
+(av i) = 0 denotes that av i has zero out-degree in the wait-for graph Gt, i.e., not waiting for any traffic participant. Then, C OSAFE aggregates the flagged AVs from all four ora-cles into the current-time-step unsafe AV set Ut
+
+> cur
+
+. As per-time-step oracle outputs may flicker under perception and prediction noise, we apply a cooldown mechanism before producing the final unsafe AV set; i.e., the cooldown set is defined by Eq. 14. 
+
+Ut 
+
+> cool
+
+=  av i ∈ V t 
+
+> AV
+
+t − tlast  
+
+> i
+
+< w hold , (14) 
+
+where whold is the cooldown window length; and tlast  
+
+> i
+
+is the most recent time step at which av i was flagged as unsafe, and 
+
+tlast  
+
+> i
+
+resets to t whenever av i ∈ U t
+
+> cur
+
+. Finally, the hazard assess-ment gets the unsafe AV set Ut = Ut 
+
+> cur
+
+∪ U t 
+
+> cool
+
+at time step t.
+
+D. Joint Hazard Mitigation 
+
+To mitigate the hazards identified by the hazard assessment, COSAFE performs the joint hazard mitigation to produce a coor-dinated set of safe reference trajectories {ˆτ ti }av i∈U t . It consists of two stages, i.e., ego-level candidate generation first generates a diverse pool of candidate trajectories for each unsafe AV from its ego-centric view, and then BnB-based joint selection 
+
+performs scene-level coordination via branch-and-bound search to assign coordinated safe reference trajectories. Aggregated BEV Projected BEV 
+
+> R,t
+> Spatial Warping Trajectory Anchors
+> Trajectory Refinement
+> K, V Q
+
+# +
+
+> Candidate Trajectories brake (fallback)
+
+Fig. 3: Architecture of Ego-level Candidate Generation 
+
+Ego-level Candidate Generation. Inspired by recent end-to-end ADSes that leverage trajectory anchors to produce multi-modal driving trajectories [29, 34], we generate per-AV can-didate trajectories by refining a trajectory anchor library with BEV-conditioned residuals, providing diverse and realistic over-ride candidates. The anchor library {cm}Mm=1 contains M rep-resentative trajectories, i.e., the centroids obtained by K-means clustering of expert trajectories from the Bench2Drive training data [28], with each cm expressed in the ego coordinate frame and covering common driving behaviors ( e.g., through, turn, lane change, and brake). As shown in Fig. 3, for each unsafe AV av i, we project BEV t 
+
+> agg
+
+into its ego coordinate frame by the inverse pose (T ti→RSU )−1, yielding the projected BEV 
+
+BEV t 
+
+> agg →i
+
+aligned with the anchor library. Each anchor cm is then refined by a cross-attention residual head with anchor fea-tures as queries and BEV t 
+
+> agg →i
+
+as keys and values by Eq. 15, 
+
+cmi = cm + MLP 
+
+
+
+Attn  TE( cm), BEV t
+
+> agg →i
+
+
+
+, (15) 
+
+where TE( ·) is an MLP-based trajectory encoder, and Attn( ·, ·)
+
+denotes a multi-head cross-attention operator. Intuitively, Attn 
+
+retrieves scene context ( e.g., nearby obstacles) relevant to the anchor feature TE( cm) from BEV t
+
+> agg →i
+
+, and MLP converts it into per-waypoint offsets that adapt cm into its refinement 
+
+cmi for av i.The final candidate set augments the M refined candidates 
+
+{cmi }Mm=1 with a deterministic brake trajectory by Eq. 16, 
+
+Ci = cmi 
+
+> Mm=1
+
+∪ cbrake  
+
+> i
+
+, (16) 
+
+where cbrake  
+
+> i
+
+is a trajectory that decelerates at a constant rate from av i’s current state, serving as a conservative fallback. To preserve the behavioral diversity of the anchor library, we train the residual head on Bench2Drive [28] with the winner-take-all strategy [70], which supervises only the refined trajec-tory from the anchor closest to each expert trajectory. 
+
+BnB-based Joint Selection. Given the unsafe AV set Ut with candidate trajectory sets {C i}av i∈U t , the auxiliary planning information {ati}av i∈U t , the scene-level information St =({(¯ stk, ¯τ tk)}, MRSU , St
+
+> RSU
+
+), and the persistent yield memory Y
+
+from the previous time step ( i.e., yield priorities between unsafe AV pairs stored across time steps), we formulate joint mitigation as a discrete assignment problem over finite per-AV candidate 
+
+Algorithm 1: BnB-based Joint Selection                                                                                                                                                  
+
+> Input: unsafe AV set Ut, candidate trajectory sets {C i}av i∈U t,auxiliary planning information {ati}av i∈U t,scene-level information St= ( {(¯ stk,¯τtk)},MRSU ,St
+> RSU ),persistent yield memory Yfrom the previous time step
+> Output: coordinated safe reference trajectories {ˆτti}av i∈U t,updated yield memory Y
+> 1Ot← { ¯τtk|tp k∈ T P t\ U t};
+> 2foreach av i∈ U tdo
+> 3Ci←Tti→RSU · C i;
+> 4Ci←HardPrune  Ci,Ot,MRSU
+> ;
+> 5Ji← { c7→J(c)}c∈C i;
+> 6Ci←DiverseTopK  Ci,Ji
+> ;
+> 7end
+> 8Y ← UpdateYieldRules  {C i}av i∈U t,{J i}av i∈U t,Y;
+> 9Gt
+> COL ←BuildConflictGraph  {C i}av i∈U t,Y;
+> 10 Sort Utin ascending order of the size of candidate set |C i|;
+> 11 global x∗← { cbrake
+> i}av i∈U t,J∗←P
+> av i∈U tJi(cbrake
+> i);
+> 12 BnB (∅,0) ;{ˆτti}av i∈U t←x∗;
+> 13 return {ˆτti}av i∈U t,Y;
+> 14 Procedure BnB (x,lb ):
+> 15 if lb ≥J∗then return ;
+> 16 if |x|=|U t|then
+> 17 J∗←lb ;x∗←x;return ;
+> 18 end
+> 19 av i←next unassigned AV from sorted Ut;
+> 20 foreach c∈ C iin ascending Ji(c)do
+> 21 if ∃(j, c ′)∈x: (i, c ),(j, c ′)∈ G t
+> COL then continue ;
+> 22 BnB  x∪ { i7→c},lb +Ji(c);
+> 23 end
+
+pools. We use branch-and-bound (BnB) to select one safe refer-ence trajectory ˆτ ti ∈ C i per unsafe AV, which resolves all spatial conflicts while staying close to each ADS’s auxiliary planning information ati, alongside an updated Y for subsequent time steps. Algorithm 1 illustrates the joint selection process. We first collect the non-controllable background trajectories 
+
+Ot (Line 1), which include both AVs deemed safe and other traf-fic participants in the current time step, acting as fixed obstacles for the collision check. For each unsafe AV av i, the candidates in Ci are then transformed from av i’s ego coordinate frame into the RSU coordinate frame via T ti→RSU (Line 3). Then, we prune three classes of candidates (Line 4), i.e., (i) candidates whose net displacement falls below a small motion threshold, leaving 
+
+cbrake  
+
+> i
+
+as the unique stop candidate; (ii) candidates that would collide with any ¯τ tk ∈ O t within the horizon; and (iii) candidates that leave the drivable region obtained from MRSU . The brake candidate cbrake  
+
+> i
+
+is unconditionally retained, guaranteeing a conservative fallback. This pruning excludes candidates that are infeasible against the fixed environment ( i.e., background tra-jectories Ot and the drivable region), and thus our joint search only needs to coordinate mutual conflicts among unsafe AVs. Next, we precompute a per-AV cost map Ji : Ci 7 → R that scores every surviving candidate (Line 5). The cost balances three concerns, as defined by Eq. 17, 
+
+J(c) = Jref (c) + Jbg (c) + JAV (c), (17) 
+
+where each term is non-negative and bounded to a comparable scale near [0 , 1] . Jref penalizes the candidate’s mean deviation from a reference trajectory realized from ati and MRSU , favor-ing candidates that stay close to the ADS’s auxiliary planning in-formation. Jbg decays exponentially with the candidate’s min-imum distance to Ot over the horizon, measured between time-aligned waypoints, rewarding candidates that keep a safe distance from background traffic. JAV decays exponentially with the distance from the candidate’s waypoints to the current positions of other unsafe AVs, since their trajectories are yet to be selected, biasing the search toward likely-feasible regions first. The brake candidate cbrake  
+
+> i
+
+is assigned a fixed cost larger than J(c) for any other c ∈ C i, so ascending-cost ordering of Ci always exhausts the remaining candidates before falling back to brake. Since J(c) is a pure function of c and St,
+
+Ji is precomputed once per time step, and reused as O(1) 
+
+lookups throughout our BnB search, keeping the inner loop free of per-node cost evaluation. Finally, Ci is reduced to κ low-cost candidates covering distinct behavioral modes (Line 6), bounding the BnB search width. After per-AV candidate pool construction, we update the per-sistent yield memory Y for the current time step (Line 8). 
+
+Y persists yield priorities across time steps so that once a yield priority is established between two AVs, it remains consistent in subsequent steps, avoiding oscillation. For each unsafe AV pair av i, av j ∈ U t without a yield priority already registered in Y, we take each AV’s lowest-cost candidate as its representative trajectory, and check whether the corresponding corridors intersect. If the corridors do not intersect, no rule is established. Otherwise, the AV whose representative trajectory enters the intersection of the two corridors earlier is granted priority, and the other AV is recorded as yielding to it. Based on the updated yield memory, we precompute the con-flict graph Gt 
+
+> COL
+
+over candidate pairs (c, c ′) ∈ C i × C j for dis-tinct unsafe AVs (Line 9). Specifically, for each pair (c, c ′), we first check whether their trajectory corridors intersect. If their corridors intersect and the two candidates spatially overlap at any time step t′ ∈ { t, . . . , t +H}, the pair is declared as conflict-ing. When the corridors intersect without same-time overlap, the later-arriving AV is the implied yielder, and the pair is declared as conflicting if this relation contradicts a rule in Y. Although the precomputed lookup tables {J i} and Gt 
+
+> COL
+
+may hold more entries than the BnB ultimately visits, the per-entry computation is independent and can be batched in parallel upfront, making it faster than evaluating each entry on demand during the search. Equipped with {J i} and Gt
+
+> COL
+
+, we run the BnB search to assemble {ˆτ ti }av i∈U t . A joint assignment x maps each unsafe AV av i to one candidate in Ci, and its cost J(x) is the sum of Ji over the assigned candidates. BnB search systematically explores joint assignments while pruning subtrees whose lower-bound cost exceeds the cost of the current best feasible solution, which means they cannot improve on the current solution. The unsafe AVs are sorted by ascending |C i|, and thus the most-constrained AV is branched first (Line 10). The current best solution (x∗, J ∗) is initialized to the all-brake assignment (Line 11), providing a guaranteed feasible fallback whose cost serves as the initial upper bound. The recursion (Lines 15-22) then prunes branches by the cost bound, expands candidates in ascending Ji(c) order, and skips any candidate that conflicts with an already-assigned one in Gt
+
+> COL
+
+. Upon completion, x∗ is written into {ˆτ ti } (Line 12). Finally, the joint hazard mitigation sends the safe reference trajectories {ˆτ ti }av i∈U t to the corresponding unsafe AVs to re-solve the hazards identified by the hazard assessment. 
+
+E. Control Switch 
+
+To allow the safe reference trajectories {ˆτ ti }av i∈U t to take effect on unsafe AVs, each participating AV runs a con-trol switch module that is conditionally activated upon re-ceiving its assigned safe reference trajectory ˆτ ti from the RSU. Specifically, when no ˆτ ti is received, the AV’s original ADS-generated planned trajectory τ ti is passed through to the vehicle controller. Otherwise, the control switch uses ˆτ ti as the trajectory finally executed by the vehicle, and tracks it through our reference-guided override , implemented as a model predictive controller (MPC) that minimizes the tracking error to 
+
+ˆτ ti over the MPC horizon under a kinematic bicycle model [21], with additional penalties on control magnitude and rate [38]. The core of the control switch is the pass-through-or-override logic conditioned on ˆτ ti , while the inner tracker is interchange-able. The MPC above is only a reference implementation, and any vendor-supplied controller ( e.g., PID, or learned policy) can substitute it without altering the RSU-side pipeline, preserving COSAFE ’s modular and ADS-agnostic design. IV. E VALUATION 
+
+We have implemented a prototype of C OSAFE with 7,959 lines of Python code. The source code and data of our work are available at [14]. To evaluate the effectiveness and efficiency of C OSAFE , we design the following six research questions.  
+
+> •
+
+RQ1 Effectiveness Evaluation : How effective is C OSAFE in providing cooperative runtime safety assurance for various heterogeneous ADSes in mixed-traffic environments?  
+
+> •
+
+RQ2 Efficiency Evaluation : Can C OSAFE satisfy runtime latency constraints in mixed-traffic environments?  
+
+> •
+
+RQ3 Accuracy Evaluation : How accurately can the hazard assessment identify unsafe AVs?  
+
+> •
+
+RQ4 Ablation Study : How does each key module of COSAFE contribute to its overall effectiveness?  
+
+> •
+
+RQ5 Mixed-Deployment Evaluation : Does C OSAFE remain effective when coexisting AVs run different ADSes?  
+
+> •
+
+RQ6 V2X Robustness Evaluation : How robust is C OSAFE 
+
+to V2X delay and packet loss? 
+
+A. Evaluation Setup 
+
+Benchmark. We adopt the InterDrive benchmark [36], a re-cent closed-loop benchmark built on the V2Xverse [37] plat-form that systematically assesses multi-vehicle interaction in CARLA simulator [16]. InterDrive comprises 10 typical multi-vehicle scenario types with reference to the pre-crash typology of NHTSA [1], organized into three categories, i.e., InterDrive-IC where vehicles enter, meet, and exit an intersection from different directions, InterDrive-LM where vehicles merge into the same lane across parallel lanes, T-junctions, and highway ramps, and InterDrive-LC where vehicles traveling in parallel execute lane-change maneuvers that intersect adjacent vehicles’ trajectories. We use the NPC-enriched configuration [36], which yields 46 routes ( i.e., 18 for IC, 20 for LM, and 8 for LC) across 3 towns, each assigning 2 to 8 AVs on overlapping paths and populated with background vehicles, pedestrians, and cyclists. The driving task requires each AV to reach its destination while interacting safely with surrounding traffic participants. 
+
+Target ADSes. We integrate C OSAFE with seven state-of-the-art ADSes spanning five families to evaluate its applicability across heterogeneous ADSes: (i) a modular ADS, Auto-ware [19]; (ii) three end-to-end ADSes, TCP [56], UniAD [24], and VAD [30]; (iii) an LLM-driven ADS, LMDrive [48]; (iv) a shared-perception cooperative ADS, CoDriving [37]; and (v) an LLM-mediated negotiation cooperative ADS, CoLMDriver [36]. For each AV, we run its native ADS with the publicly released official implementation, extracting the ADS-generated planned trajectory and auxiliary planning information from its public interfaces without modifying the underlying planning logic. In our prototype, all target ADSes share a single auxiliary BEV encoder and RSU-side fusion model, both pre-trained on DeepAccident [55], instead of per-ADS BEV adapters [42]. This strategy keeps BEV-alignment quality constant across ADSes, and thus the reported gains are attributable to C OSAFE ’s safety assurance. 
+
+Baselines. We compare C OSAFE against A RGUS [53], the state-of-the-art ego-centric runtime safety assurance framework for end-to-end ADSes, applying it to TCP, UniAD, and VAD within its design scope. To the best of our knowledge, no publicly available safety assurance framework applies to the other four target ADSes ( i.e., LMDrive, CoDriving, CoLMDriver, and Autoware). For all seven target ADSes, we additionally report their native ADS baselines without assurance as comparison. 
+
+Metrics. To measure C OSAFE ’s safety assurance effective-ness, we adopt two complementary metric groups, i.e., driving-performance metrics for the overall driving quality, and viola-tion counts for hazard prevention. Following A RGUS [53], we measure driving performance by four CARLA Leaderboard metrics [16], i.e., Route Completion (RC , the completion ratio of each route), Infraction Score (IS , a penalty factor starting at 1.0 and decreasing with each violation), Driving Score (DS =
+
+RC · IS ), and Success Rate (SR , the fraction of routes com-pleted with a full-mark DS ). Within each route, we aggregate 
+
+RC as the average, and IS as the product across all AVs. The final reported RC , IS , and DS are then averaged across the 46 routes. For hazard prevention, we count four types of safety violations corresponding to the four hazard oracles, i.e., vehicle collision ( Coll ), failure to obey stop signals ( Stop ), multi-vehicle deadlock ( Deadlock ), and vehicle stalling ( Stall ). 
+
+RQ Setup. For RQ1 , we compare C OSAFE against the base-lines across the seven target ADSes separately, where each route deploys the same ADS for all AVs to isolate the per-ADS effect, and report the driving performance and violation counts. For RQ2 , we measure the per-time-step wall-clock latency of each module of C OSAFE over all routes, and report both the mean and P95 latency to characterize typical and tail behavior. For RQ3 , following A RGUS [53], we extract violation ground truth from the corresponding unprotected baseline runs using CARLA’s infraction events. We treat an intervention as neces-sary if it occurs within 3 seconds prior to a violation. Based on this, we count necessary interventions as true positives (TP), unnecessary interventions as false positives (FP), and violations not preceded by an intervention as false negatives (FN), and report precision = TP TP +FP , recall = TP TP +FN , and F 3 score to em-phasize recall over precision in safety-critical settings. For RQ4 , we conduct module-level ablation studies on TCP as a representative ADS. We create five variants of C OSAFE ,each replacing one key module with a simpler alternative, i.e., 
+
+(i) w/o cooperative perception disables V2X-based AV infor-mation sharing, and uses only RSU-side observations, (ii) w/o deadlock & stall oracle keeps only the collision and stop signal oracles in the hazard assessment, isolating the contribution of the interaction-induced oracles introduced by C OSAFE , and (iii) w/o joint selection replaces BnB-based joint selection with one of three simpler mechanisms, leaving other modules unchanged ( i.e., per-AV greedy selection, where each unsafe AV independently selects its best candidate; deterministic priority inspired by AIM [17], where AVs take their best non-conflicting candidate in order of expected corridor entry, or brake; and randomized backoff, where each conflicting AV brakes for a random 1-8 time steps with a probability of 0.5). For RQ5 , unlike RQ1 where each route uses a single ADS type, the AVs within each route are assigned to TCP, LMDrive, and UniAD in rotation to simulate real-world roads with multiple vendors. These ADSes cover the end-to-end and LLM-driven families exhibiting different failure modes, and COSAFE reads only the V2X interface without identifying which ADS an AV runs. The three ADSes appear in balanced proportions across the 46 routes (31.3% TCP, 34.4% LMDrive, and 34.4% UniAD). The same AV-to-ADS mapping is used in both baseline and C OSAFE runs to ensure a fair comparison. For RQ6 , to simulate imperfect V2X communication, we inject three perturbations ( i.e., 250 ms delay, 500 ms delay, and 30% packet loss) into RSU-to-AV messages on TCP as a representative ADS, with all other modules unchanged. An AV that receives no safe reference trajectory executes its ADS-generated planned trajectory. 
+
+Environment. We conduct all the experiments on Ubuntu 20.04.4 LTS servers with 4 NVIDIA GeForce RTX 3090 GPUs, Intel(R) Xeon(R) Silver 4310 @ 2.10GHz and 128GB memory. To mitigate the impact of randomness, all the experiments are conducted five times, and the average results are reported. 
+
+B. Effectiveness Evaluation (RQ1) 
+
+We evaluate the effectiveness of C OSAFE by reporting driv-ing performance improvements and safety violation reductions. 
+
+Driving Performance Improvement. As shown in Table I, on InterDrive-Total, C OSAFE achieves average improvements of 70.03% in DS , 15.96% in RC , 57.86% in IS , and 162.29% in SR over the unprotected baselines. Among them, CoDriving and CoLMDriver gain 34.91% and 14.19% in DS , even though they already see beyond-line-of-sight hazards through V2X. Across the three categories, C OSAFE achieves average 
+
+DS improvements of 74.59% on IC, 44.89% on LM, and TABLE I: Results of the Driving Performance Improvement                                                                                                                                                                                                                                                                                                                    
+
+> Approach InterDrive-Total InterDrive-IC InterDrive-LM InterDrive-LC
+> DS ↑RC ↑IS ↑SR ↑DS ↑RC ↑IS ↑SR ↑DS ↑RC ↑IS ↑SR ↑DS ↑RC ↑IS ↑SR ↑
+> TCP 71.35 89.41 79.23 50.00 69.25 78.02 85.83 44.44 84.12 96.12 87.04 65.00 44.12 98.29 44.83 25.00
+> TCP-A RGUS 82.48 91.41 87.83 67.39 81.54 89.28 88.63 61.11 90.11 97.43 91.85 80.00 65.51 81.14 76.00 50.00
+> TCP-C OSAFE 92.42 94.22 97.22 82.61 89.52 93.07 96.44 72.22 97.59 97.97 99.63 85.00 100.00 100.00 100.00 100.00 UniAD 35.19 87.59 36.72 13.04 31.18 86.21 32.73 11.11 50.94 91.63 52.89 20.00 4.81 80.58 5.25 0.00
+> UniAD-A RGUS 57.43 76.60 72.70 32.61 64.03 75.93 77.81 38.89 65.60 83.96 76.09 40.00 22.17 59.69 52.73 0.00
+> UniAD-C OSAFE 79.34 91.93 85.49 54.35 75.52 83.72 90.19 44.44 89.22 99.88 89.33 70.00 63.26 90.53 65.32 37.50 VAD 30.85 96.81 31.13 13.04 27.42 98.12 27.45 5.56 45.44 97.84 45.77 25.00 2.11 91.31 2.80 0.00
+> VAD-A RGUS 57.02 79.30 67.85 28.26 54.31 74.42 66.43 22.22 69.56 92.21 74.06 40.00 31.74 57.99 55.53 12.50
+> VAD-C OSAFE 81.60 91.31 88.12 56.52 78.53 85.49 89.46 50.00 85.28 97.57 85.98 65.00 79.30 88.76 90.48 50.00 LMDrive 64.47 74.45 88.24 26.09 54.33 58.29 94.35 11.11 73.23 85.29 86.15 35.00 65.39 83.69 79.71 37.50
+> LMDrive-C OSAFE 88.33 91.62 96.35 67.39 82.12 86.01 95.34 61.11 92.25 93.56 98.69 65.00 92.52 99.38 92.78 87.50 CoDriving 68.04 95.34 70.85 52.17 54.35 91.60 58.05 38.89 93.33 96.83 96.49 75.00 35.59 100.00 35.59 25.00
+> CoDriving-C OSAFE 91.79 93.41 98.07 78.26 79.74 83.15 95.77 55.56 99.36 100.00 99.36 90.00 100.00 100.00 100.00 100.00 CoLMDriver 79.83 92.43 82.64 71.74 81.06 85.39 86.97 72.22 93.32 100.00 93.32 90.00 43.36 89.34 46.24 25.00
+> CoLMDriver-C OSAFE 91.16 93.76 97.18 80.43 85.09 85.09 100.00 72.22 98.43 100.00 98.43 90.00 86.66 97.67 87.71 75.00 Autoware 42.55 44.64 96.18 15.62 40.86 44.90 90.05 13.33 49.20 49.67 99.53 23.08 27.31 27.31 100.00 0.00
+> Autoware-C OSAFE 78.56 82.39 97.32 46.88 65.97 73.26 94.40 31.25 97.17 97.68 99.56 66.67 73.04 73.04 100.00 50.00
+
+TABLE II: Results of the Safety Violation Reduction                                                                             
+
+> Approach Coll ↓Stop ↓Deadlock ↓Stall ↓
+> TCP 21 544
+> TCP-A RGUS 10 265
+> TCP-C OSAFE 2010UniAD 142 098
+> UniAD-A RGUS 25 018 4
+> UniAD-C OSAFE 12 021VAD 133 218
+> VAD-A RGUS 26 016 5
+> VAD-C OSAFE 6050LMDrive 15 310 24
+> LMDrive-C OSAFE 3038CoDriving 40 044
+> CoDriving-C OSAFE 1031CoLMDriver 18 270CoLMDriver-C OSAFE 6010Autoware 2021 5
+> Autoware-C OSAFE 0032
+
+784.27% on LC, demonstrating that C OSAFE ’s effectiveness generalizes across diverse interaction types, with the largest gains on LC where the unprotected VAD and UniAD perform the worst. Compared to the ego-centric A RGUS baseline on TCP, UniAD, and VAD, C OSAFE yields an average DS gain of 31.10%, confirming the advantage of scene-level cooperative intervention over ego-centric takeover. 
+
+Violation Prevention. As shown in Table II, C OSAFE sub-stantially reduces four types of safety violations. On average across the seven target ADSes, C OSAFE reduces Coll , Stop ,
+
+Deadlock and Stall by 91.91%, 100.00%, 67.86% and 77.36%, respectively. Overall, C OSAFE reduces safety violations by 87.80%. Compared to A RGUS on TCP, UniAD, and VAD, COSAFE also reduces safety violations, achieving a 75.21% reduction. Moreover, A RGUS inflates deadlocks on every appli-cable ADS. We also conduct a breakdown analysis of the failure scenarios of each framework to understand their limitations. 
+
+Breakdown of A RGUS . The residual failures of both A RGUS 
+
+and C OSAFE mainly stem from imperfect perception. Yet A R-
+
+GUS relies only on each AV’s local perception, making it less effective against beyond-line-of-sight hazards. In addition, the increased deadlocks under A RGUS expose the limitation of ego-centric takeover, where AVs yield independently without scene-level coordination, producing locally reasonable yet jointly incompatible decisions. Through BnB-based joint selection and explicit yield-priority assignment, C OSAFE avoids such states. 
+
+Breakdown of C OSAFE . COSAFE does not fully eliminate 
+
+Deadlock and Stall violations, most notably on VAD. These residual cases mainly arise when unsafe AVs are already too close for any forward-only candidate trajectories to resolve the conflict. Like most ADSes, C OSAFE does not include reverse motion in its action space, and thus the BnB search falls back to a conservative all-stop assignment. This safety-oriented fallback often converts imminent collisions into less severe deadlock or stall states, thereby substantially reducing collision violations on VAD while leaving some residual liveness violations. 
+
+C. Efficiency Evaluation (RQ2) 
+
+We evaluate the runtime efficiency of C OSAFE by profiling its per-time-step wall-clock latency. The four modules’ per-time-step latencies are 27.55 / 52.30 ms (mean / P95) for the co-operative perception, 1.91 / 4.60 ms for the hazard assessment, 50.25 / 80.42 ms for the joint hazard mitigation (over active-intervention time steps), and below 0.01 ms for the control switch, with a mean total of 79.72 ms per active-intervention cycle. The logic-heavy kernels ( e.g., BnB-based joint selection and conflict-graph construction) are accelerated via Cython [4]. To contextualize C OSAFE ’s runtime overhead, we compare it to the latency of seven state-of-the-art ADSes measured in our experiments. Across the ADSes, the mean per-time-step latency ranges from 168.6 ms (TCP, the fastest) to 4,765.6 ms (CoLM-Driver, the slowest), all of which significantly exceed C OSAFE ’s 
+
+∼80 ms budget. Since C OSAFE mainly runs on the RSU side in parallel with each AV’s native ADS, its overhead is fully subsumed by the ADS’s own planning latency, and does not ex-tend the critical path. Therefore, C OSAFE delivers cooperative safety assurance while satisfying real-time constraints. 
+
+D. Accuracy Evaluation (RQ3) 
+
+We evaluate the accuracy of the hazard assessment in iden-tifying unsafe AVs by reporting precision, recall, and F 3 score across the seven target ADSes. As shown in Table III, C OSAFE 
+
+achieves an average precision of 0.836, recall of 0.943, and TABLE III: Accuracy of the Hazard Assessment                                  
+
+> Approach Precision Recall F3
+> TCP-A RGUS 0.643 0.882 0.851
+> TCP-C OSAFE 0.842 0.941 0.930
+> UniAD-A RGUS 0.802 0.978 0.957
+> UniAD-C OSAFE 0.902 0.982 0.973
+> VAD-A RGUS 0.790 0.991 0.966
+> VAD-C OSAFE 0.915 0.991 0.983
+> LMDrive-C OSAFE 0.830 0.917 0.907
+> CoDriving-C OSAFE 0.871 0.987 0.974
+> CoLMDriver-C OSAFE 0.720 0.923 0.898
+> Autoware-C OSAFE 0.774 0.857 0.848
+
+F3 score of 0.930. Compared to A RGUS on TCP, UniAD, and VAD, C OSAFE achieves average gains of 0.141 in precision, 0.021 in recall, and 0.037 in F 3 score. The high recall and F3 score confirm that C OSAFE ’s hazard assessment reliably identifies unsafe AVs in mixed-traffic environments. 
+
+E. Ablation Study (RQ4) 
+
+Table IV reports the ablation result on TCP. Although the w/o cooperative perception variant improves driving performance over the original TCP, its gains are substantially smaller than those of TCP-C OSAFE , indicating that cooperative perception is essential for extending scene-level observability beyond the RSU’s local field of view. The w/o deadlock & stall oracle 
+
+variant preserves TCP-C OSAFE ’s reductions in Coll and Stop 
+
+violations, but increases Deadlock beyond the original TCP baseline because collision-avoiding overrides may leave AVs in mutually blocked states that the disabled oracles no longer detect. With the same cooperative perception and hazard assessment, TCP-C OSAFE still improves DS over the w/o joint selection variants ( i.e., by 61.43% over per-AV greedy selection, 11.40% over deterministic priority, and 28.75% over randomized backoff), indicating that its gains come from scene-level coordination rather than perception alone. In particular, the per-AV greedy variant performs worse than the original TCP, with Coll rising to nearly four times the baseline, because independently selected candidates can produce mutually inconsistent trajectories. All three modules contribute distinctly to C OSAFE , and their combination delivers the effectiveness of cooperative safety assurance. 
+
+F. Mixed-Deployment Evaluation (RQ5) 
+
+As shown in Table V, in mixed deployment, C OSAFE im-proves driving performance over the baseline without runtime assurance by 50.47% in DS , 3.23% in RC , 46.93% in IS , and 71.44% in SR . It also reduces Coll , Stop , Deadlock , and 
+
+Stall violations by 82.35%, 100.00%, 66.67%, and 66.67%, respectively. These gains are comparable to the results in RQ1 ,confirming that C OSAFE delivers cooperative runtime safety assurance even when coexisting AVs run different ADSes. 
+
+G. V2X Robustness Evaluation (RQ6) 
+
+As shown in Table VI, C OSAFE improves DS over the original TCP by 26.18% under 250 ms delay, 16.40% under 500 ms delay, and 26.52% under 30% packet loss. Delay makes each safe reference trajectory reflect an older scene, and packet loss skips intervention steps. Although both weaken the benefit of C OSAFE , it still reduces safety violations compared to the original TCP under all three conditions. V. T HREATS TO VALIDITY 
+
+First, the benchmark selection may pose a threat to external validity. To mitigate this threat, we evaluate C OSAFE on Inter-Drive [36], the only publicly available closed-loop benchmark for V2X-enabled cooperative driving in mixed traffic, with its 10 scenario types aligned with the NHTSA pre-crash typology [1] for evaluation in real-world accident distributions. These NHTSA-aligned scenarios cover the major interaction patterns expected in real-world mixed traffic, providing evidence that COSAFE ’s safety assurance is not tied to a specific scenario. Second, the quality of cooperative perception, motion pre-diction, and BEV fusion may affect internal validity. C OSAFE 
+
+handles perception uncertainty through conservative measures (e.g., bounding-box inflation in hazard oracles, a cooldown window against temporal flickering, and per-step re-assessment that corrects mis-predictions at the next observation). To isolate COSAFE ’s safety assurance contribution from ADS-specific BEV adapters, our prototype evaluates all target ADSes under a uniform RSU-side BEV encoder and fusion model pre-trained on DeepAccident [55]. The required interfaces are specified as data formats ( i.e., BEV features, vehicle states, ADS intentions, HD maps, and infrastructure states) rather than fixed perception implementations, and are compatible with established V2X co-operative perception [15, 37, 42, 55, 62]. Thus, the applicability of C OSAFE scales with future literature advances. Third, the diversity of driving hazards presents a potential threat, as our current implementation focuses on four representa-tive safety violations. Compared with prior ego-centric runtime assurance [52, 53], C OSAFE explicitly defines an interaction-induced deadlock oracle that is critical in mixed traffic where multiple AVs may make locally reasonable yet jointly incom-patible decisions. The modular design of C OSAFE allows addi-tional hazard oracles to be incorporated without changing the pass-through-or-override abstraction, e.g., map-rule violations such as illegal U-turns or restricted-lane entry. Specifically, a new oracle needs to (i) be computable from the scene-level information constructed by cooperative perception; (ii) output the AVs requiring intervention; (iii) fit the per-step hazard assessment budget; and (iv) be mitigable by trajectory-level override, with its check reused in candidate pruning if it also constrains candidate trajectories. While the current oracles cover a wide range of common safety violations, other hazards, 
+
+e.g., sensor hardware faults or actuator failures, require separate fault models and are beyond the scope of this work. Finally, the deployment assumption underlying C OSAFE 
+
+may affect real-world applicability. C OSAFE assumes an RSU-assisted prescriptive cooperation setting, where participating AVs exchange state, intention, and scene-level information with the RSU and execute the returned safe reference trajectories, which is consistent with the prescriptive cooperation class in SAE J3216 [2] and recent V2X-enabled cooperative driving platforms [7, 37]. Unlike centralized multi-vehicle planning TABLE IV: Ablation Study for C OSAFE on TCP                                                                                         
+
+> Step Driving Performance Safety Violations
+> Cooperative Perception Deadlock & Stall Oracle Joint Selection DS ↑RC ↑IS ↑SR ↑Coll ↓Stop ↓Deadlock ↓Stall ↓
+> Original TCP 71.35 89.41 79.23 50.00 21 544
+> ✘✓✓78.42 94.84 83.03 54.35 14 353
+> ✓✘✓84.28 87.72 95.33 60.87 2092
+> ✓✓Per-AV Greedy 57.25 98.69 57.36 47.83 82 010
+> ✓✓Deterministic Priority 82.96 98.41 83.30 76.09 18 022
+> ✓✓Randomized Backoff 71.78 85.73 75.25 63.04 26 086
+> ✓✓✓92.42 94.22 97.22 82.61 2010
+
+TABLE V: Results of the Mixed-Deployment Evaluation                                  
+
+> Approach Driving Performance Safety Violations
+> DS ↑RC ↑IS ↑SR ↑Coll ↓Stop ↓Deadlock ↓Stall ↓
+> Mixed ADSes w/o C OSAFE 55.16 88.21 61.39 30.43 51 4618 Mixed ADSes w/ C OSAFE 83.00 91.06 90.20 52.17 9026
+
+TABLE VI: Results of the V2X Robustness Evaluation on TCP                                                          
+
+> Condition Driving Performance Safety Violations
+> DS ↑RC ↑IS ↑SR ↑Coll ↓Stop ↓Deadlock ↓Stall ↓
+> Original TCP 71.35 89.41 79.23 50.00 21 544250 ms Delay 90.03 93.45 93.57 76.09 5012500 ms Delay 83.05 87.69 92.03 67.39 613230% Packet Loss 90.27 93.00 94.93 76.09 3122TCP-C OSAFE 92.42 94.22 97.22 82.61 2010
+
+approaches [25, 26, 39, 54] that replace the native ADSes, COSAFE preserves each AV’s original ADS in normal operation, and only performs trajectory-level override for AVs identified as unsafe, imposing lighter deployment requirements. Currently, we focus on the assurance logic built on top of this cooperation model and assume timely V2X message delivery in the main experiments. To mitigate this threat, we evaluate C OSAFE 
+
+under imperfect V2X communication, where C OSAFE still reduces safety violations compared to the native ADS. As V2X communication becomes more reliable and prescriptive cooperation interfaces become increasingly standardized, the real-world applicability of C OSAFE is expected to be further enhanced. VI. R ELATED WORK 
+
+Safety Assurance for ADSes. It aims to keep AVs within acceptable safety bounds by continuously monitoring driving hazards and intervening before potential safety violations occur [10, 44, 52, 53]. Prior studies mainly monitor driving hazards by detecting unexpected driving conditions, distributional shifts, low model confidence, or rule-based misbehavior [6, 23, 27, 45, 49, 50, 64]. However, these works are not designed to detect interaction-induced hazards such as deadlock that arise in mixed traffic, and focus on hazard detection rather than mitigation. Furthermore, various fallback strategies have been proposed to keep ADSes within safety bounds [10, 27, 35, 44, 60, 63]. Rule-based safety models like RSS define interpretable safety distances and response rules for automated driving [47], while emergency braking systems trigger conservative responses to avoid potential collisions [33, 65]. Runtime assurance frame-works like Simplex-Drive [10] and RTA-IR [44] adopt switch-ing architectures that transfer control to a verified safety con-troller upon predicted violations, and fallback policies [60] pre-scribe pull-over maneuvers in emergencies. However, they rely on predetermined fallback responses rather than synthesizing scene-aware safe trajectories that resolve specific hazards. Recent software engineering work has further studied runtime enforcement for ADS trajectories. REDriver [52] and Fix-Drive [51] modify ADS-generated planned trajectories to enforce specification compliance, while ARGUS [53] for-mulates runtime assurance as a hazard-aware takeover-and-recovery process for ADSes. While they demonstrate the benefit of adding a runtime safety layer over ADSes, their interventions remain ego-centric, with each ADS-controlled vehicle monitored and overridden independently and interaction-induced hazards in mixed traffic left unresolved. In contrast, COSAFE provides an ADS-agnostic cooperative runtime safety assurance framework that monitors scene-level hazards and jointly generates coordinated safe reference trajectories for multiple unsafe AVs in mixed traffic. 
+
+Cooperative Autonomous Driving. It leverages V2X com-munication to extend the perception, prediction, and coordina-tion capability of individual AVs. Extensive work studies coop-erative perception to alleviate occlusion [15, 40, 42, 55, 57, 58]. End-to-end cooperative driving systems further integrate shared perception into closed-loop driving [37, 61, 62]. Beyond per-ception sharing, decentralized planning approaches let each AV cooperatively plan with neighbors [8, 68, 69]. LLM-mediated negotiation approaches such as CoLMDriver [36] further help multiple AVs exchange intentions and reach agreements [18, 20]. However, they mainly enhance the information available to each ADS, while the driving decisions are still produced by the independent driving policies and may remain unsafe. Another line of work focuses on centralized multi-vehicle planning [7, 25, 26, 39, 41]. They often assume controllable CAV fleets, homogeneous cooperation protocols, or direct re-placement of the native driving policy. In contrast, C OSAFE is not a centralized driving planner, but an ADS-agnostic runtime safety assurance layer that selectively overrides only unsafe AVs while preserving each AV’s native ADS in normal operation. VII. C ONCLUSIONS 
+
+We propose and implement C OSAFE , an ADS-agnostic co-operative runtime safety assurance framework for mixed-traffic autonomous driving. Our large-scale experiments on the InterDrive benchmark with seven state-of-the-art ADSes demon-strate the effectiveness, efficiency, and generality of C OSAFE .VIII. D ATA AVAILABILITY 
+
+The source code and data of our work are available at [14]. ACKNOWLEDGMENT 
+
+This work was supported by the National Natural Science Foundation of China (Grant No. 92582205). REFERENCES [1] N. H. T. S. Administration. (2016) Nhtsa crash viewer. [Online]. Available: https://www.nhtsa.gov/ [2] C. D. Automation, Taxonomy and definitions for terms related to cooperative driving automation for on-road motor vehicles . SAE International, 2020. [3] Baidu. (2026) Apollo: An open autonomous driving platform. [Online]. Available: https://github.com/ApolloAuto/apollo [4] S. Behnel, R. Bradshaw, C. Citro, L. Dalcin, D. S. Seljebotn, and K. Smith, “Cython: The best of both worlds,” Computing in Science & Engineering ,vol. 13, no. 2, pp. 31–39, 2010. [5] R. P. Borase, D. Maghade, S. Sondkar, and S. Pawar, “A review of pid control, tuning methods and applications,” International Journal of Dynamics and Control , vol. 9, pp. 818–827, 2021. [6] E. Candela, O. Doustaly, L. Parada, F. Feng, Y. Demiris, and P. An-geloudis, “Risk-aware controller for autonomous vehicles using model-based collision prediction and reinforcement learning,” Artificial Intelli-gence , vol. 320, p. 103923, 2023. [7] Y. Cao, W. Shangguan, A. Visser, J. Chen, L. Chai, and B. Cai, “Segment-based trajectory prediction and risk assessment for rsu-assisted cavs at signalized intersections,” IEEE Transactions on Intelligent Vehicles , 2024. [8] D. Chen, K. Zhang, Y. Wang, X. Yin, Z. Li, and D. Filev, “Communication-efficient decentralized multi-agent reinforcement learn-ing for cooperative adaptive cruise control,” IEEE Transactions on Intelligent Vehicles , 2024. [9] L. Chen, P. Wu, K. Chitta, B. Jaeger, A. Geiger, and H. Li, “End-to-end autonomous driving: Challenges and frontiers,” IEEE Transactions on Pattern Analysis and Machine Intelligence , 2024. [10] S. Chen, Y. Sun, D. Li, Q. Wang, Q. Hao, and J. Sifakis, “Runtime safety assurance for learning-enabled control of autonomous driving vehicles,” in Proceedings of the 2022 International Conference on Robotics and Automation , 2022, pp. 8978–8984. [11] M. Cheng, R. Wang, X. Xie, Y. Zhou, and L. Ma, “Stclocker: Deadlock avoidance testing for autonomous driving systems,” arXiv preprint arXiv:2506.23995 , 2025. [12] M. Cheng, Y. Zhou, and X. Xie, “Behavexplor: Behavior diversity guided testing for autonomous driving systems,” in Proceedings of the 32nd ACM SIGSOFT International Symposium on Software Testing and Analysis ,2023, pp. 488–500. [13] E. G. Coffman, M. Elphick, and A. Shoshani, “System deadlocks,” ACM Computing Surveys , vol. 3, no. 2, pp. 67–78, 1971. [14] CoSafe. (2026) Cosafe: Cooperative runtime safety assurance for mixed-traffic autonomous driving. [Online]. Available: https: //github.com/Kiki2049/CoSafe [15] J. Cui, H. Qiu, D. Chen, P. Stone, and Y. Zhu, “Coopernaut: End-to-end driving with cooperative perception for networked vehicles,” in 
+
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , 2022, pp. 17 252–17 262. [16] A. Dosovitskiy, G. Ros, F. Codevilla, A. Lopez, and V. Koltun, “CARLA: An open urban driving simulator,” in Proceedings of the 1st Annual Conference on Robot Learning , 2017, pp. 1–16. [17] K. Dresner and P. Stone, “A multiagent approach to autonomous intersection management,” Journal of artificial intelligence research ,vol. 31, pp. 591–656, 2008. [18] S. Fang, J. Liu, Y. Cui, C. Lv, P. Hang, and J. Sun, “Towards interactive and learnable cooperative driving automation: a large language model-driven decision-making framework,” IEEE Transactions on Vehicular Technology , vol. 74, no. 8, pp. 11 894–11 905, 2025. [19] T. A. Foundation. (2026) Welcome to the autoware foundation. [Online]. Available: https://autoware.org/ [20] X. Gao, Y. Wu, R. Wang, C. Liu, Y. Zhou, and Z. Tu, “Langcoop: Collaborative driving with language,” in Proceedings of the Computer Vision and Pattern Recognition Conference , 2025, pp. 4226–4237. [21] Q. Ge, Q. Sun, S. E. Li, S. Zheng, W. Wu, and X. Chen, “Numerically stable dynamic bicycle model for discrete-time control,” in Proceedings of the 2021 IEEE Intelligent Vehicles Symposium Workshops , 2021, pp. 128–134. [22] S. Gottschalk, M. C. Lin, and D. Manocha, “Obbtree: A hierarchical structure for rapid interference detection,” in Proceedings of the 23rd annual conference on Computer graphics and interactive techniques ,1996, pp. 171–180. [23] R. Grewal, P. Tonella, and A. Stocco, “Predicting safety misbehaviours in autonomous driving systems using uncertainty quantification,” in Pro-ceedings of the 2024 IEEE Conference on Software Testing, Verification and Validation , 2024, pp. 70–81. [24] Y. Hu, J. Yang, L. Chen, K. Li, C. Sima, X. Zhu, S. Chai, S. Du, T. Lin, W. Wang, L. Lu, X. Jia, Q. Liu, J. Dai, Y. Qiao, and H. Li, “Planning-oriented autonomous driving,” in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , 2023, pp. 17 853–17 862. [25] Z. Huang, H. Liu, S. Shen, and J. Ma, “Parallel optimization with hard safety constraints for cooperative planning of connected autonomous vehicles,” in Proceedings of the 2024 IEEE International Conference on Robotics and Automation , 2024, pp. 2238–2244. [26] Z. Huang, S. Shen, and J. Ma, “Decentralized ilqr for cooperative trajectory planning of connected autonomous vehicles via dual consensus admm,” IEEE Transactions on Intelligent Transportation Systems , vol. 24, no. 11, pp. 12 754–12 766, 2023. [27] M. Hussain, N. Ali, and J.-E. Hong, “Deepguard: A framework for safeguarding autonomous driving systems from inconsistent behaviour,” 
+
+Automated Software Engineering , vol. 29, p. 1, 2022. [28] X. Jia, Z. Yang, Q. Li, Z. Zhang, and J. Yan, “Bench2drive: Towards multi-ability benchmarking of closed-loop end-to-end autonomous driving,” in Proceedings of the 38th Advances in Neural Information Processing Systems , 2024. [29] B. Jiang, S. Chen, H. Gao, B. Liao, Q. Zhang, W. Liu, and X. Wang, “Vadv2: End-to-end vectorized autonomous driving via probabilistic planning,” in Proceedings of The Fourteenth International Conference on Learning Representations , 2024. [30] B. Jiang, S. Chen, Q. Xu, B. Liao, J. Chen, H. Zhou, Q. Zhang, W. Liu, C. Huang, and X. Wang, “Vad: Vectorized scene representation for efficient autonomous driving,” in Proceedings of the IEEE/CVF International Conference on Computer Vision , 2023, pp. 8340–8350. [31] M. Khan, D. LeMaster, and W. G. Najm. (2024) Understanding safety challenges of vehicles equipped with automated driving systems (ads): Analysis of ads disengagements. [Online]. Available: https://www.transp ortation.gov/sites/dot.gov/files/2024-08/HASS COE Understanding S afety Challenges of Vehicles Equipped with ADS Aug2024.pdf [32] H. W. Kuhn, “The hungarian method for the assignment problem,” Naval research logistics quarterly , vol. 2, no. 1-2, pp. 83–97, 1955. [33] K. D. Kusano and H. C. Gabler, “Safety benefits of forward collision warning, brake assist, and autonomous braking systems in rear-end collisions,” IEEE Transactions on Intelligent Transportation Systems ,vol. 13, no. 4, pp. 1546–1555, 2012. [34] Y. Li, Y. Wang, Y. Liu, J. He, L. Fan, and Z. Zhang, “End-to-end driving with online trajectory evaluation via bev world model,” in Proceedings of the IEEE/CVF International Conference on Computer Vision , 2025, pp. 27 137–27 146. [35] Q. Lin, X. Chen, A. Khurana, and J. M. Dolan, “Reachflow: An online safety assurance framework for waypoint-following of self-driving cars,” in Proceedings of the 2020 IEEE/RSJ International Conference on Intelligent Robots and Systems , 2020, pp. 6627–6632. [36] C. Liu, G. Liu, Z. Wang, J. Yang, and S. Chen, “Colmdriver: Llm-based negotiation benefits cooperative autonomous driving,” in Proceedings of the IEEE/CVF International Conference on Computer Vision , 2025, pp. 25 951–25 960. [37] G. Liu, Y. Hu, C. Xu, W. Mao, J. Ge, Z. Huang, Y. Lu, Y. Xu, J. Xia, Y. Wang et al. , “Towards collaborative autonomous driving: Simulation platform and end-to-end system,” IEEE transactions on pattern analysis and machine intelligence , 2025. [38] H. Liu, K. Chen, Y. Li, Z. Huang, M. Liu, and J. Ma, “Udmc: Unified decision-making and control framework for urban autonomous driving with motion prediction of traffic participants,” IEEE Transactions on Intelligent Transportation Systems , 2025. [39] H. Liu, Z. Huang, Z. Zhu, Y. Li, S. Shen, and J. Ma, “Improved consensus admm for cooperative motion planning of large-scale connected autonomous vehicles with limited communication,” IEEE Transactions on Intelligent Vehicles , 2024. [40] Y.-C. Liu, J. Tian, N. Glaser, and Z. Kira, “When2com: Multi-agent perception via communication graph grouping,” in Proceedings of the IEEE/CVF Conference on computer vision and pattern recognition , 2020, pp. 4106–4115. [41] Y. Lu, J. Wang, X. Dong, Z. Huang, B. Liu, J.-M. Wu, and J. Wang, “Vi-planning: Infrastructure-assisted real-time planning optimization for autonomous driving,” in Proceedings of the 31st Annual International Conference on Mobile Computing and Networking , 2025, pp. 923–937. [42] Y. Lu, Y. Hu, Y. Zhong, D. Wang, Y. Wang, and S. Chen, “An extensible framework for open heterogeneous collaborative perception,” in Proceedings of the Twelfth International Conference on Learning Representations , 2024. [43] Y. Lu, Y. Tian, K. Zhang, D. Wang, B. Chen, H. Jiang, Q. Chen, K. Hu, and X. Peng, “Dynnpc: Finding more violations induced by ads in simulation testing via dynamic npc behavior generation,” ACM Transactions on Software Engineering and Methodology , 2026. [44] Y. Peng, G. Tan, and H. Si, “Rta-ir: A runtime assurance framework for behavior planning based on imitation learning and responsibility-sensitive safety model,” Expert Systems with Applications , vol. 232, p. 120824, 2023. [45] Z. Qian, R. Chen, C. Yi, X. Zhai, and B. Chen, “Collision avoidance control for autonomous driving with multiple dynamic obstacles in iov: A prediction-enhanced apf-based approach,” IEEE Internet of Things Journal , 2025. [46] R. Rajkumar, I. Lee, L. Sha, and J. Stankovic, “Cyber-physical systems: the next computing revolution,” in Proceedings of the 47th design automation conference , 2010, pp. 731–736. [47] S. Shalev-Shwartz, S. Shammah, and A. Shashua, “On a formal model of safe and scalable self-driving cars,” arXiv preprint arXiv:1708.06374 ,2017. [48] H. Shao, Y. Hu, L. Wang, G. Song, S. L. Waslander, Y. Liu, and H. Li, “Lmdrive: Closed-loop end-to-end driving with large language models,” in Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , 2024, pp. 15 120–15 130. [49] A. Stocco, P. J. Nunes, M. d’Amorim, and P. Tonella, “Thirdeye: Attention maps for safe autonomous driving systems,” in Proceedings of the 37th IEEE/ACM International Conference on Automated Software Engineering ,2022, pp. 1–12. [50] A. Stocco, M. Weiss, M. Calzana, and P. Tonella, “Misbehaviour prediction for autonomous driving systems,” in Proceedings of the ACM/IEEE 42nd international conference on software engineering , 2020, pp. 359–371. [51] Y. Sun, C. M. Poskitt, K. Wang, and J. Sun, “Fixdrive: Automatically repairing autonomous vehicle driving behaviour for $0.08 per violation,” in Proceedings of the 2025 IEEE/ACM 47th International Conference on Software Engineering , 2025, pp. 1921–1933. [52] Y. Sun, C. M. Poskitt, X. Zhang, and J. Sun, “Redriver: Runtime enforcement for autonomous vehicles,” in Proceedings of the IEEE/ACM 46th International Conference on Software Engineering , 2024, pp. 1–12. [53] D. Wang, Y. Lu, B. Chen, S. Hao, H. Jiang, Y. Tian, and X. Peng, “Argus: Resilience-oriented safety assurance framework for end-to-end adss,” in 
+
+Proceedings of the 2025 40th IEEE/ACM International Conference on Automated Software Engineering , 2025, pp. 13–25. [54] J. Wang, H. Wang, J. Song, X. Chen, J. Guo, K. Li, X. Li, and B. Huang, “Knowledge-guided self-learning control strategy for mixed vehicle platoons with delays,” Nature Communications , vol. 16, no. 1, p. 7705, 2025. [55] T. Wang, S. Kim, J. Wenxuan, E. Xie, C. Ge, J. Chen, Z. Li, and P. Luo, “Deepaccident: A motion and accident prediction benchmark for v2x autonomous driving,” in Proceedings of the AAAI Conference on Artificial Intelligence , 2024, pp. 5599–5606. [56] P. Wu, X. Jia, L. Chen, J. Yan, H. Li, and Y. Qiao, “Trajectory-guided control prediction for end-to-end autonomous driving: A simple yet strong baseline,” in Proceedings of the Advances in Neural Information Processing Systems , 2022. [57] R. Xu, C.-J. Chen, Z. Tu, and M.-H. Yang, “V2x-vitv2: Improved vision transformers for vehicle-to-everything cooperative perception,” IEEE transactions on pattern analysis and machine intelligence , vol. 47, no. 1, pp. 650–662, 2024. [58] R. Xu, Z. Tu, H. Xiang, W. Shao, B. Zhou, and J. Ma, “Cobevt: Coop-erative bird’s eye view semantic segmentation with sparse transformers,” in Proceedings of The 6th Conference on Robot Learning , 2023, pp. 989–1000. [59] R. Xu, H. Xiang, Z. Tu, X. Xia, M.-H. Yang, and J. Ma, “V2x-vit: Vehicle-to-everything cooperative perception with vision transformer,” in 
+
+Proceedings of the European conference on computer vision , 2022, pp. 107–124. [60] W. Xue, B. Yang, T. Kaizuka, and K. Nakano, “A fallback approach for an automated vehicle encountering sensor failure in monitoring environment,” in Proceedings of the 2018 IEEE Intelligent Vehicles Symposium , 2018, pp. 1807–1812. [61] J. You, Z. Jiang, Z. Huang, H. Shi, R. Gan, K. Wu, X. Cheng, X. Li, and B. Ran, “V2x-vlm: End-to-end v2x cooperative autonomous driving through large vision-language models,” Transportation Research Part C: Emerging Technologies , vol. 183, p. 105457, 2026. [62] H. Yu, W. Yang, J. Zhong, Z. Yang, S. Fan, P. Luo, and Z. Nie, “End-to-end autonomous driving through v2x cooperation,” in Proceedings of the AAAI conference on artificial intelligence , vol. 39, no. 9, 2025, pp. 9598–9606. [63] J. Yu and F. Luo, “Fallback strategy for level 4+ automated driving system,” in Proceedings of the 2019 IEEE Intelligent Transportation Systems Conference , 2019, pp. 156–162. [64] W. Yu, C. Zhao, H. Wang, J. Liu, X. Ma, Y. Yang, J. Li, W. Wang, X. Hu, and D. Zhao, “Online legal driving behavior monitoring for self-driving vehicles,” Nature communications , vol. 15, p. 408, 2024. [65] W. Zhang, P. Li, J. Wang, B. Sun, Q. Jin, G. Bao, S. Rui, Y. Yu, W. Ding, P. Li, and Y. Chen, “Dual-aeb: Synergizing rule-based and multimodal large language models for effective emergency braking,” in Proceedings of the 2025 IEEE International Conference on Robotics and Automation ,2025, pp. 14 888–14 895. [66] X. Zhang and Y. Cai, “Building critical testing scenarios for autonomous driving from real accidents,” in Proceedings of the 32nd ACM SIGSOFT International Symposium on Software Testing and Analysis , 2023, pp. 462–474. [67] Y. Zhang, Z. Zhu, W. Zheng, J. Huang, G. Huang, J. Zhou, and J. Lu, “Beverse: Unified perception and prediction in birds-eye-view for vision-centric autonomous driving,” arXiv preprint arXiv:2205.09743 , 2022. [68] R. Zhao, Y. Li, F. Gao, Z. Gao, and T. Zhang, “Multi-agent con-strained policy optimization for conflict-free management of connected autonomous vehicles at unsignalized intersections,” IEEE transactions on intelligent transportation systems , vol. 25, no. 6, pp. 5374–5388, 2023. [69] S. Zhou, W. Zhuang, G. Yin, H. Liu, and C. Qiu, “Cooperative on-ramp merging control of connected and automated vehicles: Distributed multi-agent deep reinforcement learning approach,” in Proceedings of the 2022 IEEE 25th International Conference on Intelligent Transportation Systems , 2022, pp. 402–408. [70] Z. Zhou, J. Wang, Y.-H. Li, and Y.-K. Huang, “Query-centric trajectory prediction,” in Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , 2023, pp. 17 863–17 873.

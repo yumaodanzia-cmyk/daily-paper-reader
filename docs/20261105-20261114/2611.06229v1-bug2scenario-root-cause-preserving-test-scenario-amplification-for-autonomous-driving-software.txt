@@ -1,0 +1,337 @@
+Title: Bug2Scenario: Root-Cause-Preserving Test Scenario Amplification for Autonomous Driving Software
+
+URL Source: https://arxiv.org/pdf/2611.06229v1
+
+Published Time: Thu, 05 Nov 2026 02:29:31 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# Bug2Scenario: Root-Cause-Preserving Test Scenario Amplification for Autonomous Driving Software 
+
+Yuchen Cao 1,† , Zhenyu Mao 1,† , Jacky Wai Keung 1, Yifei Wang 1, Yihan Liao 1, and Jingyu Zhang 2,* 
+
+> 1
+
+City University of Hong Kong, Hong Kong 
+
+{cynthcao2-c, zhenyumao2-c, ywang4748-c, yihanliao4-c }@my.cityu.edu.hk, Jacky.Keung@cityu.edu.hk 
+
+> 2
+
+Hong Kong Metropolitan University, Hong Kong 
+
+> †
+
+Equal contribution. *Corresponding author: fzhang@hkmu.edu.hk 
+
+Abstract —Simulation-based fuzzing exposes autonomous driv-ing system (ADS) failures by repeatedly mutating and executing scenarios, but converting one failure into reusable regression scenarios remains difficult. Such variants test whether the mech-anism persists after software changes, for example by varying weather or actor placement while retaining a collision’s actor– route conflict. We present Bug2Scenario, a root-cause-guided post-fuzzing framework. From scenario data, traces, and oracle evidence, it extracts a root-cause pattern. An LLM proposes semantic variations over actors, missions, routes, and weather. Deterministic rules construct DriveFuzz-compatible scenarios. Execution evidence and manual review assess preservation. Separating these responsibilities prevents fluency, syntax, or recurring labels from masquerading as causal evidence. Under matched seeds, six LLM backbones, candidate budget, and execution pipeline, Bug2Scenario improves strict preservation by 6.7 percentage points (p = 0.104 ; not significant) and boundary-inclusive preservation by 10.6 points (p = 0.011 ). Feedback helps some initially unsuccessful seeds yield a strictly preserved candidate. Seed-level stopping then avoids further API calls and simulator runs. Remaining failures reflect actor-placement constraints, simulator instability, and incomplete or conflicting causal evidence. Bug2Scenario thus produces reli-able ADS regression assets. Our implementation is available at https://github.com/YgcCoder/Bug2Sce .
+
+Index Terms —Software testing, test amplification, autonomous driving software, large language models 
+
+I. I NTRODUCTION 
+
+Fuzz testing in simulation is a central technique for exer-cising autonomous driving systems (ADSs) because safety-critical interactions are expensive, rare, and difficult to re-produce on public roads [1], [2]. CARLA and Autoware provide controllable cyber-physical test environments in which engineers can vary roads, actors, missions, and weather while observing a production-scale driving stack [3], [4]. Automated methods built on these platforms search large scenario spaces for collisions, traffic-law violations, perception errors, and unsafe vehicle states. Failure discovery is only the beginning of testing. After a fuzzer exposes a violation, engineers need regression as-sets that reproduce it under controlled variation. Repeated execution does not reveal which scene details are incidental or required. A useful test family must support debugging, regression testing, and maintenance while keeping the failure boundary interpretable. Most ADS testing research emphasizes discovery. DeepTest and DeepRoad transform driving scenes, whereas AV-Fuzzer and DriveFuzz mutate executable scenarios [5]–[8]. Re-cent methods further improve search efficiency, diversity, or responsibility-aware violation discovery [9]–[12]. Post-fuzzing test amplification instead starts from a failure-triggering seed and generates controlled variants to preserve its mechanism rather than discover an arbitrary new failure. Its output is not a new fault report, but an auditable set of regression candidates traceable to the original evidence. It asks which variants reproduce the mechanism of a failure already found? 
+
+The central engineering gap is the distinction between symptom recurrence and mechanism preservation. A failure oracle is a detection rule. Its outcome is the collision (C) , red-light violation (R) , lane invasion (L) , or stuck/immobility (S) label from one run. Symptom recurrence repeats a com-patible outcome, whereas mechanism preservation also re-tains the seed’s critical interaction and failure progression. In Fig. 1, case_098 is an actor–route collision. Label-only conditioning instead yields a red-light violation, while root-cause guidance retains that collision mechanism. The same outcome can still arise from different interactions. Parseability, executability, and a matching outcome respectively show that JSON can be read, a scenario can run, and a visible symptom recurs. None alone proves mechanism preservation. Post-fuzzing test amplification consequently needs explicit preservation constraints and graded assessment. Unconstrained variation may add an unrelated failure to the same bug family, while a scenario near a behavioral boundary may retain the critical interaction but weaken its visible symptom. Binary acceptance based only on syntax or matching outcomes cannot distinguish these outcomes or support reliable scenario-level regression asset generation. Grading also records partial evi-dence without admitting it as strict reproduction. LLMs propose semantic variation but create distinct schema, execution, and preservation risks. They support search, fuzz-input generation, and execution-guided repair [13]–[16], while language and multimodal models propose driving scenar-ios [17]–[19]. In LLM-assisted fuzz-input generation, a model proposes tests or structured configurations for another stage to execute and validate. A fluent proposal may place an actor outside a drivable region, omit a critical mission field, or depart from the seed mechanism. Existing fuzzers target discovery, arXiv:2611.06229v1 [cs.SE] 4 Nov 2026 Pure-LLM Bug2Scenario              
+
+> Root-cause guided Seed + failure label
+> Failure label: Collision (C)
+> Root-cause evidence: Actor-route conflict Generation objective: Preserve the same failure mechanism Manual outcome: R| Not preserved
+> DriveFuzz Seed
+> case_098
+> Observed: (C) | Strictly preserved
+> Failure-label conditioning alone does not ensure root-cause preservation Fig. 1. Motivating example from case_098 . The seed failure is a collision
+> caused by an actor–route conflict. Failure-label conditioning alone produces ared-light violation and does not preserve the mechanism, whereas root-cause-guided generation retains the collision mechanism. Thus, matching or triggering an oracle outcome is not sufficient evidence of root-cause preservation.
+
+structured generation does not test membership in a seed’s bug family, and direct LLM generation guarantees neither schema compliance nor mechanism preservation. One response should not control proposal, coordinates, and causal judgment. Sep-arating these roles makes rejection attributable to generation, construction, execution, or preservation assessment. In this work, we present Bug2Scenario as an LLM-assisted but validator-centered approach to post-fuzzing test amplifi-cation. Seed evidence defines a root-cause pattern, and an LLM proposes high-level variations over semantic conditions such as actors, missions, routes, and weather rather than final simulator coordinates or JSON. Deterministic concretization then produces DriveFuzz-compatible JSON. Schema checks and execution artifacts support manual assessment of invalid, no-failure, different-failure, boundary, and strictly preserved outcomes. Structural errors return to concretization, whereas an observed execution that conflicts with the seed mechanism revises the causal explanation or later generation constraints. Validated patterns remain anchored to the original seed rather than accumulated feedback. Under matched generation and ex-ecution budgets, Bug2Scenario improves strict and boundary-inclusive preservation over Pure-LLM. Same-seed feedback repairs some first-pass failures before recovery plateaus. The resulting test families help engineers study failure boundaries without mixing unrelated mechanisms. Our contributions are:  
+
+> •
+
+We introduce a root-cause-preserving test-generation framework for post-fuzzing amplification, distinguishing same-mechanism reproduction from failure discovery and visible violation recurrence.  
+
+> •
+
+Bug2Scenario provides an evidence-grounded work-flow that combines root-cause pattern extraction, LLM-assisted high-level variation, deterministic concretization, and execution-based mechanism preservation assessment.  
+
+> •
+
+We present a matched empirical evaluation across six LLM backbones and a Pure-LLM baseline, reporting strict and boundary-inclusive preservation separately.  
+
+> •
+
+We analyze iterative same-seed feedback and cost control, identifying where execution and manual-review evidence repairs seeds, where recovery plateaus, and how seed-level stopping avoids later calls and simulations. II. B ACKGROUND AND RELATED WORK 
+
+A. Software Testing and Scenario Generation in ADS 
+
+ADS testing spans learned-component checks and system-level scenario execution. Component methods include DeepTest [5], DeepRoad [6], DeepHunter [20], DeepX-plore [21], DLFuzz [22], and Surprise Adequacy [23]. Re-cent work evaluates test-selection metrics under distribution shifts [24] and probes driving models using transferable [25] or adaptive multiobjective attacks [26]. System-level search in-cludes AV-Fuzzer [7], DriveFuzz [8], SAMOTA [9], DeepCol-lision [10], BehAVExplor [11], and DoppelTest [12]. Unlike component tests, these executions must satisfy map, mission, traffic, and simulator constraints. Scenic [27], VerifAI [28], LawBreaker [29], and AsFault [30] support specification, falsification, or scenario generation. They target property vio-lations or failure discovery, not preservation of a selected seed mechanism. Coverage, diversity, and oracle yield therefore cannot define regression-family membership. Regression sce-narios need a stable intent linking execution to seed evidence; Bug2Scenario retains DriveFuzz’s representation and checks candidates against that mechanism. Traditional test amplification starts from existing tests and transforms their inputs or assertions to expose additional be-havior; DSpot, for example, improves developer-written Java unit tests through input and assertion amplification [31]. Re-cent LLM-assisted ADS testing instead uses semantic knowl-edge to guide scenario discovery: SLaFE translates traffic laws into structured constraints and combines them with cooperative evolutionary fuzzing to search for violation-triggering scenar-ios [32]. These approaches respectively amplify program-level tests or discover law-violating driving scenarios. In contrast, Bug2Scenario starts from one executed ADS failure and constructs a regression family whose candidates must retain that seed’s interaction mechanism. 
+
+B. Failure Oracles and Mechanism Preservation 
+
+DriveFuzz [8], AV-Fuzzer [7], and LawBreaker [29] use oracles to identify violations, not execution equivalence. Two collisions may arise from different actor interactions, and one interaction may approach a boundary where its symp-tom weakens. Regression membership instead depends on the seed’s actor–route geometry, mission segment, temporal behavior, system response, and critical window. Graded out-comes record uncertainty when incomplete traces retain only part of this relation. Bug2Scenario combines a seed pattern with manual assessment to distinguish strict, boundary, and non-preserved outcomes without treating recurrence as proof. 
+
+C. LLM-assisted Software Testing 
+
+LLM-assisted software engineering raises data-quality and output-validation concerns. At repository level, HGARena organizes budgeted multi-agent issue resolution around ex-ecutable tests as the final acceptance signal [33]. Although Phase1: Semantic Understanding 
+
+Seed Failure Case < Original > Failure Abstraction 
+
+Failure Analyzer 
+
+> Causal Explanation Evidence-based Reasoning Uncertainty
+
+Root-Cause Pattern P
+
+Phase2: Grounded Generation 
+
+> Failure Mechanism Preservation Constraints
+> Actor near ego route ↓Ego enters conflict region ↓Planner/control fails to avoid ↓Collision
+> Root-cause-guided generation High-level scenario variants
+
+Scenario Amplifier 
+
+> Candidate Scenario JSON < Generated >
+
+Validation Suite 
+
+> DriveFuzz + Autoware + CARLA Execution
+> Post-execution Classification Pre-execution Validation
+> • Schema Check • Actor Placement Check • Mission Feasibility
+> Schema Alignment Actor / Mission / Weather Instantiation DriveFuzz-style JSON
+
+Rule-based Concretizer 
+
+> Amplification Outputs
+> FAIL : Invalid / No Failure / Different Failure PASS : Same-root-cause Failure
+> Validation Results
+
+Failure Memory & Control 
+
+> Historical Failure Storage
+> Prompt Construction Rule-based Filtering
+> Process Control / Cost Reduction
+> R1: Reject / Revise R3: Update Generation Constraints R4: Store Validated Pattern R2: Update Explanation R2: Update Explanation
+> Manual Verification
+
+Phase3: Execution-based Validation 
+
+> DriveFuzz-discovered failure Scenario Data Oracle Result Execution Trace Root-Cause Evidence Scenario Summary Critical Window Oracle Summary Trace Evidence
+
+Fig. 2. Overview of Bug2Scenario. The workflow consists of semantic understanding, grounded generation, and execution-based validation. Starting from a DriveFuzz-discovered seed failure, Bug2Scenario abstracts scenario evidence, uses LLM-assisted causal explanation to extract a root-cause pattern, generates guided candidate scenarios, concretizes them into DriveFuzz-style JSON, and validates them through pre-execution checks and DriveFuzz, Autoware, and CARLA execution. Feedback updates explanations, generation constraints, and failure memory while retaining the seed pattern as the target. 
+
+HGARena targets patch resolution rather than ADS scenarios, it likewise separates model-guided iteration from execution-based acceptance. Practitioners identify requirements for train-ing data [34], while ChatGPT can misjudge its code out-puts [35]. Code benchmarks [36] and repository-level issue resolution [37] therefore require behavioral evaluation. Co-daMOSA combines model proposals with search [13]; Titan-Fuzz [14] and Fuzz4All [15] generate inputs for execution; ChatUniTest adds validation and repair [16]. ChatScene [17] and LLM4Drive [18] generate driving scenarios, while multi-modal approaches are surveyed separately [19]. Generated arti-facts still need syntax, execution, and semantic checks. Cyber-physical scenarios additionally impose map, mission, actor-placement, and simulator constraints. Bug2Scenario adopts this generation–validation separation, using execution evi-dence to determine regression-family membership. III. B UG 2S CENARIO 
+
+A. Framework Overview 
+
+Bug2Scenario is a software-engineering framework for post-fuzzing test amplification. Given a DriveFuzz-discovered fail-ure case, it first organizes the original failure into structured evidence, then uses LLM-assisted causal explanation to de-rive a root-cause pattern, and finally generates and validates candidate scenarios through rule-based concretization and real DriveFuzz, Autoware, and CARLA execution. Figure 2 illus-trates this workflow. For the running example in Fig. 1, this chain starts from the observed actor–route conflict, retains that interaction in the root-cause pattern and high-level variants, converts each vari-ant into candidate JSON, and accepts it only when execution and manual evidence support the same collision mechanism. The workflow contains three interacting phases. The first phase is semantic understanding. Bug2Scenario represents the original seed failure case through scenario data, an oracle result, an execution trace, and root-cause evidence. The fail-ure abstraction module converts these inputs into a scenario summary, critical-window record, oracle summary, and trace evidence. The failure analyzer then uses LLM-assisted causal explanation to identify the failure mechanism and expose reasoning uncertainty. Its output is the root-cause pattern P ,which records the mechanism and preservation constraints for later generation. 
+
+The second phase is grounded generation. Guided by P ,the scenario amplifier produces root-cause-guided, high-level scenario variants that preserve key failure conditions while changing controllable actors, missions, puddles, or weather. These variants are not simulator inputs. The rule-based con-cretizer performs schema alignment and actor, mission, and weather instantiation to emit a DriveFuzz-style candidate sce-nario JSON. 
+
+The third phase is execution-based validation. The val-idation suite first applies pre-execution validation, including schema, actor-placement, and mission-feasibility checks. Can-didates that pass are executed with DriveFuzz, Autoware, and CARLA, producing oracle results, traces, logs, and rosbags. Post-execution classification assigns each candidate to an invalid, no-failure, different-failure, or same-root-cause cate-gory. Manual verification converts the available evidence into validation results: PASS for a same-root-cause failure or FAIL for an invalid, no-failure, or different-failure outcome. The framework is iterative rather than one-shot. The failure memory & control module stores historical failure records, constructs prompts, applies rule-based filtering, and limits cost through seed-level process control. Feedback path R1 rejects or revises candidates that fail validation. R2 updates the causal explanation when execution contradicts it, and R3 updates generation constraints after no-failure or different-failure outcomes. R4 stores each validated pattern, while confirmed same-root-cause candidates form the amplification outputs. 
+
+B. Problem Formulation 
+
+A DriveFuzz-style scenario configuration can be repre-sented as T = ⟨M ap, M ission, Actors, P uddles, W eather ⟩.Bug2Scenario focuses on the post-fuzzing setting, where the input is not an arbitrary seed scenario but a failure case that has already triggered an oracle violation. We denote such a seed failure case as 
+
+F = ⟨Tfail , O, T r, E ⟩, (1) where Tfail is the original failure-triggering scenario, O is the observed oracle result— collision (C) , red-light violation (R) ,
+
+lane invasion (L) , or immobility/stuck (S) —T r is the execu-tion trace containing vehicle states and runtime observations, and E is the available root-cause evidence collected from manual inspection, logs, topic summaries, or LLM-assisted explanation. The goal of Bug2Scenario is to generate a set of executable candidate scenarios 
+
+T ′ = {T ′
+
+> 1
+
+, T ′
+
+> 2
+
+, . . . , T ′
+
+> n
+
+}, (2) where each candidate scenario is also a DriveFuzz-style con-figuration 
+
+T ′ 
+
+> i
+
+= ⟨M ap ′
+
+> i
+
+, M ission ′
+
+> i
+
+, Actors ′
+
+> i
+
+, P uddles ′
+
+> i
+
+, W eather ′
+
+> i
+
+⟩.
+
+(3) Unlike diversity-oriented scenario generation, our objective is not to maximize arbitrary variation. Instead, each T ′ 
+
+> i
+
+should vary the scenario conditions while preserving the failure mechanism captured by the root-cause pattern P of F . The generated scenario is therefore a candidate amplified scenario until it is validated through execution. After a generated candidate is concretized and executed, Bug2Scenario classifies the outcome into four categories. An 
+
+invalid scenario fails pre-execution checks or cannot be exe-cuted reliably in the simulator. A no-failure scenario executes successfully but does not trigger a relevant oracle violation. A different-failure scenario triggers a failure, but the failure symptom or trace evidence does not match the seed root-cause pattern. A same-root-cause failure triggers a compatible oracle result and produces trace evidence consistent with the original root-cause pattern. Only the last category is considered a validated member of the amplified bug family. 
+
+C. Failure Abstraction and Causal Explanation Labeling 
+
+The failure abstraction module first converts a discovered failure into information that can support causal explanation. Given a seed failure case F , it constructs an input consisting of the scenario data, fault label, oracle result, and selected execution evidence. The scenario summary covers the map, mission, actors, puddles, and weather parameters, and the oracle summary records the observed outcome. When avail-able, the trace evidence contains critical-window observations, actor states, ego-vehicle states, and relevant log or rosbag information. The failure analyzer asks the LLM to produce a structured causal explanation rather than a final scenario. A typical explanation includes a failure summary, key entities, candidate causal interactions, reasoning uncertainty, and conditions that should be preserved during amplification. For example, in a collision case, the explanation may identify that the ego vehicle approaches a conflict region, an actor is placed near or along the ego route, the ADS does not avoid or slow down sufficiently, and the execution eventually results in collision. The LLM output is treated as a candidate explanation and not as a ground-truth oracle. We therefore design the prompt to require uncertainty statements and evidence-based reasoning, and we manually inspect a small set of examples before applying the prompt to a larger failure pool through an API. This design separates semantic interpretation from execution validation. The LLM is useful for summarizing complex scenario information and proposing causal hypotheses, but it does not decide whether a generated scenario is correct. Correctness is checked later through rule-based validation and simulator execution. This separation is important because LLM explanations may be incomplete or may overfit to the fault label if trace evidence and root-cause constraints are not explicitly provided. 
+
+D. Root-Cause Pattern Extraction 
+
+After obtaining a causal explanation, Bug2Scenario ab-stracts it into a root-cause pattern P . This pattern is more specific than an oracle label. The oracle label describes the failure symptom, while P describes the mechanism that should be preserved during amplification. For example, the label “collision” only states that a collision occurs, whereas P may capture that an actor partially obstructs the ego route, the ego vehicle enters the conflict region, and the planner or controller fails to avoid or slow down before impact. In our framework, a root-cause pattern records four types of information. First, it identifies the relevant scenario entities, such as the ego vehicle, actor, puddle, traffic signal, road segment, or intersection. Second, it describes the interaction among these entities, such as route obstruction, unsafe ap-proach, insufficient stopping distance, or failure to re-plan. Third, it specifies the failure symptom that should remain compatible with the seed failure, such as collision, red-light vi-olation, immobility, or a combination of oracle labels. Fourth, it records preservation constraints that guide generation, such as keeping an actor near the ego route, keeping the mission through a conflict region, or retaining a low-friction area near the critical window. The pattern is not intended to replace detailed manual debugging of Autoware modules. Instead, it acts as an inter-mediate representation for test amplification. It is sufficiently structured to constrain scenario generation, but lightweight enough to be obtained from scenario data, oracle results, traces, and LLM-assisted explanation. This representation al-lows Bug2Scenario to generate scenarios that vary surface-level parameters while maintaining the mechanism that plau-sibly caused the original failure. 
+
+E. Root-Cause-Guided Scenario Amplification 
+
+Given a seed failure and its root-cause pattern, the scenario amplifier generates candidate scenario variants. Unlike pure LLM generation, which may directly propose a new scenario from a short fault label, Bug2Scenario conditions generation on the root-cause pattern and its preservation constraints. The generation step therefore focuses on controlled variation: it changes scenario factors that can test the boundary of the bug while keeping the causal structure of the failure. The generated variants are high-level templates rather than final simulator coordinates. A collision pattern can vary actor placement, speed, route geometry, puddles, or weather while retaining the conflict between the ego route and the obstructing actor. For a red-light failure, generation may alter the approach route, controlled intersection, weather, or initial distance to the stop line without removing the relevant signal-handling con-dition. Stuck patterns instead vary mission geometry, blocking actors, or road conditions while keeping the conditions under which the ADS fails to progress. This design has two advantages. First, it reduces the chance that the LLM generates arbitrary diverse scenarios unrelated to the seed bug. Second, it provides a natural way to study triggering boundaries. If a generated variant still produces a same-root-cause failure, it becomes part of the bug family. If it no longer triggers a failure, it provides evidence about the boundary of the failure mechanism. Thus, amplification is not only a generation task but also a way to characterize when a known ADS bug persists or disappears. 
+
+F. Rule-based Concretization and Validation 
+
+The high-level variants generated by the scenario amplifier must be converted into executable DriveFuzz-style scenario configurations. The rule-based concretizer aligns each gen-erated template with the expected schema, instantiates map and mission fields, places actors and puddles, assigns weather parameters, and produces a candidate scenario JSON T ′.This rule-based step is necessary because LLM-generated descriptions alone may contain invalid coordinates, unsup-ported fields, physically implausible placements, or incomplete execution parameters. Before executing a candidate, the validation suite applies pre-execution validation. Its schema check, actor-placement check, and mission-feasibility check also test physical plau-sibility and preservation of key root-cause conditions. For instance, an actor should not be placed outside valid road regions or overlap unrealistically with the ego vehicle at initialization. A mission should remain executable and should still pass through the region relevant to the seed failure. For red-light-related cases, the route should still involve a rele-vant traffic-light-controlled area. These deterministic checks precede simulator execution, while seed-level stopping limits later API calls after strict recovery. Candidates that pass pre-execution validation are run in the DriveFuzz, Autoware, and CARLA environment, which produces oracle results, traces, logs, and rosbags. During post-execution classification, an unreliable execution or violated static assumption is marked invalid. A reliable run without a relevant oracle is a no-failure case. A failure inconsistent with the seed pattern is a different-failure case. Only a compatible oracle supported by trace evidence is classified as a same-root-cause failure. The feedback loops use manual verification and automatic evidence to produce same-seed validation results. Manual verification refines a same-root-cause classification with the conservative label strictly preserved , partial or boundary ,or not preserved , together with the observed failure type and notes. The failure memory & control module retains these records as historical failure storage without replacing the authoritative original seed or its Phase 1 pattern. Rule-based filtering selects relevant records, prompt construction combines them with the original target, and the LLM revises its explanation and proposes new mutations. Process control stops a seed once at least one candidate is strictly preserved to reduce later API and simulator cost. Partial or boundary cases remain feedback evidence but do not satisfy the stopping criterion. IV. E XPERIMENTS AND EVALUATION 
+
+A. Research Questions and Evaluation Overview 
+
+We evaluate Bug2Scenario as a post-fuzzing scenario am-plification framework for Autoware failures discovered by DriveFuzz. The evaluation focuses on execution-grounded amplification rather than textual explanation quality alone. A generated candidate is useful only if it can be represented as a DriveFuzz-style scenario, executed in the DriveFuzz, Auto-ware, and CARLA environment, and classified with respect to the seed failure’s root-cause pattern. The evaluation does not require the generated failures to be uniformly distributed across oracle types. Instead, it uses a balanced generation budget over selected seed failures and model backbones, and treats the resulting failure distribution as an empirical outcome. 
+
+RQ1—Backbone effects. Under a shared generation protocol, how do the six LLM backbones differ in candidate validity and in the execution evidence available for later assessment? 
+
+RQ2—Root-cause preservation. Among executable or oracle-triggering candidates, which ones retain the seed mech-anism rather than becoming invalid, no-failure, or different-failure scenarios? 
+
+RQ3—Matched Pure-LLM comparison. A matched control tests whether root-cause guidance changes executable and preservation-consistent outcomes under the same generation and execution budget. 
+
+RQ4—Exploratory feedback repair. For seeds without a strict first-pass success, we follow recovery for at most five rounds under seed-level stopping. Candidate assessment proceeds through four validation stages. First, JSON validity checks whether generated can-didate files are syntactically parseable. Second, execution artifact availability records whether DriveFuzz produces ros-bags, score files, camera videos, or only minimal artifacts. Third, oracle triggering identifies an execution-level failure symptom. The final stage determines whether the observed behavior is consistent with the seed root-cause pattern. This ordering matters because syntactic validity does not guarantee simulator execution, and an oracle-triggered execution is not necessarily a same-root-cause failure. 
+
+B. DriveFuzz Baseline and Failure Pool 
+
+We use DriveFuzz as the failure-discovery baseline. Among 1,000 executions, 169 trigger at least one failure oracle. Man-ual audit found 13 of the 169 cases whose oracle-label com-binations differed from their DriveFuzz records and annotated 19 as uncertain, motivating our separation of oracle symptoms from mechanism assessment. The pool is also overlapping and imbalanced: it contains 23 collision, 10 stuck, 76 lane-invasion, and 150 red-light labels. We stratify the overlapping pool, oversampling rare col-lision, stuck, and mixed-oracle groups while sampling the dominant red-light and lane-plus-red-light groups across the pool. The resulting 30 seeds involve 12 collision, 18 red-light, 18 lane-invasion, and 6 stuck labels; these groups overlap. We allocate the same budget to every seed and model. Each of six LLM backbones generates two candidates per seed, giving 360 Bug2Scenario candidates. The budget is balanced, but the execution and preservation outcomes are empirical rather than forced to be uniform. 
+
+C. Experimental Setup 
+
+The Phase 3 execution uses 30 selected seeds, six LLM backbones, and two candidates per seed-model pair. The backbones are DeepSeek R1, Doubao Seed 2.0 Lite, Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-4o, and GPT-5.1. All candi-dates are exported as DriveFuzz-style JSON files and executed in the DriveFuzz, Autoware, and CARLA environment. Each candidate has its own output directory. We inspect the gener-ated JSON files, execution directories, rosbag artifacts, score files, camera videos, and error-event JSON files. Code-assisted analysis supplies execution and oracle evidence, while manual review determines root-cause preservation. For RQ3, we additionally execute a matched Pure-LLM baseline. The baseline uses the same 30 seed failures and six model backbones, but generates one candidate per seed-model pair. The prompt contains only the seed scenario summary and DriveFuzz symptom label. It does not include the root-cause pattern, critical-window evidence, or preservation constraints.                      
+
+> TABLE I MATCHED EXECUTION -LEVEL COMPARISON (180 CANDIDATES PER METHOD ). T HE REVIEW POOL IS A TRIAGE METRIC ,NOT PRESERVATION GROUND TRUTH .Metric Bug2Scenario Pure-LLM Generated / JSON-valid 180 180 Camera artifacts 177 173 Rosbag artifacts 101 94 Oracle triggered 94 87 Root-cause review pool 84 72 Different failure 10 15 No oracle / incomplete 78 87 Invalid / crash 86
+
+This produces 180 Pure-LLM candidates. To keep the execu-tion budget matched, we compare them with the predefined 
+
+cand_001 subset of Bug2Scenario, which also contains 180 candidates. 
+
+D. Manual Review Protocol 
+
+Root-cause preservation requires evidence beyond oracle labels. We therefore use code-assisted evidence extraction followed by manual assessment of the candidate video and available traces against the seed root-cause pattern. Two computer science Ph.D. students participated in evidence pro-cessing and assessment under a shared three-level protocol: 
+
+strictly preserved , partial or boundary , and not preserved .The conservative primary measure counts a candidate as strict only when the oracle and available trace or video evidence un-ambiguously support the same seed mechanism. The broader inclusive measure is the set union of strict and partial-or-boundary cases and is reported separately from strict success. Strict preservation requires sufficient visual or trace evidence when artifacts are missing or incomplete. The matched manual evaluation covers all 180 Bug2Scenario cand_001 candidates and all 180 Pure-LLM candidates. The Bug2Scenario labels contain 65 strict, 34 boundary, and 81 not-preserved cases. The Pure-LLM labels contain 53 strict, 27 boundary, and 100 not-preserved cases. 
+
+E. RQ1: LLM Backbone Comparison 
+
+All six backbones generate 60 syntactically valid DriveFuzz-style candidates, and every candidate has an execution directory. Across the 360 candidates, 197 produce rosbag and camera artifacts, 126 produce score and camera artifacts without a rosbag, 27 produce camera-only artifacts, and 10 produce minimal artifacts. Artifact completeness differs by model: rosbag counts range from 24 to 38, score counts from 16 to 30, and camera counts from 57 to 59 out of 60. These are execution-availability measures, not root-cause-preservation results. Taken together, all six backbones generate JSON-valid can-didates, but their execution artifacts are not equally complete. Rosbags, score files, and camera streams capture different portions of an execution and should not be treated as in-terchangeable success indicators. The nearly uniform camera TABLE II MANUAL RQ3 RESULTS UNDER THE MATCHED 180-CANDIDATE BUDGET . C ELLS SHOW THE BUG 2S CENARIO RATE (%) WITH THE PERCENTAGE -POINT CHANGE FROM PURE -LLM AS A SUBSCRIPT . B OLD VALUES INDICATE POSITIVE CHANGES OVER PURE -LLM, NOT STATISTICAL SIGNIFICANCE . Incl. 
+
+> ADDS PARTIAL OR BOUNDARY CASES TO STRICT PRESERVATION
+
+. C, R, L, AND S DENOTE COLLISION , RED -LIGHT VIOLATION , LANE INVASION , AND STUCK . I NVOLVEMENT GROUPS OVERLAP . M ULTIPLICITY GROUPS PARTITION THE SEEDS .Seed-oracle group DeepSeek R1 Doubao Seed 2.0Lite Claude Sonnet 4.5 Gemini 2.5Pro GPT-4o GPT-5.1 Overall Strict Incl. Strict Incl. Strict Incl. Strict Incl. Strict Incl. Strict Incl. Strict Incl. 
+
+By oracle involvement (overlapping groups) 
+
+C involved 8.3 −16 .7 16.7 − 8.3 16.7 0.0 16.7 − 8.3 16.7 + 8.3 41.7 +25 .0 0.0 − 8.3 8.3 0.0 25.0 + 8.3 41.7 +16 .7 0.0 −16 .7 25.0 0.0 11.1 − 4.2 25.0 + 4.2
+
+R involved 38.9 +16 .7 50.0 +11 .1 38.9 +11 .1 50.0 +16 .7 50.0 + 5.6 72.2 +11 .1 27.8 − 5.6 55.6 +11 .1 50.0 +16 .7 83.3 +33 .3 33.3 +16 .7 66.7 +33 .3 39.8 +10 .2 63.0 +19 .4
+
+L involved 16.7 0.0 27.8 +11 .1 11.1 0.0 16.7 + 5.6 22.2 −11 .1 38.9 0.0 16.7 + 5.6 27.8 +11 .1 22.2 +11 .1 50.0 +22 .2 33.3 +16 .7 66.7 +38 .9 20.4 + 3.7 38.0 +14 .8
+
+S involved 50.0 +16 .7 50.0 +16 .7 33.3 0.0 33.3 0.0 33.3 0.0 66.7 +16 .7 33.3 0.0 66.7 +33 .3 33.3 +16 .7 50.0 +16 .7 50.0 +50 .0 83.3 +33 .3 38.9 +13 .9 58.3 +19 .4
+
+By oracle multiplicity (disjoint groups) 
+
+Single oracle 58.3 − 8.3 66.7 −25 .0 75.0 0.0 83.3 − 8.3 75.0 +41 .7 91.7 +25 .0 50.0 − 8.3 75.0 − 8.3 75.0 +16 .7 91.7 0.0 41.7 +25 .0 75.0 0.0 62.5 +11 .1 80.6 − 2.8
+
+Two oracles 16.7 0.0 33.3 +16 .7 16.7 + 8.3 25.0 +16 .7 33.3 − 8.3 50.0 0.0 16.7 0.0 33.3 +16 .7 25.0 + 8.3 50.0 +16 .7 41.7 +16 .7 83.3 +50 .0 25.0 + 4.2 45.8 +19 .4
+
+Three oracles 16.7 +16 .7 16.7 +16 .7 0.0 0.0 0.0 0.0 0.0 −16 .7 33.3 +16 .7 0.0 0.0 16.7 +16 .7 16.7 +16 .7 50.0 +50 .0 0.0 0.0 16.7 +16 .7 5.6 + 2.8 22.2 +19 .4
+
+Overall 33.3 0.0 43.3 0.0 36.7 + 3.3 43.3 + 3.3 43.3 +10 .0 63.3 +13 .3 26.7 − 3.3 46.7 + 6.7 43.3 +13 .3 66.7 +16 .7 33.3 +16 .7 66.7 +23 .3 36.1 +6 .7 55.0 +10 .6
+
+counts would hide the much wider variation in rosbag and score availability, while a score file without a rosbag cannot support the same temporal inspection. Backbone evaluation must therefore include the evidence needed by downstream preservation assessment rather than stop at syntactic validity or aggregate all artifact types into a single completeness flag. RQ1 therefore reveals differences after generation rather than at the JSON boundary. Every backbone satisfies the syntactic requirement, yet the evidence available for later diagnosis varies across traces, scores, and videos. A model that produces more camera files is not necessarily the one that leaves the strongest temporal record or triggers the most relevant oracle events. We consequently avoid declaring a single best backbone from artifact counts alone and carry the available evidence into preservation assessment. 
+
+F. RQ2: Root-Cause Preservation 
+
+RQ2 evaluates the central claim of Bug2Scenario: generated scenarios should preserve the seed failure mechanism. A can-didate is not counted as successful merely because it triggers any DriveFuzz oracle. It must trigger behavior compatible with the seed oracle and satisfy the root-cause preservation constraints extracted from the seed failure. Execution outcomes demonstrate the gap between syntax, oracle symptoms, and preservation. Of the 360 Bug2Scenario candidates, 178 trigger at least one DriveFuzz oracle, 143 produce partial artifacts without an observed oracle, 19 reach the goal without a failure, 10 fail during actor spawning, and 10 terminate with HANG behavior. The available event files contain 36 crash and 152 red-light flags, but these overlapping symptoms do not establish the seed mechanism. Code-assisted analysis compares each candidate with its seed using oracle compatibility, mission and map preservation, actor-route relations, runtime distance, and extra symptoms. It is used for evidence extraction and triage, not as preservation ground truth. In the fully reviewed 180-candidate matched Bug2Scenario subset, 65 candidates are strictly preserved, 34 are partial or boundary, and 81 are not preserved. This corresponds to 36.1% strict preservation and 55.0% inclusive preservation relevance. Strict preservation is substantially narrower than oracle triggering: only 65 of the 180 manually reviewed matched candidates are strictly preserved. This gap is expected be-cause an oracle records a symptom, whereas preservation asks whether the interactions that produced that symptom remain compatible with the seed mechanism. The partial or boundary label captures cases in which some defining evidence survives but the full causal pattern cannot be confirmed. Counting those cases changes the scientific claim from reproduced mechanism to preservation-relevant evidence. The inclusive measure is therefore reported separately and never substituted for the conservative strict result. The three-way manual distribution localizes where evidence is lost. The 34 boundary cases are neither equivalent to the 65 strict reproductions nor appropriately merged with the 81 not-preserved outcomes: they retain some seed-defining relation but lack the complete evidence required by the conservative rule. Keeping this middle category prevents uncertainty from being converted into success or failure. Accordingly, the strict measure records confirmed reproduction, whereas the inclu-sive measure asks whether generation retained preservation-relevant evidence that may still support diagnosis or targeted repair. 
+
+G. RQ3: Comparison with Pure-LLM Generation 
+
+RQ3 compares Bug2Scenario with direct Pure-LLM gen-eration under a matched execution budget. The Pure-LLM baseline receives only the seed scenario summary and fault label, then generates candidate scenarios without the structured root-cause pattern, critical-window evidence, or preservation constraints used by Bug2Scenario. Both methods use the same seed cases, model backbones, rule-based concretizer, DriveFuzz-style JSON schema, and DriveFuzz, Autoware, and CARLA execution environment. The RQ3 budget is split evenly between the two meth-ods: 30 seed failures × 6 model backbones × 1 candi-025 50 75 100              
+
+> Cumulative seeds (%)
+> 0/9 2/9 3/9 3/9 3/9 6/9 6/9 8/9 8/9 8/9
+> Strict recovery Inclusive preservation evidence
+> Rd1 9 seeds Rd2 9 seeds Rd3 7 seeds Rd4 6 seeds Rd5 6 seeds
+> Iteration
+> Mean API tokens/call 5.7k 5.8k 8.2k 10.7k 13.2k Fig. 3. Final cumulative seed-level RQ4 trajectory with round-level API cost. Plot labels Rd1–Rd5 denote experimental rounds, distinguishing them from feedback paths R1–R4 in Fig. 2. Both curves use the original nine-seed denominator. Inclusive preservation evidence is the union of strict and partial/boundary outcomes. The bottom strip reports mean total API tokens per call, not round totals. Rd1 Rd2 Rd3 Rd4 Rd5 024 037 039 061 069 094 112 118 147
+> Seed case
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> 10 3
+> 6 × 10 2
+> 2 × 10 3
+> 3 × 10 3
+> 4 × 10 3
+> Request/context (log)
+> Response tokens / candidate (k)
+> Fig. 4. Seed–round token distribution for the standardized two-candidate audit. Rd1–Rd5 denote experimental rounds. Figure 3 reports round means. Here bar height is response tokens per generated candidate and color is request tokens per actual context record (log scale). Pale tiles denote calls omitted after seed-level stopping.
+
+date per seed-model pair, yielding 180 Pure-LLM candidates and 180 matched Bug2Scenario candidates. The matched Bug2Scenario subset is the predefined cand_001 candidate from each seed-model pair. Table I reports the execution-level comparison, while Table II reports the final manual same-root-cause comparison. The matched comparison shows that Bug2Scenario pro-duces slightly more oracle-triggered candidates than Pure-LLM generation under the same budget: 94 versus 87. It also produces more candidates that enter the root-cause review pool: 84 versus 72. Pure-LLM produces more different-failure outcomes, 15 versus 10, and more no-oracle or incomplete outcomes, 87 versus 78. The invalid/crash count is similar, with 8 for the matched Bug2Scenario subset and 6 for Pure-LLM. These execution-level counts are triage signals rather than preservation ground truth. The primary statistical com-parison uses the manual strict and inclusive labels below. The final manual table reports heterogeneous strict-preservation effects across backbones: the change is zero for DeepSeek, negative for Gemini, and positive for the other four models. At the execution and oracle-match level, Bug2Scenario shows a positive trend over Pure-LLM generation under the matched 180-candidate budget. The manual labels narrow this claim. Under the conservative strict criterion, Bug2Scenario confirms 65 same-root-cause candidates, while Pure-LLM confirms 53. Under the inclusive preservation-relevant crite-rion, which additionally counts partial or boundary-preserving cases, Bug2Scenario yields 99 candidates and Pure-LLM yields 80. A two-sided exact McNemar test over the same 180 case-model pairs gives p = 0 .104 for strict same-root-cause success and p = 0 .011 for inclusive preservation relevance. Thus, the strict result is positive but not statistically significant at p < 0.05 , while the inclusive preservation-relevance result shows a significant improvement. Table II uses 180 candidates per method. Each colored subscript is a percentage-point change from Pure-LLM, not a fraction. Strict requires complete confirmation of the seed mechanism. Inclusive additionally retains partial or boundary evidence. The paired tests therefore compare the same case– model units under both criteria. Table II is based on 30 seed cases. Applying the same six backbones to these cases yields 180 candidates for each method. In the overlapping view, C, R, L, and S occur in 12, 18, 18, and 6 cases, respectively. By oracle multiplicity, the evaluation set contains 12 single-oracle cases, 12 two-oracle cases, and 6 three-oracle cases. These counts refer to seed cases rather than model-expanded candidate rows. 
+
+H. RQ4: Exploratory Feedback-loop Repair 
+
+RQ4 explores the feedback loops in Fig. 2 on the nine seeds for which the first-pass, six-backbone evaluation produced no strictly preserved candidate. We fix the feedback model to Claude Sonnet 4.5 and apply a seed-level stopping rule: a seed leaves the study after its first strictly preserved candidate, whereas partial or boundary cases remain in the feedback history but do not count as recovery. Accordingly, RQ4 is interpreted as an exploratory recovery study for difficult seeds. Round 2 provides the model with the authoritative original seed and Phase 1 root-cause pattern together with the six same-seed Round 1 candidate, execution, and manual-review records. It generates two candidates for each of the nine seeds. All 18 candidates pass pre-validation and produce execution records. Sixteen have complete front/rear video pairs, while two crash or produce only minimal artifacts. Assessment using the available evidence identifies two strictly preserved candidates, recovering case_069 and case_112 .Round 3 processes only the remaining seven seeds. Each prompt retains the original target and adds the two Round 2 outcomes to the six Round 1 records. The model generates six candidates per remaining seed, yielding 42 candidates. All are generated, pre-validated, and executed. Of these, 39 have complete video pairs, and all 42 are adjudicated from the available evidence. One candidate strictly preserves the root cause of case_118 . Two additional candidates are labeled partial or boundary and therefore do not satisfy the stopping rule. Round 4 processes the remaining six seeds and generates 36 candidates. Manual assessment finds no strictly preserved candidate and two partial or boundary candidates, so all six seeds continue. Round 5 generates 36 final candidates. The completed workbook labels the 30 video-reviewed candidates as 0 strict, 3 partial or boundary, and 27 not preserved. Three additional executions have crash or minimal artifacts, and three have no execution output. None is counted as preservation evidence. Thus, Round 5 adds no strict recovery and no new seed to the cumulative evidence set. Figure 3 combines outcome progression with mean to-tal tokens per API call. Its values are not round totals. Round 1 pools six backbones, whereas Rounds 2–5 use Claude Sonnet 4.5, so the strip is descriptive rather than a cross-model efficiency comparison. The actual active-seed schedule requires 9 + 7 + 6 + 6 = 28 feedback calls, compared with 9 × 4 = 36 calls if all nine seeds continued through four rounds; seed-level stopping therefore avoids eight calls (22.2%). This result quantifies API-call savings; a complete end-to-end cost analysis additionally requires human-review effort, wall-clock time, and monetary cost. For the standardized candidate-level audit in Fig. 4, we retain exactly two outcomes per active seed-round under a rule fixed independently of token usage: strict outcomes first, then partial or boundary outcomes, and finally candidate order. This cap preserves every strict and partial/boundary seed-level finding. Excluded rows remain in the artifact. Token accounting nevertheless follows the actual API calls. The original failed seed and its Phase 1 representation count as one context object and each historical feedback record as one more, giving actual per-call context sizes of 1, 7, 9, 15, and 21 for Rounds 1–5. We normalize request tokens by actual context size and response tokens by the number of candidates actually generated. Thus, post-hoc retention does not erase the cost of excluded outputs. The composition of the difficult pool offers an exploratory explanation for the plateau. All nine seeds combine multiple oracle types: five contain two oracles and four contain three, whereas the full 30-seed set contains 12 single-, 12 two-, and six three-oracle seeds. Three-oracle seeds are therefore overrepresented in the difficult pool (44.4% versus 20.0%), and no single-oracle seed enters it. Round 2 recovers the two C+L seeds case_069 and case_112 . Round 3 recovers 
+
+case_118 (C+L+R). The six unrecovered seeds are evenly split between two- and three-oracle groups. Their evidence is also harder to resolve: for example, case_037 and 
+
+case_061 carry C+L+R labels but contain conflicts between the dataset and execution oracle records, while case_094 
+
+carries C+L+S although its execution record confirms only col-lision. These cases also exhibit command–status mismatches that prevent confident module-level attribution. We therefore treat the observed association between compound evidence and recovery difficulty as exploratory. Across the feedback study, execution and manual-review feedback recovers three of the nine initially unsuccessful seeds, all by Round 3. Round 2 recovers 2/9 seeds, and Round 3 recovers one of the seven remaining seeds, giving a final cumulative recovery of 3/9 (33.3%). Rounds 4 and 5 produce additional partial or boundary candidates but no strict recovery. The final cumulative preservation-evidence count remains 8/9. The plateau indicates that longer histories alone do not resolve contradictory or incomplete evidence. A more targeted repair stage should first distinguish placement or mission infeasibility from genuine mechanism loss, then revise the corresponding constraint rather than repeatedly enlarging the prompt. Thus, same-seed feedback repaired three initially unsuccessful seeds under this exploratory setting. 
+
+I. Cross-RQ Model and Evidence Effects 
+
+Artifact availability and preservation vary across backbones without forming a single model ranking. Camera evidence is nearly complete for every model, whereas rosbag, score-file, and oracle availability differ more clearly. Strict-preservation effects vary by backbone, while inclusive gains are more con-sistent, particularly for compound-oracle seeds that often retain only partial or boundary evidence. Because subgroup sizes are small and oracle-involvement groups overlap, we interpret these patterns descriptively and report artifact completeness and preservation separately rather than collapse them into a composite score. 
+
+J. Error Analysis 
+
+The 360-candidate Bug2Scenario pool exposes three recur-ring modes: 10 actor-spawn failures, 10 HANG terminations, and 143 partial artifacts without an oracle. The matched comparison likewise contains no-oracle, incomplete, invalid, and crash outcomes for both methods. None supplies same-root-cause evidence. These modes justify validation beyond JSON syntax, including actor placement, mission feasibility, trace availability, oracle compatibility, and manual preserva-tion assessment. Feedback should therefore target the observed execution failure rather than generic diversity. V. D ISCUSSION 
+
+A. From Failure Discovery to Regression-Test Amplification 
+
+Bug2Scenario complements DriveFuzz by beginning where fuzz-driven failure discovery ends. It extracts a root-cause pat-tern from a discovered failure, generates controlled regression variants, and separates symptom recurrence from mechanism preservation using execution evidence. This division of software-testing responsibilities is im-portant. DriveFuzz explores the scenario space and exposes failures. Bug2Scenario turns selected failures into auditable regression targets. A root-cause pattern remains stable across variations, while the validation hierarchy prevents executable but unrelated violations from entering the same bug family. The resulting family supports debugging, regression testing, and test maintenance by showing which controlled changes preserve, weaken, or eliminate a mechanism. It supplements rather than replaces the original fuzzing campaign, and the resulting family remains traceable to its seed failure. After an ADS update, engineers can rerun the generated family to determine whether the original mechanism persists, weakens, or disappears across controlled scenario variations. 
+
+B. Validator-Centered Use of LLMs 
+
+LLMs summarize evidence, propose causal hypotheses, and generate high-level test variants. Rule-based checks and DriveFuzz–Autoware–CARLA evidence decide executability and mechanism preservation. The LLM is therefore a test-hypothesis generator rather than an execution oracle. Seed evidence constrains its explanation, and deterministic schema, placement, and mission logic translate each proposal before simulation. This LLM-assisted but validator-centered design limits fluent unsupported details. 
+
+C. Evidence Operationalization 
+
+An available oracle timestamp anchors a bounded critical window. We summarize evidence within or immediately before that window, including ego motion and control, detected or predicted actors, route state, and the oracle event. Large topics are represented by bounded summaries rather than raw arrays, and dataset–execution conflicts remain explicit uncertainty. For 
+
+case_098 , the collision timestamp anchors the window; the record includes pre-collision speed and braking status, nearby-object evidence, and route waypoints. These fields support the actor–route interpretation in Fig. 1 without treating topic availability alone as causal proof. Pattern construction then uses a fixed evidence-facing tem-plate: entities, interaction chain, symptom, and preservation constraints. A proposed element must be traceable to scenario or execution evidence; unsupported elements remain in the uncertainty field rather than becoming hard constraints. The normalized pattern is the contract between semantic interpre-tation and generation, while the original seed evidence remains authoritative. Together with the concretizer interface in Sec-tion III-F, this makes the transformation boundary auditable. This representation exposes the evidence supporting each preservation constraint and provides a stable interface between semantic analysis and executable scenario construction. The concretizer interface follows the same five-part repre-sentation. It maps mission poses, actor type, navigation mode, speed and pose, optional actor destinations, puddle location and size, and weather values into named DriveFuzz fields. Missing or unsupported fields are rejected before execution rather than completed by the LLM, exposing the implemented schema boundary for audit. Each candidate therefore remains traceable to its high-level variant and seed pattern, allowing validation failures to be attributed to a specific transformation stage. 
+
+D. Threats to Validity Construct validity. Regression-family membership depends on seed-derived patterns and manual interpretation of avail-able execution evidence. We retain videos, traces, labels, and matched case–model pairs so that the three-way judgments remain auditable, and we keep strict and inclusive outcomes separate to distinguish boundary evidence from confirmed reproduction. The present study evaluates the concretization pipeline as part of the complete framework; future formal schema-to-JSON mappings and component ablations will quantify its standalone contribution. 
+
+Internal and reliability validity. Manual assessment un-der the shared protocol may still reflect judgment variation. Prompt design and backbone choice may influence generated variants. Simulator instability, incomplete videos or traces, and conflicts among dataset and execution-oracle records may also affect classification. Code-assisted triage supports the conservative manual decision rule used for final classification. 
+
+External validity. The evaluation covers 30 selected Drive-Fuzz seeds, Autoware and CARLA, selected maps and or-acle combinations, and six LLM backbones. The subgroup and difficult-pool observations are interpreted descriptively because groups overlap and sizes differ. RQ4 provides ex-ploratory recovery evidence for nine initially unsuccessful seeds and Claude Sonnet 4.5; broader seed and backbone coverage remains future work. The public repository releases protocols, labels, code, and analysis artifacts to support in-dependent annotation and replication across additional traffic settings and autonomous software stacks. VI. C ONCLUSION 
+
+This paper presented Bug2Scenario, which converts a fuzz-discovered ADS failure into a controlled family of regression scenarios by separating root-cause interpretation, deterministic DriveFuzz test construction, and execution-based preservation assessment. Under the matched budget, boundary-inclusive preservation improves by 10.6 percentage points ( p = 0 .011 ), while strict preservation rises by 6.7 points without sta-tistical significance ( p = 0.104 ). Feedback recovers three of nine initially unsuccessful seeds by Round 3, and seed-level stopping avoids eight of 36 possible feedback calls. These results show that evidence-grounded amplification can produce reusable regression assets while keeping mechanism-preservation judgments auditable. Future work will extend feedback evaluation across more seeds and LLM backbones and refine schema mappings, trace-derived patterns, actor placement, and mission-feasibility repair. ACKNOWLEDGEMENT 
+
+The work described in this paper was fully supported by Hong Kong Metropolitan University Research Grant (Project Reference No. RD/2026/1.15). REFERENCES [1] Y. Liao et al. , “Advancing autonomous driving system testing: Demands, challenges, and future directions,” Information and Software Technology ,p. 107859, 2025. [2] G. Lou et al. , “Testing of autonomous driving systems: where are we and where should we go?” in Proceedings of the 30th ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering , 2022, pp. 31–43. [3] A. Dosovitskiy et al. , “Carla: An open urban driving simulator,” in 
+
+Conference on robot learning . PMLR, 2017, pp. 1–16. [4] S. Kato et al. , “Autoware on board: Enabling autonomous vehicles with embedded systems,” in 2018 ACM/IEEE 9th International Conference on Cyber-Physical Systems (ICCPS) . IEEE, 2018, pp. 287–296. [5] Y. Tian, K. Pei, S. Jana, and B. Ray, “Deeptest: Automated testing of deep-neural-network-driven autonomous cars,” in Proceedings of the 40th international conference on software engineering , 2018, pp. 303– 314. [6] M. Zhang et al. , “Deeproad: Gan-based metamorphic testing and input validation framework for autonomous driving systems,” in Proceedings of the 33rd ACM/IEEE international conference on automated software engineering , 2018, pp. 132–142. [7] G. Li et al. , “Av-fuzzer: Finding safety violations in autonomous driving systems,” in 2020 IEEE 31st international symposium on software reliability engineering (ISSRE) . IEEE, 2020, pp. 25–36. [8] S. Kim et al. , “Drivefuzz: Discovering autonomous driving bugs through driving quality-guided fuzzing,” in Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security , 2022, pp. 1753–1767. [9] F. U. Haq, D. Shin, and L. Briand, “Efficient online testing for dnn-enabled systems using surrogate-assisted and many-objective optimiza-tion,” in Proceedings of the 44th international conference on software engineering , 2022, pp. 811–822. [10] C. Lu et al. , “Learning configurations of operating environment of autonomous vehicles to maximize their collisions,” IEEE Transactions on Software Engineering , vol. 49, no. 1, pp. 384–402, 2022. [11] M. Cheng, Y. Zhou, and X. Xie, “Behavexplor: Behavior diversity guided testing for autonomous driving systems,” in Proceedings of the 32nd ACM SIGSOFT International Symposium on Software Testing and Analysis , 2023, pp. 488–500. [12] Y. Huai et al. , “Doppelg¨ anger test generation for revealing bugs in autonomous driving software,” in 2023 IEEE/ACM 45th International Conference on Software Engineering (ICSE) . IEEE, 2023, pp. 2591– 2603. [13] C. Lemieux, J. P. Inala, S. K. Lahiri, and S. Sen, “Codamosa: Escaping coverage plateaus in test generation with pre-trained large language models,” in 2023 IEEE/ACM 45th International Conference on Software Engineering (ICSE) . IEEE, 2023, pp. 919–931. [14] Y. Deng et al. , “Large language models are zero-shot fuzzers: Fuzzing deep-learning libraries via large language models,” in Proceedings of the 32nd ACM SIGSOFT international symposium on software testing and analysis , 2023, pp. 423–435. [15] C. S. Xia et al. , “Fuzz4all: Universal fuzzing with large language mod-els,” in Proceedings of the IEEE/ACM 46th International Conference on Software Engineering , 2024, pp. 1–13. [16] Y. Chen et al. , “Chatunitest: A framework for llm-based test generation,” in Companion Proceedings of the 32nd ACM International Conference on the Foundations of Software Engineering , 2024, pp. 572–576. [17] J. Zhang, C. Xu, and B. Li, “Chatscene: Knowledge-enabled safety-critical scenario generation for autonomous vehicles,” in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition ,2024, pp. 15 459–15 469. [18] Z. Yang, X. Jia, H. Li, and J. Yan, “Llm4drive: A survey of large language models for autonomous driving,” arXiv preprint arXiv:2311.01043 , 2023. [19] C. Cui et al. , “A survey on multimodal large language models for autonomous driving,” in Proceedings of the IEEE/CVF winter conference on applications of computer vision , 2024, pp. 958–979. [20] X. Xie et al. , “Deephunter: a coverage-guided fuzz testing framework for deep neural networks,” in Proceedings of the 28th ACM SIGSOFT international symposium on software testing and analysis , 2019, pp. 146–157. [21] K. Pei, Y. Cao, J. Yang, and S. Jana, “Deepxplore: Automated whitebox testing of deep learning systems,” in proceedings of the 26th Symposium on Operating Systems Principles , 2017, pp. 1–18. [22] J. Guo et al. , “Dlfuzz: Differential fuzzing testing of deep learning systems,” in Proceedings of the 2018 26th ACM Joint Meeting on European Software Engineering Conference and Symposium on the Foundations of Software Engineering , 2018, pp. 739–743. [23] J. Kim, R. Feldt, and S. Yoo, “Guiding deep learning system testing using surprise adequacy,” in 2019 IEEE/ACM 41st International Con-ference on Software Engineering (ICSE) . IEEE, 2019, pp. 1039–1049. [24] J. Zhang et al. , “Empirical insights of test selection metrics under multiple testing objectives and distribution shifts,” Proceedings of the ACM on Software Engineering , vol. 3, no. FSE, pp. 1288–1311, 2026. [25] J. Zhang et al. , “Enhancing the transferability of adversarial attacks for end-to-end autonomous driving systems,” in 2024 31st Asia-Pacific Software Engineering Conference (APSEC) . IEEE, 2024, pp. 171–180. [26] J. Zhang et al. , “UniAda: Universal adaptive multiobjective adversarial attack for end-to-end autonomous driving systems,” IEEE Transactions on Reliability , vol. 73, no. 4, pp. 1892–1906, 2024. [27] D. J. Fremont et al. , “Scenic: a language for scenario specification and scene generation,” in Proceedings of the 40th ACM SIGPLAN conference on programming language design and implementation , 2019, pp. 63–78. [28] T. Dreossi et al. , “Verifai: A toolkit for the formal design and analysis of artificial intelligence-based systems,” in International Conference on Computer Aided Verification . Springer, 2019, pp. 432–442. [29] Y. Sun et al. , “Lawbreaker: An approach for specifying traffic laws and fuzzing autonomous vehicles,” in Proceedings of the 37th IEEE/ACM International conference on automated software engineering , 2022, pp. 1–12. [30] A. Gambi, M. M¨ uller, and G. Fraser, “Asfault: Testing self-driving car software using search-based procedural content generation,” in 2019 IEEE/ACM 41st International Conference on Software Engineering: Companion Proceedings (ICSE-Companion) . IEEE, 2019, pp. 27–30. [31] B. Danglot, O. L. Vera-P´ erez, B. Baudry, and M. Monperrus, “Automatic test improvement with DSpot: A study with ten mature open-source projects,” Empirical Software Engineering , vol. 24, no. 4, pp. 2603– 2635, 2019. [32] Y. Liu et al. , “LLM-based semantic modeling and cooperative evolu-tionary fuzzing for traffic violation scenario generation,” in 2025 32nd Asia-Pacific Software Engineering Conference (APSEC) . IEEE, 2025, pp. 563–574. [33] Y. Cao et al. , “HGARena: Budgeted test-driven multi-agent repository issue resolution with heterogeneous graph-augmented retrieval,” in 2026 IEEE 50th Annual Computers, Software, and Applications Conference (COMPSAC) . IEEE, 2026, pp. 1–10. [34] X. Yu et al. , “What makes a high-quality training dataset for large language models: A practitioners’ perspective,” in Proceedings of the 39th IEEE/ACM International Conference on Automated Software En-gineering , 2024, pp. 656–668. [35] X. Yu et al. , “Fight fire with fire: How much can we trust ChatGPT on source code-related tasks?” IEEE Transactions on Software Engineering ,vol. 50, no. 12, pp. 3435–3453, 2024. [36] M. Chen et al. , “Evaluating large language models trained on code,” 
+
+arXiv preprint arXiv:2107.03374 , 2021. [37] C. E. Jimenez et al. , “SWE-bench: Can language models resolve real-world GitHub issues?” in International Conference on Learning Representations , 2024.

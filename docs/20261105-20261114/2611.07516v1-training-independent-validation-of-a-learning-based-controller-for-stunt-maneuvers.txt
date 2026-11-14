@@ -1,0 +1,251 @@
+Title: Training-Independent Validation of a Learning-Based Controller for Stunt Maneuvers
+
+URL Source: https://arxiv.org/pdf/2611.07516v1
+
+Published Time: Fri, 06 Nov 2026 02:08:18 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+> arXiv:2611.07516v1 [cs.RO] 5 Nov 2026
+
+# Training-Independent Validation of a Learning-Based Controller for Stunt Maneuvers 
+
+Kiruthiga Chandra Shekar 1, Aliasghar Arab 2, and Jingang Yi 3
+
+Abstract — Learned controllers for vehicle maneuvers are usually validated under the conditions and objective used to train them, where they appear highly reliable, yet the parameters that change on real roads are often not those the model was trained on. We argue that validation must be independent of training: it should vary physical parameters that training kept fixed and use acceptance criteria absent from the training objective. A learning-based control policy, G-Maneuver, with 90.11% success is tested for stunt-level maneuvers. A looser terminal-heading score ranked the worst setting as the best. Because real stunt tests are safety-critical, a simulation-to-reality-to-simulation (Sim2Real2Sim) loop uses the simulation to select safe zones for real-vehicle trials with 16.9% acceptance. Automotive safety analysis frameworks are used to identify parameters for validation using coverage tests. We demonstrated that the kinematic stunt-driving indicators, namely heading change, sideslip, and speed-normalized yaw rate, match between simulation and the real world, while force and roll indicators do not, which identifies the indicators that can support safe deployment. A video of the experiments is available at https://youtu.be/dN1Oes8pNIo .
+
+I. I NTRODUCTION 
+
+Braking alone has a limited ability to avoid collisions. For a given closing speed and distance there is a boundary beyond which no braking profile can prevent impact, while a maneuver with rapid yaw motion can still steer the vehicle clear [1], [2]. Aggressive evasive maneuvers are therefore considered as the last available option in this part of the avoidance envelope, which is why they are studied as an active safety feature. The stunt J-turn maneuver with an extreme 180 ◦ spin while moving reverse as one of the most dynamically demanding maneuver of this family is demonstrated in Fig. 1. The J-turn is a challenging maneuver to conduct because it is a chain of phases, and its outcome depends mainly on when the controller switches from one phase to the next. Once the vehicle starts full-lock steering at a given reverse speed, for example, the heading at which stabilization begins is largely fixed, and a late or early switch cannot be undone. Computing these switching instants from a vehicle model is difficult because the tires operate at their friction limit, where tire models lose accuracy and a reference trajectory is hard to construct [3], [4]. Learning-based methods avoid this step by tuning the switching schedule directly from the 
+
+> 1
+
+K. C. Shekar is with General Autonomy, USA. 
+
+kshekar@genauto.ai .
+
+> 2
+
+A. Arab is with the City College of New York, New York Uni-versity, and General Autonomy, USA. aarab@ccny.cuny.edu, aliasghar.arab@nyu.edu, aarab@genauto.ai .
+
+> 3
+
+J. Yi is with the Department of Mechanical and Aerospace Engineering, Rutgers University, Piscataway, NJ, USA. jgyi@rutgers.edu .1. Accelerate 
+
+> Straight Max Reverse
+> 2. Start the Spin
+> Max Zero Neutral
+> 3. Keep the Momentum
+> Max Zero Neutral ً4. Reduce the Momentum
+> Balance Low Neutral ً5. Stabilize
+> Balance Low Drive ً6. Drive Normal
+> Straight Low Drive
+
+Fig. 1. Phases of the J-turn and the steering, pedal, and gear commands. 
+
+outcomes of repeated trials [5], [6]. Reinforcement learning [5], optimization-based motion planning [3], and agentic large language model (LLM) control [6] have all produced working J-turn controllers, and learned policies now also operate at the handling limit in racing [7] and drifting [8]. The instructed reinforcement learning approach formu-lated the J-turn as a sequence of dynamically distinct phases learned under safety constraints [5], and ManeuverGPT kept this phase structure but replaced gradient-based training with LLM agents that revise the phase commands in natural language after each simulated trial [6]. Classical vehicle dynamics describes the coupled lateral, yaw, and load-transfer effects that govern such transient handling, including secondary effects such as engine gyroscopic coupling [4], [9]. Our earlier work evaluated evasive maneuvers as a decision problem, asking whether and when to start one [10], [11]. The present paper takes that decision as given and asks how well the maneuver is executed afterward. Scenario-based testing is the dominant approach to au-tonomous vehicle safety assessment, because exhaustive real-world driving is impractical [12], [13]. A scenario is built from road geometry, traffic participants, and environmental conditions, and the vehicle is scored on outcomes such as collision avoidance; benchmarks such as CommonRoad standardize the scenario format [14], and candidate scenarios can be extracted from recorded driving [15]. Coverage-based testing adds a measure of completeness. It describes all possi-ble scenarios by a set of parameters and reports how much of that parameter space has been tested, rather than how many scenarios a library contains. Directed simulation budgets toward parameter regions likely to expose unsafe behavior [16], and several works define explicit multi-dimensional coverage metrics [17]–[19]. A trained adversarial vehicles can make safety-critical events more frequent, which reduces the required testing effort by orders of magnitude [20]. In all of these works the parameters describe the traffic scenario, such as traffic density, the trajectories of other road users, and obstacle placement. None of them asks whether a single maneuver, executed alone, remains acceptable across the physical conditions that govern it, such as road friction and the initial state of the vehicle. Hazard analysis complements coverage. Safety standards give researchers and industry a common language for hazards and acceptance evidence, so results expressed in their terms can be compared and reused by other teams. ISO 26262 ad-dresses risk from hardware and software faults [21], whereas ISO 21448, the Safety of the Intended Functionality (SOTIF) standard, addresses insufficient performance without any fault [22]. SOTIF fits a learned controller: when the policy fails on a surface or from an initial state it was never tuned for, nothing has malfunctioned, so neither fault-based analysis nor the training score detects the failure. System-Theoretic Process Analysis (STPA) expresses hazards as unsafe control actions, and cascading it with scenario gener-ation turns hazards into executable tests [23]. We follow the same chain, from physical hazard to unsafe control action to test parameter (Table I), and end it in a pass or fail acceptance test rather than a safety integrity level, because our goal is evidence about a controller rather than product certification. This paper addresses how such a controller should be validated. A learned policy is usually evaluated under the conditions and objective used to train it, where it appears highly reliable. Training, however, fixes a small set of parameters, typically one road surface and one initial state, while friction, weather, and the initial state of the vehicle change on real roads. The paper makes three main contribu-tions. First, it defines a validation protocol independent of training that judges each trial by completion, measured only while the controller is active, and by recoverability when control is handed back. Second, it uses automotive safety analysis frameworks to derive the coverage parameters from the physical failure modes of the maneuver. Third, across 1,152 CARLA trials it shows that acceptance falls to 16.9%, identifies the conditions responsible. A Sim2Real2Sim loop is designed to simulate large-scale tests on the cloud to select safe zones for real-vehicle stunt tests. II. P ROBLEM FORMULATION 
+
+A. Policy Under Test and Its Training Objective 
+
+G-Maneuver does not compute a new command at every time step. For a requested maneuver and vehicle it outputs a parameter set ˜P that defines a control schedule, namely a fixed command for each of five phases (reverse acceleration, reverse steering, counter-steering, acceleration, and braking) together with the conditions that trigger each switch to the next phase. Following [6], the command is 
+
+u(t) = θ(t) δ(t) η(t) γ(t)T ∈ U , (1) with normalized throttle θ, steering δ, brake η, gear γ ∈{0, 1} (forward or reverse), and U the set of admissible Y
+
+> y
+> Xx
+> v_G
+> βψ
+> v_f
+
+δ     
+
+> v_r
+> ω_f
+> ω_r
+> d_f
+> d_ r
+> O
+> Fig. 2. Schematic of the vehicle’s planar motion as a symmetric bicycle model. dfand drare the clearances to the vehicles ahead and behind.
+
+commands, applied to the nonlinear vehicle ˙x = f (x, u).Two switching conditions shape the maneuver most strongly: the reverse-speed threshold Vr , at which the vehicle stops accelerating in reverse and starts steering, and the heading threshold ψg , the heading change at which rotation ends and counter-steering begins. A few shot learning policy in [6] is developed by minimizing 
+
+L( ˜P ) = α1ψerr ( ˜P ) + α2c( ˜P ) + α3j( ˜P ), (2) where ψerr ( ˜P ) is the final heading error with respect to 180 ◦,
+
+c( ˜P ) ∈ { 0, 1} indicates a collision, j( ˜P ) measures jerk, and 
+
+αi ≥ 0 are weights; a reinforcement-learning formulation would equivalently maximize the reward R ∝ − L( ˜P ). Two properties of (2) make it unsuitable as its own validation criterion. It scores only the final heading, so it does not distinguish a vehicle that is settled at the end of the maneuver from one that is still rotating or sliding. In [6], it was evaluated only on dry asphalt from one initial condition over 100 iterations so none of the physical parameters that vary on a real road entered training. 
+
+B. Vehicle Dynamics and Physical Limits 
+
+To choose physical test parameters, we need the limits the maneuver operates against. A planar single-track model [4] captures the dominant lateral and yaw behavior (Fig. 2). Its state x = [ x y ψ v r β ]T collects the position (x, y )
+
+of the center of gravity G in the ground frame O-XY , the heading ψ, the longitudinal speed v, the yaw rate r = ˙ψ, and the sideslip angle β between the heading and the velocity 
+
+vG of G, so that v = vG cos β and the lateral velocity is 
+
+vy = vG sin β, with vG = |vG| the speed. The lateral and yaw dynamics under small angles are 
+
+m( ˙ vy + vr ) = Fyf + Fyr , Iz ˙r = aF yf − bF yr , (3) with m the vehicle mass, Iz the yaw inertia, and a, b the distances from G to the front and rear axles. The lateral tire forces are Fyf = Cf αf and Fyr = Cr αr , with cornering stiffnesses Cf , Cr and slip angles αf = δ − β − ar/v and 
+
+αr = −β + br/v , the angles between each wheel’s heading and the velocity vf or vr of its center; δ is the road-wheel angle produced by the steering command. The wheel spin rates ωf and ωr set the longitudinal slip of each tire and hence its longitudinal force. A tire cannot produce unlimited force. The friction circle states that its combined longitudinal force Fx and lateral force Fy cannot exceed the road friction coefficient μ times the normal load Fz ,
+
+q
+
+F 2 
+
+> x
+
++ F 2 
+
+> y
+
+≤ μF z , (4) so braking and steering share one limited force budget, and the lateral force available for turning shrinks directly with μ. Load-transfer effects beyond this model, including gyroscopic coupling [9], are not modeled. Equation (4) explains why friction is a test dimension: lowering μ shrinks the available tire force, yet μ appears nowhere in the training objective (2). The same holds for the initial state x(0) , which sets the speed and suspension state from which the first phase starts. The region in which the vehicle remains controllable is the dynamic stability envelope 
+
+Ω = {x : |r| ≤ ¯r, |ay | ≤ μg, |ϕ| ≤ ¯ϕ}, (5) with ay the lateral acceleration, ϕ the roll angle, ¯r and ¯ϕ
+
+their bounds, and g the gravitational acceleration. 
+
+C. Acceptance Test 
+
+The acceptance test is defined independently of (2). Let 
+
+∆ψJ be the heading change while the J-turn controller is active and tf the instant at which it hands control back. Completion keeps the tolerance under which G-Maneuver was developed, so that the comparison with its reported success is like for like, but measures the heading only over the maneuver itself: 
+
+Acomp : |∆ψJ | − 180 ◦ ≤ εψ , εψ = 10 ◦. (6) Recoverability is the requirement the objective leaves out. It holds when the vehicle is settled at hand-off, so that normal driving can resume, meaning that rotation and sliding have died out over the last Ts of the maneuver: 
+
+Arec : |r(t)| ≤ ¯rrec and |β(t)| ≤ ¯βrec ∀t ∈ [tf − Ts, t f ],
+
+(7) with ¯rrec = 20 ◦/s, ¯βrec = 15 ◦, and Ts = 0 .5 s. A trial at test condition p, defined in the next subsection, is accepted only if both hold, 
+
+A(p) = Acomp (p) ∧ A rec (p). (8) To judge how aggressive a trial is, independently of whether it is accepted, we also record the peak lateral acceleration, yaw rate, and roll angle during the maneuver, the three quantities that bound Ω.
+
+D. Test Grid and Failure Region 
+
+By coverage we mean the set of test conditions at which the policy is evaluated. The test dimensions fall into three groups. Physical parameters change the plant and were fixed during training: the weather W ∈ {Clear, Cloudy, Fog, Rain }, which sets the road friction μ ∈ { 0.9, 0.9, 0.85 , 0.6}
+
+and shrinks the friction circle (4), and the pre-maneuver wait tw ∈ { 0.5, 2.5, 4.5, 6.5} s between placing the vehicle in the scene and starting the maneuver, which determines how settled the initial state x(0) is. Schedule parameters are the thresholds Vr ∈ {6, 10 , 14 , 18 } m/s and ψg ∈{75 ◦, 90 ◦, 105 ◦}, which set the phase-switching instants that determine ∆ψJ ; varying them shows how tolerant the out-come is to a switch that happens earlier or later than training intended. Control parameters should not affect the maneuver and check the test setup: the time of day Td ∈ {day, night }, which only changes lighting, and the post-maneuver follow time th ∈ {0, 5, 10 } s, which only changes how long the run continues after hand-off. A test condition is 
+
+p = ( W, t w, V r , ψ g , T d, t h).Table I links the dimensions to the failure modes, FM-1 to FM-4, that they are meant to expose. Each row starts from one requirement or limit: FM-1 from the 180 ◦ heading reversal of Acomp , FM-2 from the friction circle (4), and FM-3 and FM-4 from the yaw-rate and roll bounds of Ω.For each, we asked four questions in the order of the STPA chain: how the maneuver can violate the limit (failure mode and physical cause), which measured quantity reveals the violation (evaluation metric), which control decision would cause it (unsafe control action), and which condition makes that decision more likely (coverage parameter). The last col-umn corresponds to what SOTIF calls a triggering condition, a condition under which a fault-free policy can perform insufficiently, and each such condition becomes a dimension of the test grid. The list is not exhaustive. It contains the failure modes the planar model can express; actuator faults, powertrain limits, sensing errors, and interaction with other road users are outside its scope. Each dimension k of p takes Nk levels from a level set 
+
+Sk, and the test grid is their product, 
+
+G =
+
+> 6
+
+Y
+
+> k=1
+
+Sk, |G| = 4 · 4 · 4 · 3 · 2 · 3 = 1 ,152 . (9) The exhaustive campaign runs every grid point once, and Section III describes how the grid can be explored with fewer trials. None of these dimensions was varied during the development of G-Maneuver; in this sense the whole grid is held out from training. The failure region is the set of grid points at which the policy is rejected, 
+
+F = {p ∈ G | A (p) = 0 } , (10) and its boundary is the set of accepted points that have a rejected neighbor along some axis, 
+
+∂F = {p ∈ G | A (p) = 1 , ∃k : A(p′) = 0 } , (11) where p′ differs from p by one level along axis k. The shape of this boundary tells us how the policy should be tested. If it is aligned with the axes, each parameter affects the outcome independently and the parameters can be tested one at a time. If it is not, the parameters interact, and only a joint sweep reveals where the policy fails. III. A DAPTIVE COVERAGE METHOD 
+
+The size of the grid (9) is the product of the number of levels along each dimension, so it grows exponentially as dimensions or levels are added, and an exhaustive sweep TABLE I PHYSICS -B ASED FAILURE MODES , E VALUATION METRICS , AND COVERAGE DIMENSIONS                        
+
+> Failure Mode Physical Cause Evaluation Metric Unsafe Control Action Coverage Parameter FM-1 Incomplete or excessive heading reversal Heading change during maneuver Premature or late phase transition Heading threshold, reverse-speed threshold, initial state FM-2 Tire force saturation Peak lateral acceleration aySteering demand exceeds friction limit Weather and road friction FM-3 Yaw instability Peak yaw rate rRotation grows beyond controllable region Reverse-speed threshold, steering input FM-4 Excessive roll Peak roll angle ϕLoad transfer reduces stability margin Reverse-speed threshold, road friction
+
+quickly becomes too expensive in simulation and impossible on a real vehicle. We therefore select the test points adap-tively: based on the outcomes observed so far, the method chooses which values of the test parameters to evaluate next and how finely to step along each parameter range. The adaptation concerns only the test design. The policy under test and its controller are unchanged in every trial, so the method is an adaptive coverage strategy, not adaptive control. Its point selection is inspired by linear programming. In a linear program, the optimum of a linear objective over a convex feasible region always lies at a vertex, so the search can move along the vertices and edges of the region instead of visiting its interior. Maneuver acceptance is not linear, but it behaves similarly in one useful respect: physical failures tend to be driven by the extremes of the parameter ranges, such as the highest reverse speed or the earliest start. Nonlinear effects can still create local minima and maxima inside the space, which a vertex search alone would miss. The method therefore starts from the boundaries of the test space and then searches the rest of the space for possible failures. The search runs in four stages. It first evaluates every vertex of the space, that is, every combination of the lowest and highest level of each ordered dimension, for every weather condition, since weather has no natural order. It then refines the edges by reducing the step along a parameter range. Let E ⊆ G be the set of evaluated points and ek aone-level step along axis k. Whenever p and p + n ek are both in E, with n > 1 and A(p)̸ = A(p + n ek), the method evaluates the point halfway between them, 
+
+pm = p + ⌊n/ 2⌋ ek, (12) and repeats until every such disagreement is resolved to adjacent levels, which locates the failure boundary ∂F along each edge. Third, it probes the interior at the central levels of every dimension to detect local extrema that the vertices cannot reveal, and it refines around these probes with the same bisection rule. Finally, it traces the safe zones: it evaluates every unevaluated neighbor of each accepted point until every accepted point is enclosed by evaluated points, which follows ∂F into the interior. The second and fourth stages are repeated until no new point is added. We measure the coverage of E in two ways. The Scenario Coverage Index (SCI) of our scenario generation framework [10] weights the fraction of the levels of each dimension that has been tested, and the boundary coverage R∂ counts the fraction of the failure boundary that has been evaluated, 
+
+SCI = 
+
+> 6
+
+X
+
+> k=1
+
+wk
+
+|S k(E)|
+
+Nk
+
+, R∂ = |∂F ∩ E| |∂F| , (13) where Sk(E) is the set of levels of dimension k that appear in E and the weights satisfy P 
+
+> k
+
+wk = 1 . SCI measures how widely each parameter range is spanned, whereas R∂ mea-sures how much of the region that separates accepted from rejected conditions has been found. Section IV-C evaluates how many trials this search needs and what it finds. We evaluate learning-based maneuvers in CARLA [24], an open, high-fidelity urban driving simulator with tunable vehicle and tire-road parameters, and on the autonomous vehicle test-bed shown in Fig. 6. The test vehicle is a Mini Cooper S instrumented with a roof-mounted perception unit (lidar, camera, and inertial measurement unit), brake and throttle actuators, and a modular steering robot. All simulated trials are run in CARLA. To evaluate the adaptive coverage method against ground truth, we also ran the exhaustive grid once, which gives 1,152 trials and 96 for each combination of Vr and ψg ; the results in Section IV use this exhaustive set. No obstacle or other vehicle is present, so the results reflect only how the maneuver is executed, not perception or the decision to start it. Each trial logs position, velocity, attitude, yaw rate, steering, controller phase, and collision status at every frame. The heading change ∆ψJ is unwrapped over the frames in which the J-turn controller is active, and sideslip is computed from the body-frame velocities as β = atan2( vy , |v|).IV. R ESULTS 
+
+Of the 1,152 trials, 215 (18.7%) met the completion criterion, against the 90.11% reported for the same tolerance under training conditions [6]. Adding recoverability removes a further 20 trials that completed the reversal but were still rotating or sliding at hand-off, leaving 195 accepted trials (16.9%). Almost all of the gap between reported and validated success therefore comes from the test conditions, not from the added criterion: the policy executes the J-turn reliably in the conditions it was developed in and unreliably in the conditions it was not. Fig. 3 shows how the remaining trials fail. Under-rotation is the dominant failure, with 666 trials (57.8%) turning less than 170 ◦, and 299 of them (26.0%) turning less than 30 ◦, so that the vehicle barely rotates at all. Over-rotation accounts for 271 trials (23.5%) that turn more than 190 ◦. Accepted trials cluster tightly around 180 ◦, with a mean of 181 .6◦.Fig. 3. (a) Outcome of the 1,152 trials. (b) Heading change during the maneuver; the shaded band is the 180 ◦ ± 10 ◦ completion criterion.  
+
+> Fig. 4. (a) Acceptance rate for combination of the phase-switching thresholds (96 trials/cell). (b) Acceptance rate by weather (with road friction
+> μ) and by pre-maneuver wait; the dashed line is the overall rate of 16.9%.
+
+A. The Validation Criterion Changes the Conclusion 
+
+The choice of criterion is not a detail. The built-in score of our simulation test harness measures the heading change over the whole run, including the time after hand-off, accepts 
+
+180 ◦ ± 25 ◦, and requires that no collision flag is raised. It reports 156 successes, but only 80 of them pass our acceptance test. Of the other 76, 64 never completed the reversal during the maneuver, most of them stopping near 
+
+158 ◦, and 12 completed it but were not settled at hand-off. Conversely, it rejects 115 trials that our test accepts: 73 only because of the collision flags raised during the scene reset, and 42 because the heading kept drifting after hand-off. The two scores disagree on 191 trials (16.6%). They also disagree on where the policy works best. The built-in score rates Vr = 18 m/s with ψg = 105 ◦ as the best combination, at 54.2%, while under our test no trial in that cell completes the reversal: the vehicle stops short with a median heading change of 158 ◦ and reaches 180 ◦ only by coasting after hand-off. A loose terminal-heading score of the kind used in (2) therefore does not merely overestimate success; it reverses the conclusion about which settings are safe to use. 
+
+B. Where the Policy Fails 
+
+Fig. 4a shows the acceptance rate for each threshold combination. Six of the twelve combinations lie entirely in F, with no accepted trial out of 96. The policy works only at moderate reverse speed: Vr = 10 m/s is accepted at every heading threshold, between 37.5% and 56.2%, while 
+
+Vr = 6 m/s works only with ψg = 75 ◦ (43.8%) and 
+
+Vr ≥ 14 m/s almost never works. The effect of ψg therefore reverses with Vr : a later switch helps at Vr = 10 m/s and prevents completion at Vr = 6 m/s. The boundary ∂F in (11) is not aligned with the axes, so the two thresholds interact and testing them one at a time would miss the failure structure. A development campaign that happened to test a single combination is reported between 0% and 56.2%. Fig. 4b shows that the physical parameters matter as much as the schedule. The initial state has the strongest effect. When the maneuver starts 0.5 s after the vehicle is placed, no trial is accepted under any weather, while waits of 2.5 to 6.5 s give 17.0% to 27.1%; the vehicle is most likely still settling on its suspension after placement, so the first phase starts from a state the policy never saw. Weather also changes the outcome, but not in the order friction alone would predict. Rain, with the lowest friction ( μ = 0 .6), gives 22.6%, close to Clear and Cloudy ( μ = 0 .9, 20.1%), while Fog ( μ = 0 .85 )gives only 4.9%. In this campaign the Fog trials also start with the vehicle already rolling at 0.49 m/s, so the Fog result cannot be separated from this difference in initial speed; either way, it is a change in physical condition that training did not include. The two remaining CARLA parameters, the time of day and the post-maneuver follow time, did not affect the maneuver: acceptance was 16.8% by day and 17.0% at night, and between 16.7% and 17.2% across the three follow times. They are therefore omitted from Fig. 4b, and their flat response confirms that the differences above come from the maneuver and not from the test setup. 
+
+C. Efficiency of Adaptive Coverage 
+
+Replaying the adaptive coverage method on the exhaustive set, with each query returning the logged outcome of that grid point, shows how much of this picture it recovers with fewer trials. The search stops after 631 trials, 54.8% of the grid: 128 at the vertices, 60 in edge bisection, 32 interior probes, and 411 in safe-zone tracing. Every level of every dimension is tested, so SCI in (13) equals 1 for any choice of weights. It finds 181 of the 195 accepted trials, all of which lie on ∂F, so R∂ = 0 .928 ; the two measures therefore differ, and only R∂ reveals what the search misses. The search recovers the main conclusions above: the four threshold combinations with acceptance of at least 37.5%, no accepted trial in the six combinations that have none (one of which, 
+
+Vr = 18 m/s with ψg = 90 ◦, is never sampled because both of its neighbors along the edge fail), and the complete failure at a 0.5 s wait. It misses the two sparse safe islands at Vr = 14 and 18 m/s with ψg = 75 ◦, where acceptance is only 12.5% and 2.1% and all 36 and 32 sampled points failed. This is the expected limit of a vertex-first search: a small isolated region is found only if a probe happens to land in it, so denser interior probing is needed where such islands matter. 
+
+D. Failed Trials Are More Aggressive 
+
+Rejected trials drive the vehicle harder than accepted ones. The mean peak lateral acceleration is 21.4 m/s 2 for rejected and 17.0 m/s 2 for accepted trials, the mean peak yaw rate is 181 ◦/s against 150 ◦/s, and the mean peak roll is 0.30 ◦ against 0.25 ◦. Over-rotated trials are the most aggressive, with a mean peak yaw rate of 198 ◦/s. Failures under untrained conditions are therefore not only less reliable but also closer to the limits of Ω, which strengthens the case Fig. 5. Stability assessment of the J-turn ensemble. (a) Open-loop stability pyramid in (β, ˙ψ, v ). (b) Classical phase portrait at vG = 6 m/s. (c) The same data normalized by the bound at each sample’s own speed, so the admissible region is the unit square. Real traces use the same 3 s / 1.5 s / 1 s window as Fig. 7b and are drawn at the ensemble speed so the overlay is geometric. Sideslip is wrapped into (−π/ 2, π/ 2) with the simulated body-frame convention. Shading is pooled sample density, the band is the 10th to 90th percentile, and the solid line is the ensemble median. 
+
+for validating outside the training conditions before such a policy is deployed. A phase-plane view shows how far the maneuver goes beyond the open-loop stability limits even when it suc-ceeds (Fig. 5). It uses the 98 G-Maneuver runs under its development conditions, with the speed vG and the signed longitudinal speed v of Section II-B. Panel (b) is the classical portrait of sideslip β against yaw rate ˙ψ at vG = 6 m/s, the speed of the real executions; the gray rectangle is the region in which the vehicle stays stable without control. The rectangle is bounded by a sideslip limit ¯β = 0 .28 rad and a yaw-rate limit ¯r(vG) = alim /v G, with lateral-acceleration limit alim = 4 .41 m/s 2, both fitted to the open-loop stability boundary of the single-track model. Because this region shrinks with speed, panel (a) stacks the rectangles along v,giving two pyramids that narrow as |v| grows and meet where the vehicle changes from reverse to forward. The simulated runs move faster than 6 m/s and therefore leave the slice in panel (b), so panel (c) normalizes each sample by the bound at its own speed, making the stable region the unit square. The ensemble leaves this square along both axes and reaches about five times the sideslip bound. Leaving the open-loop envelope is inherent to a heading reversal and is not, by itself, a sign of failure. This is why acceptance is defined by a settled state at hand-off rather than by staying inside the envelope. 
+
+E. Sim2Real2Sim Validation 
+
+All preceding results come from simulation, so they are only as reliable as the metrics behind them are on real hard-ware. Real tests of stunt maneuvers are themselves safety-critical: a failed J-turn on a real vehicle can end in a spin, a rollover, or a collision, so each real trial must be placed where the risk is lowest. The Sim2Real2Sim loop serves both needs. The simulation identifies safe zones, combinations of thresholds and conditions in which the maneuver is predicted to complete without approaching a dynamic limit, and real trials are run only there. The real measurements then show whether the simulated metrics that defined those zones can be trusted. We close the loop in three steps: the simulation chooses where to test, the real vehicle is measured there, and the measurements are compared with the simulator at matched conditions to find which stunt-driving indicators transfer and which are simulator artifacts.                                
+
+> TABLE II STUNT -D RIVING INDICATOR TRANSFER BETWEEN SIMULATION AND
+> REAL VEHICLE
+> Real-1 Real-2 Sim. accepted Ratio (Real/Sim) Heading change 179 .3◦170 .7◦181 .6◦0.99 ,0.94
+> Peak |ay|(m/s 2)1.55 4.88 17.03 0.091 ,0.29
+> Peak yaw rate (°/s) 40.0 127.8 150.0 0.27 ,0.85
+> Peak roll (°) 2.63 1.94 0.246 10 .7,7.9
+
+In the first step, simulation to reality, the acceptance map selects a safe operating point. The real trials were run at low reverse speed, about 6 m/s, in the region where the simulation predicts that the reversal can complete. The prediction there is specific and can be falsified: the reversal completes without approaching a dynamic limit. In the second step we measured this prediction. We recorded 100 Hz inertial and positioning data from the test-bed vehicle (Fig. 6) performing two J-turns in an open parking lot, extracted each maneuver from the interval of sustained yaw rate, and scored it with the metrics of Table II. Fig. 7a shows one execution from aerial video: the body ro-tates through the reversal while the vehicle keeps moving in its original direction, which produces sideslip near 90 ◦. The vehicle does not measure sideslip directly, so we reconstruct it from the heading change ∆ψ measured from the start Fig. 6. G-Mini autonomous vehicle test-bed: roof-mounted perception unit, brake and throttle actuators, and modular steering robot. 
+
+of the maneuver, since the direction of travel stays nearly constant, and fold it by arcsin(sin( ·)) into (−π/ 2, π/ 2) ,the same interval as the simulated body-frame estimate. A constant compass offset, calibrated on the straight departure segment where the true sideslip is zero, is stable to about 
+
+2◦ across six independent fixes. The prediction holds. The two executions reverse the heading by 179 .3◦ and 170 .7◦,both within the 10 ◦ tolerance, against a mean of 181 .6◦ over accepted simulated trials, and neither became unstable.     
+
+> (a)
+> (b) Fig. 7. (a) Real-vehicle J-turn from aerial video, strobed at uniform intervals with the tracked path overlaid; the body rotates through the reversal while the path continues along its original direction, which produces the large sideslip. (b) Sideslip and yaw rate against maneuver time. Real traces share the simulated origin: 3 s of straight motion (cropped), the heading reversal compressed to 1.5 s, and 1 s of settled exit. Sideslip is folded by
+> arcsin(sin(∆ ψ)) into (−π/ 2, π/ 2) ; yaw rate is converted from rad/s and scaled so its peak sits above 200 ◦/s.
+
+In the third step, reality back to simulation, we compare the real executions with the 98 G-Maneuver runs, and the comparison separates into geometry and rate (Fig. 7b). Peak sideslip agrees closely, 87 .6◦ measured against about 85 ◦
+
+simulated, so the simulated policy and the real vehicle perform the same rotation. The quantities that describe how fast this rotation happens disagree. Peak yaw rate is 40 .0◦/s measured against 208 ◦/s simulated, and the timing differs in kind: the simulated rotation is a burst of about 1.3 s within a 5.3 s run, while the real rotation is spread almost evenly over its window. Most of this gap is due to speed. The real executions peak at 5.6 m/s against 12 .8 m/s in simulation, and at a fixed path curvature yaw rate grows with speed, so rate metrics transfer only after normalization by speed, while geometric metrics transfer directly. Normalization does not reconcile the dynamic loading. As a fraction of the friction limit, the real executions reach 
+
+0.51 , while the simulated ensemble reaches 10 .4, about 4.9 g,which no tire can produce on asphalt. The logged channels show the same defect from the opposite side (Table II): the simulator reports between 3.5 and 11 times the real peak lateral acceleration but only about one tenth of the real peak roll. These two errors cannot both be correct, because in a physical vehicle larger lateral acceleration produces larger roll through load transfer. The pattern points to the simulated suspension and load-transfer path, which appears too stiff: the chassis accelerometer records sharp lateral spikes while the body barely rolls. Neither the simulation nor the real data alone reveals this defect; it appears only when the two are compared. 
+
+F. Interpretation and Limitations 
+
+The drop from the reported 90.11% to the validated 16.9% has two parts. The larger part, from 90.11% to 18.7%, comes from the test conditions: the policy was refined using feedback from a single operating point, and its schedule does not carry over to other initial states, weather, and threshold settings. The smaller part, from 18.7% to 16.9%, comes from the added recoverability requirement. The general les-son is that a learned policy can be highly reliable under the parameters it was trained with and still fail under the parameters that actually change on the road, and a validation that reuses the training conditions and objective cannot detect this. The planar model omits load transfer beyond the lateral and yaw dynamics, including gyroscopic effects [9], which is the same channel the comparison found unreliable in the simulator. The weather condition with the lowest acceptance is confounded with a nonzero initial speed in this campaign, so the separate effects of fog and initial speed remain to be measured. And the test space contains a single vehicle; extending it to obstacles and perception, and adding real-vehicle trials in the low-acceptance regions identified by the simulation, is the most direct path toward a deployment argument. V. C ONCLUSION 
+
+This paper argued that a learned maneuver policy must be validated independently of its training, with physical test parameters that training kept fixed and acceptance criteria that the training objective does not contain. Applied to G-Maneuver, a learning-based policy for stunt J-turn maneuvers whose approach reports 90.11% success, this validation found that the policy completed the reversal in 18.7% of 1,152 trials and was accepted in 16.9%. The failures were concentrated in conditions that training never varied, namely an unsettled initial state, a change in weather, and switching thresholds away from the trained values, and failed trials were more aggressive than successful ones. Since real stunt tests are safety-critical, the Sim2Real2Sim loop provides a practical way to find safe zones in which such maneuvers can be performed on real vehicles with minimum risk, and it showed that the kinematic stunt-driving indicators transfer to hardware while force and roll indicators do not. Because the protocol maps physical hazards to tests through standard safety frameworks, it provides a shared basis on which other teams can validate their own learned policies for autonomous vehicle maneuvers. ACKNOWLEDGMENT 
+
+The cloud computing services used in this work were provided as part of the NVIDIA Perception Award and the autonomous vehicle test-bed was built using New Jersey Commission on Science, Innovation and Technology (CSIT) award. The authors thank the systems engineering team of General Autonomy for their technical support. REFERENCES [1] A. Arab, M. Khaleghi, A. Partovi, A. Abbaspour, C. Shinde, Y. Mousavi, V. Azimi, and A. Karimoddini, “High-resolution safety verification for evasive obstacle avoidance in autonomous vehicles,” 
+
+IEEE Open J. Veh. Technol. , vol. 6, pp. 276–287, 2025. [2] X. He, Y. Liu, C. Lv, X. Ji, and Y. Liu, “Emergency steering control of autonomous vehicle for collision avoidance and stabilisation,” Veh. Syst. Dyn. , vol. 57, no. 8, pp. 1163–1187, 2019. [3] A. Arab, K. Yu, J. Yu, and J. Yi, “Motion planning and control of autonomous aggressive vehicle maneuvers,” IEEE Trans. Autom. Sci. Eng. , vol. 21, pp. 1488–1500, 2024. [4] R. Rajamani, Vehicle Dynamics and Control , 2nd ed. Springer, 2012. [5] A. Arab and J. Yi, “Instructed reinforcement learning control of safe autonomous J-turn vehicle maneuvers,” in Proc. IEEE/ASME Int. Conf. Adv. Intell. Mechatronics (AIM) , 2021, pp. 1058–1063. [6] S. Azdam, P. Doma, and A. Arab, “ManeuverGPT: Agentic control for safe autonomous stunt maneuvers,” in Proc. IEEE/RSJ Int. Conf. Intell. Robots Syst. (IROS) , 2025, pp. 20 365–20 370. [7] P. R. Wurman, S. Barrett, K. Kawamoto, J. MacGlashan, K. Subrama-nian, T. J. Walsh et al. , “Outracing champion Gran Turismo drivers with deep reinforcement learning,” Nature , vol. 602, no. 7896, pp. 223–228, 2022. [8] S. Zhao, J. Zhang, N. Masoud, Y. Jiang, H. Huang, and T. Liu, “Drift cornering control and real-vehicle deployment for electric vehicles,” 
+
+IEEE Trans. Ind. Electron. , vol. 72, no. 12, pp. 13 509–13 520, 2025. [9] A. Shahabi, A. H. Kazemian, S. Farahat, and F. Sarhaddi, “The in-fluence of engine gyroscopic moments on vehicle transient handling,” 
+
+Proc. Inst. Mech. Eng., Part D: J. Automobile Eng. , vol. 235, no. 9, pp. 2425–2441, 2021. [10] K. C. Shekar and A. Arab, “Safety-centered scenario generation for autonomous vehicles,” in Proc. SAE WCX World Congr. Exp. , no. 2026-01-0529, 2026. [11] A. Arab, M. Khaleghi, and K. Aslansefat, “Risk assessments for evasive emergency maneuvers in autonomous vehicles,” 
+
+arXiv:2604.26050 , 2026. [12] P. Kaur, S. Taghavi, Z. Tian, and W. Shi, “A survey on simulators for testing self-driving cars,” in Proc. 4th Int. Conf. Connected Auton. Driving (MetroCAD) , 2021, pp. 62–70. [13] S. Khastgir, S. Brewerton, J. Thomas, and P. Jennings, “Systems approach to creating test scenarios for automated driving systems,” 
+
+Rel. Eng. Syst. Saf. , vol. 215, p. 107610, 2021. [14] M. Althoff, M. Koschi, and S. Manzinger, “CommonRoad: Compos-able benchmarks for motion planning on roads,” in Proc. IEEE Intell. Veh. Symp. (IV) , 2017, pp. 719–726. [15] D. Karunakaran, J. S. Berrio Perez, and S. Worrall, “Generating edge cases for testing autonomous vehicles using real-world data,” Sensors ,vol. 24, no. 1, p. 108, 2024. [16] J. Tu, S. Suo, C. Zhang, K. Wong, and R. Urtasun, “Towards scalable coverage-based testing of autonomous vehicles,” in Proc. 7th Conf. Robot Learn. (CoRL) , vol. 229, 2023, pp. 2611–2623. [17] E. de Gelder, M. Buermann, and O. Op den Camp, “Coverage metrics for a scenario database for the scenario-based assessment of automated driving systems,” in Proc. IEEE Int. Automated Veh. Validation Conf. (IAVVC) , 2024, pp. 1–8. [18] B. Guo, H. Guo, X. Liu, Z. Han, W. Shi, and J. Liu, “Research on methods for constructing typical safety test scenarios in autonomous driving,” Digit. Transp. Saf. , vol. 5, no. 2, pp. 144–158, 2026. [19] D. Nalic, T. Mihalj, F. Orucevic, M. Schabauer, C. Lex, W. Sinz, and A. Eichberger, “Criticality assessment method for automated driving systems by introducing fictive vehicles and variable criticality thresholds,” Sensors , vol. 22, no. 22, p. 8780, 2022. [20] S. Feng, H. Sun, X. Yan, H. Zhu, Z. Zou, S. Shen, and H. X. Liu, “Dense reinforcement learning for safety validation of autonomous vehicles,” Nature , vol. 615, no. 7953, pp. 620–627, 2023. [21] ISO, Road vehicles: Functional safety , ISO 26262, Std., 2018. [22] ——, Road vehicles: Safety of the intended functionality (SOTIF) ,ISO/PAS 21448, Std., 2019. [23] C. Sun, R. Zhang, A. R. Alghooneh, M. Ning, P. Panahandeh, S. Tuer, and A. Khajepour, “Cascaded safety analysis and test scenario generation techniques for autonomous driving: A case study with WATonoBus,” Automot. Innov. , vol. 8, no. 2, pp. 252–263, 2025. [24] A. Dosovitskiy, G. Ros, F. Codevilla, A. Lopez, and V. Koltun, “CARLA: An open urban driving simulator,” in Proc. 1st Annu. Conf. Robot Learn. (CoRL) , vol. 78, 2017, pp. 1–16.

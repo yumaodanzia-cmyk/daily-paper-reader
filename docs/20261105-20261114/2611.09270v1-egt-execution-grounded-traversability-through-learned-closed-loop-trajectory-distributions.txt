@@ -1,0 +1,1135 @@
+EGT: Execution-Grounded Traversability through Learned Closed-Loop
+Trajectory Distributions
+Chinmay Mundane1, Amith Manoharan1, and Arun Kumar Singh1
+Trial A
+Trial B
+Trial C
+Fig. 1: Real-world EGT tests across three terrain trials. Each trial shows (1) the robot motion, (2) the initial camera view, and (3)–(4) the candidate
+reference paths (cyan) with their FM-predicted closed-loop trajectories (yellow). The accompanying video shows the subsequent replanning steps. Trial
+A: Due to the small slope angle, the predicted trajectories closely follow both cyan paths to their endpoints, so EGT classifies both paths as traversable,
+further confirmed by the actual vehicle motion. Trial B: One candidate path hits a lamp post, and the predicted trajectory stops early. EGT classifies this
+blocked path as non-traversable (3) and the path that moves away from the tree as traversable (4) Trial C: A straight candidate path hits a low tree branch.
+EGT classifies this blocked path as non-traversable (3) and the path that steers away from the branch as traversable (4).
+Abstract— Rough terrain traversability is often estimated
+through point-wise roll, pitch, or force-angle margins along
+a planned path. However, these metrics are often inaccurate
+and overly conservative because they ignore how terrain
+disturbances and low-level controller corrections can affect
+the vehicle’s motions. To overcome these limitations, we in-
+troduce Execution-Grounded Traversability (EGT), defined as
+the probability that a vehicle–controller pair can execute a
+candidate path while meeting trajectory-level tracking and
+progress requirements. We estimate EGT by predicting the
+distribution of closed-loop trajectories using a latent-space flow
+matching (FM) model conditioned on multi-resolution terrain
+features and 3D vehicle attitude and wheel-ground contact
+points prior. Across 650 simulated trials on unseen terrains,
+EGT reduces safe-path rejection to 2.2% (versus 11.4%–39.5%
+for pose-margin and force-angle baselines) and unsafe accep-
+tance to 7.7%. Integrated into a receding-horizon sampling-
+based planner, EGT reduces navigation failure rates by 24–42
+and 30–44 percentage points over [1] and [2], respectively, while
+cutting goal-reaching time by up to 20.5% and 45%. Finally, we
+demonstrate zero-shot transfer of our simulation-trained model
+to real-world outdoor experiments.
+I. INTRODUCTION
+Autonomous wheeled vehicles used outdoors for applica-
+tions such as search and rescue, construction, and forestry
+must accurately evaluate whether they can follow a reference
+path over rough terrain without tipping over or getting stuck.
+Standard traversability methods evaluate safety along this
+path using tip-over stability margins [3] or limits on terrain-
+induced roll and pitch angles [4], [5]. However, relying on
+attitude limits or tip-over margins to evaluate traversability—
+even dynamic metrics like the force-angle measure [3]—
+tends to be both overly conservative and inaccurate for three
+key reasons:
+1 are with the Institute of Technology, University of Tartu, Estonia.
+1) Pointwise limits ignore closed-loop recovery (overly
+conservative): Checking stability or attitude limits at ev-
+ery point along a path penalizes brief posture excursions.
+A large transient roll or pitch angle does not make a
+path infeasible if the vehicle’s momentum and low-level
+controller can ensure a safe recovery.
+2) Rotational stability does not guarantee traversal (in-
+accurate): Force-angle and attitude limits only check
+for rotational tip-over. Even when a vehicle stays within
+safe posture limits and tip-over margins, wheel slip can
+stop forward progress or push the vehicle sideways into
+obstacles or ditches.
+3) Reference-path checks ignore closed-loop deviation
+(inaccurate): Calculating posture or tip-over margins
+along the reference path may provide limited insight
+because terrain disturbances and subsequent controller
+corrections can make the vehicle depart substantially from
+the planned reference.
+Therefore, in this paper, we do not define traversability
+from terrain and posture features alone; instead, we evaluate
+whether a specific vehicle–controller pair can execute a ref-
+erence path under closed-loop control. Formally, we define
+Execution-Grounded Traversability (EGT) as the probability
+that a vehicle–controller pair can execute a candidate refer-
+ence path while keeping the path-tracking error below a set
+limit and completing a required fraction of its arc length. This
+execution-based perspective reshapes how we factor vehicle
+stability into traversability assessments. Specifically, our core
+insight is that physical failures—like tipping into a ditch or
+stalling on a steep slope—directly derail path tracking or halt
+forward progress. Conversely, satisfying attitude or force-
+angle bounds alone does not guarantee that the vehicle will
+arXiv:2611.09270v1  [cs.RO]  6 Nov 2026
+
+
+complete the path.
+To compute EGT, we must predict the distribution of
+closed-loop path-tracking behavior on rough terrain. One
+approach, proposed by Wang et al. [6], learns an open-
+loop, action-conditioned dynamics model and pairs it with
+a tracking controller at inference time. In effect, the learned
+model acts as a simulator, generating closed-loop executions
+through repeated evaluations of the dynamics model and a
+low-level controller. However, this recursive rollout com-
+pounds prediction errors: an inaccurate state prediction alters
+the controller’s corrective action, which further degrades sub-
+sequent predictions. Moreover, these corrections can push the
+model toward state–action pairs that are poorly represented in
+the training data, further reducing accuracy. Finally, and most
+importantly, their learned target is action-conditioned vehicle
+dynamics, rather than the complete execution distribution
+conditioned on a reference path.
+In this paper, we bypass the recursive rollouts of [6]
+by treating the vehicle and its feedback controller as a
+single closed-loop system. Rather than simulating step-by-
+step dynamics, we directly learn the distribution of realized
+trajectories from closed-loop executions in simulation. We
+model this conditional distribution using a latent-space flow
+matching (FM) architecture conditioned on multi-resolution
+terrain features and a 3D kinematic pose–contact prior. Given
+this context and a candidate path, our learned FM model
+jointly predicts the entire sequence of closed-loop waypoints,
+without recursive evaluations of vehicle dynamics and a
+tracking controller.
+Our EGT method provides two main advantages. First,
+across 650 simulated trials on unseen terrains, EGT reaches
+97.4% classification accuracy. It is much less conservative
+and more accurate than the force-angle measure [3] and
+roll/pitch limit methods [4], [5], cutting the conservative
+rejection of safe paths from 11.4%–39.5% down to 2.2% and
+unsafe acceptance down to 7.7%. Second, when we use EGT
+with conditional value-at-risk (CVaR) execution costs in a
+simple receding-horizon sampling-based planner, we reduce
+failure rates by 24–42 percentage points over [1] and 30–44
+percentage points over [2]. At the same time, our planner
+reduces mean goal-reaching time by up to 20.5% and 45%
+over these baselines.
+In summary, the contributions of our work are:
+• We introduce EGT, a probabilistic traversability metric
+based on closed-loop execution requirements.
+• We develop a closed-loop trajectory predictor based on
+latent FM that allows us to estimate EGT along a reference
+path.
+• We combine EGT with risk-aware planning and demon-
+strate improvements in path classification and navigation.
+II. RELATED WORK
+This section extends the comparisons with existing work
+presented in Section I.
+A. Motion Prediction and Learned Traversability
+Traversability methods can assess predicted vehicle motion
+or directly estimate terrain costs. Takemura and Ishigami [4]
+combine a quasi-dynamic model with a tracking controller
+to predict trajectories. They assess these trajectories using
+limits on roll, pitch, and slip. Learned predictive models
+also support motion-based traversability assessment [2], [7].
+Wang et al. [6] combine learned probabilistic dynamics
+with a tracking controller to predict closed-loop executions
+through recursive model–controller evaluations.
+Other methods map terrain observations directly to
+traversability costs or scores. Castro et al. [8] learn velocity-
+conditioned costs from visual and geometric features, using
+IMU measurements for supervision. WVN [9] predicts visual
+traversability scores using velocity-tracking errors as self-
+supervision. RoadRunner [10] predicts traversability maps
+from camera and LiDAR measurements, using labels gen-
+erated in hindsight. TNT [11] maps terrain elevation to
+traversability costs. Its supervision uses vehicle attitude,
+differences between commanded and executed motion, and
+kinodynamic prediction uncertainty. Other approaches learn
+terrain costs from expert demonstrations through inverse
+reinforcement learning [12], or directly predict risk-sensitive
+costs [13].
+Our FM model directly predicts a joint distribution of com-
+plete closed-loop trajectories for a reference path and a fixed
+vehicle–controller pair. This avoids recursive dynamics–
+controller rollouts during prediction. It also supports path-
+specific assessment from predicted executions, rather than
+from local terrain scores alone.
+B. Probabilistic Traversability and Risk-Aware Planning
+Probabilistic methods account for uncertainty in traversabil-
+ity assessment. Leininger et al. [1] constructed sparse
+Gaussian-process-based elevation maps. They used the de-
+rived terrain slope, uncertainty, and footprint assessment
+as the traversability metric. STEP [14] combines terrain
+uncertainty, conditional value-at-risk (CVaR), and model pre-
+dictive control. PIETRA [15] predicts uncertainty in traction
+and vehicle attitude. It also uses CVaR to assess traction risk
+and constrain roll and pitch.
+Our approach follows a risk-aware framework similar
+to those of the above works. However, EGT provides the
+probabilistic traversability estimate directly over closed-loop
+executions for a given reference path and controller. The
+effects of traction loss and tip-over are captured when they
+cause violations of the tracking or progress requirements.
+III. METHODS
+In
+this
+section,
+we
+first
+derive
+Execution-Grounded
+Traversability (EGT), assuming that a conditional closed-
+loop predictor is available. We then describe a latent-space
+flow-matching realization of this predictor and its use in a
+receding-horizon, sampling-based planner.
+A. Execution-Grounded Traversability
+Let π denote the fixed feedback controller. For simplicity, we
+consider straight-line reference paths starting at the current
+vehicle position q0. Reference waypoints are denoted by qff
+k
+and are stacked to obtain a reference τ ff with the following
+
+
+arc-length parameterization:
+γ(s) = q0 + sd,
+s ∈[0, l],
+∥d∥2 = 1,
+(1)
+where d ∈R2 is its direction and l > 0 is its length.
+Although the reference path is a straight line, the real-
+ized closed-loop execution can follow a curved trajectory
+determined by the vehicle’s kinematics and the vehicle–
+terrain interaction dynamics. The vehicle starts tracking the
+reference path from rest and comes to a halt after the
+execution.
+Let C be the terrain context formed by fusing τ ff, multi-
+resolution terrain features, and the vehicle’s 3D pose prior.
+Let (p0, . . . , ph) be the sequence of waypoints obtained by
+tracking τ ff using the controller π. The predicted execution
+waypoints represent vehicle positions at 0.1 s intervals, in-
+cluding any time spent at the endpoint after arrival. Assume
+that we have access to a conditional closed-loop predictor,
+parameterized by θ, which defines a distribution over com-
+plete execution trajectories:
+τ cl = col(p0, . . . , ph) ∈R2(h+1),
+τ cl ∼pπ
+θ(· | C).
+(2)
+Here, col stacks its arguments into a column vector. Here,
+pk ∈R2 is the kth waypoint and h is the number of
+prediction steps.
+a) Tracking and reference-path progress:
+Given a
+closed-loop trajectory τ cl, the arc-length coordinate of the
+nearest reference point is obtained directly as
+sk = clip[0,l]
+
+d⊤(pk −q0)
+
+,
+k = 0, . . . , h.
+(3)
+The dot product measures displacement along the reference
+direction, while clipping restricts the projection to the refer-
+ence segment.
+Let n be a constant unit normal satisfying n⊤d = 0. The
+signed orthogonal tracking error simplifies to
+e⊥,k = n⊤[pk −γ(sk)] = n⊤(pk −q0).
+(4)
+For a prescribed corridor half-width w(s) > 0, define the
+normalized worst-case tracking error:
+z⊥(τ cl) =
+max
+k=0,...,h
+|e⊥,k|
+w(sk).
+(5)
+The condition z⊥(τ cl) ≤1 requires the orthogonal tracking
+error to remain within the prescribed tolerance at every
+waypoint of the predicted closed-loop trajectory.
+We also define terminal reference-path progress as follows:
+ρ(τ cl) = sh
+l = clip[0,1]
+d⊤(ph −p0)
+l
+
+.
+(6)
+This statistic measures advancement along the reference
+path τ ff. We use terminal rather than maximum attained
+progress to account for cases where the robot retreats after
+making some progress along the reference path. The progress
+requirement is ρ(τ cl) ≥β, where β ∈(0, 1] specifies the
+minimum completion fraction.
+b) Distributional definition of EGT: The conditional
+execution distribution induces a joint distribution over the
+scalar quantities z⊥(τ cl) and ρ(τ cl), denoted by z⊥and ρ for
+brevity. We define EGT as the probability that both execution
+requirements hold simultaneously:
+pegt =
+π
+Pr
+θ (z⊥≤1∧ρ≥β |C)=Eπ
+θ[ind(z⊥≤1∧ρ≥β)|C]. (7)
+Closed-Loop Execution
+Fig. 2: Overview of the conditional latent flow matching architecture.
+Terrain FPN and path-fusion features, kinematic pose–contact features, and
+planner–goal context form conditioning tokens C. A shared flow transformer
+predicts the conditional latent velocity field vθ, which is integrated and
+decoded into closed-loop trajectory rollouts.
+The probability and expectation are taken under the con-
+ditional execution distribution in (2). Here, ind(·) equals
+one when its argument is true and zero otherwise. Tracking
+accuracy and sufficient progress must hold within the same
+execution.
+c) Sample-average approximation: To evaluate (7), we
+draw ns independent complete executions bτ cl,(m) ∼pπ
+θ(· |
+C), for m = 1, . . . , ns. For each execution, we compute
+z(m)
+⊥
+= z⊥(bτ cl,(m)),
+ρ(m) = ρ(bτ cl,(m)).
+(8)
+The sample-average approximation of EGT is
+bpegt = 1
+ns
+ns
+X
+m=1
+ind
+
+z(m)
+⊥
+≤1 ∧ρ(m) ≥β
+
+.
+(9)
+Here, ind equals one if the condition holds and zero oth-
+erwise. This estimate is the fraction of predicted executions
+that jointly satisfy the tracking and progress requirements.
+B. Learning Closed-Loop Execution Distributions
+In this section, we develop a latent-space FM model to
+approximate the distribution of closed-loop executions pπ
+θ
+for a given reference path and low-level controller π. Let
+τ ff and τ cl
+gt denote a reference path and its corresponding
+ground-truth closed-loop execution. Both are represented by
+h + 1 = 100 ordered planar waypoints in the robot’s local
+frame. Let eφ and dφ denote the variational autoencoder
+(VAE) encoding and decoding operations, with parameters
+φ. The reference and execution codes are
+zff = eφ(τ ff),
+zcl = eφ(τ cl
+gt),
+(10)
+where zff, zcl ∈Rdz and dz = 32. The VAE is trained
+beforehand, and both its encoder and decoder remain frozen
+during FM learning. We use zff as part of the conditioning
+input C in the FM model, along with additional tokens
+derived from terrain geometry and vehicle pose (see Fig. 2
+and Appendix VI). The vector zcl is used as the training
+target.
+a) Flow-matching training: Each training example pro-
+vides a conditioning input and a paired ground-truth ex-
+ecution latent zcl. The aim of flow matching is to learn
+a velocity field that maps standard Gaussian noise to the
+distribution of closed-loop executions of the reference path.
+To this end, let z0 ∼N(0, Idz) and r ∼U[0, 1]. Conditional
+
+
+flow matching [16] uses linear interpolation and minimizes
+the following velocity-matching loss:
+zr = (1 −r)z0 + rzcl,
+(11)
+ℓflow = E
+vθ(zr, r, C) −(zcl −z0)
+
+2
+2
+
+,
+(12)
+where the expectation is over training examples, Gaussian
+noise, and flow time r. The velocity field vθ is modeled
+as a sequence of transformer blocks in our implementation,
+with learnable weights θ.
+We also include auxiliary losses to supervise the decoded
+waypoint coordinates and terminal position. During training,
+we unroll the learned latent dynamics and decode their
+endpoint:
+dbz(r)
+dr
+= vθ(bz(r), r, C),
+(13)
+bτ cl = dφ(bzcl) = col(bp0, . . . , bph),
+(14)
+where bzcl = bz(1) and col represents column-wise stacking.
+Writing pcl
+k for the corresponding ground-truth execution
+waypoint, the auxiliary losses and total training objective are
+ℓcoord =E
+"
+1
+h+1
+h
+X
+k=0
+∥bpk−pcl
+k ∥2
+2
+#
+, ℓend =E
+h
+∥bph−pcl
+h ∥2
+2
+i
+, (15)
+ℓtotal = ℓflow + λcoordℓcoord + λendℓend,
+(16)
+with λcoord = 2 and λend = 4 chosen for our imple-
+mentation. Gradients from the auxiliary losses pass through
+the decoder to the flow model, while the VAE parameters
+remain fixed. We use AdamW with an initial learning rate
+of 10−4, 10 warmup epochs, a cosine learning-rate schedule
+over 500 epochs, and an exponential moving average with
+decay 0.999.
+b) Sampling complete executions: At inference time,
+the conditioning matrix C is constructed once for each
+reference and reused across flow evaluations and execution
+samples. For each sample, we initialize bz(0) ∼N(0, Idz)
+and integrate (13) using nflow = 10 Euler steps:
+bz(rj+1) = bz(rj) + δr vθ(bz(rj), rj, C),
+(17)
+where rj = jδr, δr = 1/nflow, and j = 0, . . . , nflow −1.
+The final latent is decoded into the full waypoint sequence.
+Before evaluating EGT, we smooth the decoded sequence
+using Bernstein polynomials and shift it so that its initial
+waypoint coincides with the local origin. Repeating this pro-
+cedure with independent noise draws provides the execution
+samples used in (9).
+c) Overview of the neural architecture and structure of
+the conditioning input: The conditioning input C has the
+following structure:
+C =
+
+tref
+tgoal
+T⊤
+way
+T⊤
+kin
+T⊤
+spatial
+⊤,
+(18)
+where C ∈Rnmem×d and nmem = 2 + 2(h + 1) + n3 = 266.
+We use a feature pyramid network (FPN) [17] to build the
+tokens Tspatial and Tway. These tokens capture a coarse
+overview of the terrain and fine-grained terrain features
+near the reference path, respectively. Similarly, tref, Tkin,
+and tgoal are formed by embedding, respectively, the latent
+representation of the reference path, the vehicle’s 3D pose
+and contact points obtained using the method in [18], and the
+goal or endpoint of the reference path. Appendix VI gives
+(a) The FM closed-loop predictions (green) and the resulting EGT assess-
+ment indicate that the vehicle can clear the bump. The Gazebo simulation
+confirms this assessment.
+(b) The FM closed-loop execution predictions (red) for a straight path over
+a ditch lead to a non-traversable EGT assessment. The Gazebo simulations
+confirm that the vehicle topples while crossing the ditch. The vehicle’s
+terminal position is close to where the FM predictions end.
+(c) A scenario in which the reference path passes partly through a crater. The
+FM predictions (red) and the resulting EGT assessment indicate navigation
+failure due to uncertainty in tracking the path closely. The simulation run
+confirms this assessment.
+Fig. 3: Representative closed-loop trajectory predictions on simulated
+terrain.
+further details of the token construction and the latent-space
+transformer block.
+C. Risk-Aware Sampling-Based Planning
+We use the developments of the previous subsections to
+design a sampling-based receding-horizon planner for rough-
+terrain navigation. At each replanning cycle, we generate a
+set of nc candidate references, C = {τ ff
+i }nc
+i=1. We construct
+the context Ci for each candidate path and subsequently
+sample ns executions bτ cl,(m)
+i
+from the learned FM model.
+The superscript identifies the closed-loop execution sample,
+while the subscript identifies the candidate path. Applying
+the procedure in Section III-A to the sampled closed-loop
+executions gives z(m)
+⊥,i , ρ(m)
+i
+, and bpegt,i.
+We adopt a two-step process for selecting the best can-
+didate. We first construct the EGT-accepted safe set F and
+then rank its members using the cost ji:
+F = {i ∈{1, . . . , nc} : bpegt,i ≥preq} ,
+(19)
+ji = λgecg,i + λ⊥r⊥,i + λprogrprog,i.
+(20)
+The set F contains all candidate paths whose EGT meets
+the specified threshold preq. The first term measures progress
+toward the global goal, while the last two terms are CVaR
+estimates of the tracking loss z⊥,i and progress loss 1 −ρi.
+These terms regulate worst-case path-tracking and progress
+behavior. The least-cost path is then selected for execution.
+a) Global task cost and execution risk: Let vg(p)
+denote the global cost-to-go from position p to the mission
+goal pg. In open terrain, it can be the Euclidean distance
+∥p−pg∥2; when obstacles or route topology matter, a map-
+aware cost-to-go can be used instead. The expected terminal
+
+
+task cost and its normalized form are
+cg,i = 1
+ns
+ns
+X
+m=1
+vg(bp(m)
+i,h ),
+ecg,i =
+cg,i
+vg(p0) + ϵ,
+(21)
+where ϵ > 0. This term evaluates global task utility sepa-
+rately from local reference-path progress.
+We quantify adverse execution outcomes using empirical
+CVaR estimates. For scalar loss samples z(1), . . . , z(ns) and
+level α ∈[0, 1), we define
+\
+CVaRα(z) = min
+η∈R
+(
+η +
+Pns
+m=1[z(m) −η]+
+ns(1 −α)
+)
+,
+(22)
+where [a]+ = max(a, 0). The tracking and progress risks are
+r⊥,i = \
+CVaRα⊥(z⊥,i), rprog,i = \
+CVaRαprog(1 −ρi).
+(23)
+The first term emphasizes large tracking deviations, while
+the second emphasizes the low-progress tail.
+b) Fallback when no candidate is accepted: If no
+candidate meets preq, we relax the threshold to within δp
+of the maximum candidate reliability, with pabort as the
+lower bound. We then repeat candidate selection using the
+objective ji and the cached evaluations. If no candidate meets
+pabort, the planner returns no-go and regenerates paths. This
+fallback reduces the required execution confidence rather
+than relaxing the tracking or progress tolerances.
+IV. VALIDATION AND BENCHMARKING
+This section has two objectives. First, we evaluate how
+accurately EGT captures a wheeled vehicle’s ability to tra-
+verse a given rough terrain. Second, we assess the impact of
+EGT on downstream planning performance by benchmarking
+against existing navigation algorithms.
+A. Implementation Details
+We implemented the FM model, EGT assessment, and
+sampling-based planner in JAX, using Equinox [19] as the
+training framework. We adapt the method in [20] as our
+low-level path-tracking controller. The training data were
+collected in ROS Gazebo using a Husky vehicle. Intel
+RealSense was used to obtain terrain information in both
+simulation and real-world runs. The training dataset consisted
+of closed-loop executions of 8,808 feed-forward trajectories
+on 7 different terrains.
+For all experiments, we use a constant corridor half-width
+w(s) = 1.0 m, minimum progress fraction β = 0.8, and
+required EGT probability preq = 0.8. Each candidate is
+evaluated using ns = 30 predicted executions. At every
+replanning cycle, the planner evaluates nc = 100 candidate
+reference paths. Both execution-risk terms use a CVaR level
+of α⊥= αprog = 0.90, and the objective weights in (20) are
+λg = λ⊥= λprog = 0.5.
+Real-world implementation was done on a skid-steered
+robot Jackal which is similar to the vehicle used in training.
+The computations were performed on the mounted RTX 3090
+laptop. The planning took an average of 1s, while the low-
+level path-tracking controller ran at 20Hz.
+The vehicle remains at rest during replanning and begins
+tracking the selected reference only after planning is com-
+plete. Each new execution therefore starts from rest, consis-
+tent with the initial-state assumption of the FM predictor.
+B. Qualitative Demonstration of EGT
+Fig. 3 provides a qualitative validation of the FM-derived
+EGT assessment across three terrains using bpegt from (9)
+(with preq = 0.80). In Fig. 3(a), the reference path crosses a
+bump that the vehicle can traverse; the green FM predictions
+closely follow the path to the goal, satisfying bpegt ≥preq and
+classifying the path as traversable, as confirmed in Gazebo.
+Conversely, in Fig. 3(b), the path crosses a steep ditch and
+the predicted executions terminate early (recall (6) and (7)),
+yielding bpegt < preq (non-traversable). Simulation confirms
+that the vehicle topples near the predicted termination point.
+In Fig. 3(c), the predicted executions exhibit large variance;
+although some samples succeed, bpegt falls below preq and
+the path is classified as non-traversable, matching repeated
+simulations in which the vehicle falls in more frequently than
+it succeeds.
+Fig. 1 shows a real-world validation of the EGT assess-
+ment, where reference paths passing through non-navigable
+barriers (lamppost in Trial B, hanging tree branch in Trial
+C) are correctly classified as non-traversable.
+C. Quantitative Benchmarking of EGT
+EGT classifies a path as traversable when bpegt ≥preq,
+with preq = 0.8 and computed from the predictions of the
+closed-loop executions through FM. We compare it with two
+alternatives:
+• Force-Angle Measure [3]: This baseline evaluates tip-
+over stability along the reference path using gravitational
+loading only. We use [18] to estimate the vehicle’s 3D
+pose and wheel–ground contact points. At each evaluated
+reference waypoint, we compute the force-angle margins
+about all tip-over axes. A path is accepted only if the
+minimum margin is strictly greater than zero at every
+evaluated waypoint. Inertial loads are not included in this
+baseline.
+• Pose-Margin: Based on [4], [5], this baseline checks
+whether the vehicle’s pitch and roll angles along the refer-
+ence path exceed a set threshold. We evaluate thresholds
+of 45◦, 60◦, and 75◦to examine the trade-off between
+conservative rejection and incorrect acceptance.
+Methodology: We evaluate traversability classification over
+650 simulated trials. All trials use terrains that were not
+included in the FM training data. In each trial, the vehicle–
+controller pair executes a reference path once in simulation.
+An execution is labeled safe if the vehicle reaches the
+goal without tipping over, getting stuck, or exceeding the
+prescribed lateral-deviation limit. Otherwise, it is labeled
+unsafe. The lateral limit is the same as the tracking tolerance
+used in EGT, w(s) = 1.0 m. Here, safe and unsafe refer to
+successful and unsuccessful reference-path execution under
+these task requirements. All methods are evaluated against
+the same outcome labels, which are assigned from the actual
+recorded simulation.
+The dataset contains ns = 598 safe and nu = 52 unsafe
+executions. Let nr denote the number of safe executions
+incorrectly rejected, and na the number of unsafe execu-
+tions incorrectly accepted. The conservative rejection rate,
+
+
+TABLE I: Traversability classification over 650 simulated trials: 598 safe
+and 52 unsafe executions under the stated task requirements. All metric
+values are percentages. The EGT ablation omits conditioning on the NLS
+pose prior. Arrows indicate the preferred direction, and best values are
+shown in bold. The force-angle baseline uses gravitational loading only.
+Metric
+Force-Angle [3]
+Pose-Margin
+EGT
+45◦
+60◦
+75◦
+(Ours)
+w/o pose-
+contact prior
+Conservative rejection ↓
+39.5
+35.3 21.7 11.4
+2.2
+4.8
+Unsafe acceptance ↓
+13.5
+13.5 38.5 63.5
+7.7
+71.2
+Overall accuracy ↑
+62.6
+66.5 76.9 84.5
+97.4
+89.8
+100 nr/ns, measures how often a method rejects paths that
+the vehicle–controller pair successfully executes. The unsafe
+acceptance rate, 100 na/nu, measures how often a method
+accepts paths whose recorded executions fail. These error
+rates use their respective ground-truth class sizes, rather
+than the total number of trials. Finally, overall accuracy
+is the percentage of correctly classified trials, calculated as
+100 [1 −(nr + na)/(ns + nu)]. Lower values are preferable
+for both error rates, whereas higher accuracy is preferable.
+Results: Table I shows that the evaluated tip-over and pose-
+margin criteria can be both conservative and inaccurate
+as traversability predictors. The force-angle baseline rejects
+39.5% of successful executions, yet accepts 13.5% of unsuc-
+cessful executions. The pose-margin baselines reject 11.4%–
+35.3% of successful executions and accept 13.5%–63.5% of
+unsuccessful executions. Increasing the pose-margin thresh-
+old reduces conservative rejection but increases incorrect
+acceptance.
+EGT achieves the lowest observed rates of both errors and
+the highest overall accuracy. It incorrectly rejects 13 of 598
+successful executions and accepts four of 52 unsuccessful
+executions. These counts give a conservative-rejection rate
+of 2.2%, an unsafe-acceptance rate of 7.7%, and an overall
+classification accuracy of 97.4%.
+Without conditioning on the 3D pose and contact-point
+prior from [18], EGT rejects 29 of 598 successful execu-
+tions and accepts 37 of 52 unsuccessful executions. The
+corresponding error rates increase to 4.8% and 71.2%, while
+overall accuracy decreases to 89.8%. This ablation shows
+the importance of the pose prior for the evaluated execution
+predictor. It should be noted that for the pose-prior abla-
+tion, we train a separate FM model without pose–contact
+conditioning, using the same training dataset and training
+procedure.
+Overall, these results provide two key validations. First,
+the pose limits and tip-over stability margins measured
+through force-angle measure, can reject executable paths
+while also often accepting paths that fail the execution
+requirements. Second, EGT probability estimated through the
+learned FM model reduces both types of error by assessing
+predicted closed-loop execution.
+D. Probability Calibration
+We use the same N = 650 simulated path executions and
+outcome labels as Table I to assess the calibration of EGT
+as a probability forecast of successful path execution. Let
+pi = bpegt,i for the ith reference path. We set yi = 1 if the
+TABLE II: EGT probability calibration against the execution-success
+labels used in Table I. nb: bin size; ¯pb: mean predicted probability; ¯yb:
+observed execution-success frequency; CI: pointwise 95% Wilson confi-
+dence interval for the group execution-success probability.
+Probability bin
+nb
+¯pb
+¯yb
+95% CI
+[0, 0.80)
+61
+0.0656
+0.2131
+[0.1290, 0.3312]
+[0.80, 0.96)
+40
+0.9200
+1.0000
+[0.9124, 1.0000]
+[0.96, 1)
+64
+0.9667
+1.0000
+[0.9434, 1.0000]
+pi = 1
+485
+1.0000
+0.9918
+[0.9790, 0.9968]
+recorded execution meets the success criteria in Section IV-
+C, and yi = 0 otherwise. To recall, success requires reaching
+the goal without getting stuck, tipping over or violating the
+prescribed lateral limit. The outcome labels yi, are obtained
+from actual simulated motion. In contrast, pi is computed
+from the predictions from the FM model.
+We evaluate calibration by comparing the predicted prob-
+abilities with the observed execution-success frequencies.
+Each reference path is executed only once. Therefore, we
+group the test cases into probability bins to compare the
+predictions with multiple recorded outcomes. We use bins
+of unequal width because uniform division resulted in some
+bins with too few cases. Let Bb be the set of cases in bin
+b, with nb = |Bb|. For each bin, we calculate the mean
+predicted probability ¯pb = n−1
+b
+P
+i∈Bb pi and the observed
+success frequency ¯yb = n−1
+b
+P
+i∈Bb yi. Here, ¯yb is the
+fraction of recorded executions in bin b that meet the stated
+success criteria. Agreement between ¯pb and ¯yb indicates
+calibration at the group level. We report pointwise 95%
+Wilson confidence intervals [21] for the group execution-
+success probabilities to describe uncertainty due to the finite
+number of recorded outcomes.
+Table II shows that EGT underestimates the success
+frequency in the lowest bin, wherein the mean prediction
+is 0.0656, whereas the observed frequency is 0.2131. The
+confidence interval is [0.1290, 0.3312], which is entirely
+above the mean prediction. In the two intermediate bins,
+all recorded executions meet the success criteria, and the
+mean predictions are within the confidence intervals. For
+predictions where pi = 1, 481 of the 485 executions meet
+these criteria. In other words, EGT predicts perfect success
+against a the observed success frequency of 0.9918.
+To summarize, Table II shows calibration varies across
+the bins: the predictions are conservative in the lower bins,
+but they slightly overestimate the success frequency when
+pi = 1.
+E. Benchmarking the Planning Performance of EGT
+We evaluate how EGT-based path selection affects navigation
+performance on rough terrain. We compare the sampling-
+based planner in Section III-C with GP-navigation [1] and
+TAL [2] on three terrains. For each method, we run 50 trials
+per terrain. A trial fails if the vehicle gets stuck or tips over.
+We use the author-provided GP-navigation implementation,
+which operates online without pretraining. On the other hand,
+TAL requires learning a neural transition model, and for
+this, we use the vehicle transitions extracted from the same
+simulated execution dataset used to train our FM model.
+For navigation, we combine the learned transition model
+with adapted π-MPPI [20] (400 control sample sequences,
+
+
+TABLE III: Navigation performance across three terrains, with 50 trials
+per method and terrain. Failure rates use all trials; goal-reaching times use
+common-success runs (N = 21, 17, 19 for Terrains 1–3).
+Terrain
+Method
+Failure rate
+(%) ↓
+Goal time (s) ↓
+Mean ± std.
+Terrain 1
+Proposed
+4
+27.42 ± 13.09
+GP-navigation
+40
+28.00 ± 14.46
+TAL
+34
+49.80 ± 22.22
+Terrain 2
+Proposed
+4
+32.90 ± 10.65
+GP-navigation
+46
+37.68 ± 20.69
+TAL
+48
+51.37 ± 17.19
+Terrain 3
+Proposed
+2
+28.76 ± 7.83
+GP-navigation
+26
+36.18 ± 13.09
+TAL
+46
+48.82 ± 15.20
+horizon 2s). Its cost penalizes pitch and roll magnitudes and
+Euclidean distance to the goal. Note that we use the same
+π-MPPI optimization method as the low-level path-tracking
+controller in our approach. Thus, both our approach and TAL
+use the same underlying training executions and the π-MPPI
+optimization method, but differ in their prediction targets and
+planning objectives.
+Results. Table III reports failure rates using all 50 trials for
+each method and terrain. Goal-reaching times are computed
+only over common-success runs, that is, runs in which all
+three methods succeeded; the common sample counts are
+21, 17, and 19 for Terrains 1, 2, and 3, respectively. Our
+planner has the lowest failure rates on all terrains: 4% on
+Terrain 1, 4% on Terrain 2, and 2% on Terrain 3. In contrast,
+GP-navigation fails in 26%–46% of trials, and TAL fails in
+34%–48% of trials.
+Over the common-success runs, our planner also has
+the lowest mean goal-reaching time on each terrain. On
+Terrain 1, our planner and GP-navigation have similar mean
+times (27.42 s and 28.00 s), but our planner reduces the
+failure rate from 40% to 4%. On Terrains 2 and 3, our planner
+reduces the mean time by 12.7% and 20.5% compared with
+GP-navigation, while also maintaining lower failure rates.
+Compared with TAL, our planner reduces the mean goal-
+reaching time by 36%–45% across the three terrains.
+V. CONCLUSIONS AND FUTURE WORK
+We presented Execution-Grounded Traversability (EGT)
+to assess whether a vehicle–controller pair can follow a
+rough-terrain path. Using closed-loop trajectories predicted
+by a flow-matching model, EGT computes the probability of
+satisfying path-tracking and progress constraints. Across 650
+simulated trials, EGT achieved 97.4% classification accuracy,
+reducing conservative rejection and unsafe acceptance over
+3D-pose baselines. The EGT planner achieved 2%–4% fail-
+ure rates and the lowest mean goal-reaching times across
+three terrains. The real-world validation is presented in Fig. 1
+and the accompanying video, which includes experimental
+comparison with [1]. Finally, since our planner accounts for
+the potential low-level controller’s corrective actions through
+FM-based execution predictions, it reduces the reliance on
+frequent reference-path re-planning while retaining high-rate
+feedback control.
+Limitations and Future Work: Our EGT assessment as-
+sumes rough, non-deformable terrains. In the future, we
+plan to train the FM model on deformable surfaces and
+condition it on tokens derived from both point clouds and
+images. Furthermore, embeddings from vision foundation
+models could be integrated into the FM architecture. In this
+work, we also assume a fixed vehicle–controller pair. Thus, a
+promising direction is to enable the FM architecture to take
+the vehicle embodiment and low-level control structure as
+additional context. Finally, EGT evaluates execution along
+the reference path, but it does not check stability past the
+endpoint. To address this limitation, the planner can replan
+before the path ends—for example, halfway through—and
+extend the prediction horizon past the previous endpoint.
+We are also looking to reduce the computation time of our
+planner. A major overhead stems from the computation of
+3D kinematic prior which in the current work is obtained
+from solving a non-linear least squares (NLS) problem [18].
+One way to reduce this overhead is to replace the NLS with
+a learned surrogate.
+REFERENCES
+[1] A. Leininger, M. Ali, H. Jardali, and L. Liu, “Gaussian process-based
+traversability analysis for terrain mapless navigation,” in International
+Conference on Robotics and Automation (ICRA).
+IEEE, 2024, pp.
+10 925–10 931.
+[2] A. Datar, C. Pan, M. Nazeri, A. Pokhrel, and X. Xiao, “Terrain-
+attentive learning for efficient 6-dof kinodynamic modeling on ver-
+tically challenging terrain,” in IEEE/RSJ International Conference on
+Intelligent Robots and Systems (IROS), 2024, pp. 5438–5443.
+[3] E. Papadopoulos and D. A. Rey, “The force-angle measure of tipover
+stability margin for mobile manipulators,” Vehicle System Dynamics,
+vol. 33, no. 1, pp. 29–48, 2000.
+[4] R. Takemura and G. Ishigami, “Computationally efficient and sub-
+optimal trajectory planning framework based on trajectory-quality
+growth rate analysis,” Frontiers in Robotics and AI, vol. Volume 9,
+2022.
+[5] P. Kr¨usi, P. Furgale, M. Bosse, and R. Siegwart, “Driving on point
+clouds: Motion planning, trajectory optimization, and terrain assess-
+ment in generic nonplanar environments,” Journal of Field Robotics,
+vol. 34, no. 5, pp. 940–984, 2017.
+[6] S. J. Wang, S. Triest, W. Wang, S. Scherer, and A. Johnson, “Rough
+terrain navigation using divergence constrained model-based rein-
+forcement learning,” in Proceedings of the 5th Conference on Robot
+Learning, ser. Proceedings of Machine Learning Research, A. Faust,
+D. Hsu, and G. Neumann, Eds., vol. 164.
+PMLR, 08–11 Nov 2022,
+pp. 224–233.
+[7] G. Kahn, P. Abbeel, and S. Levine, “Badgr: An autonomous self-
+supervised learning-based navigation system,” IEEE Robotics and
+Automation Letters, vol. 6, no. 2, pp. 1312–1319, 2021.
+[8] M. G. Castro, S. Triest, W. Wang, J. M. Gregory, F. Sanchez, J. G.
+Rogers, and S. Scherer, “How does it feel? self-supervised costmap
+learning for off-road vehicle traversability,” in IEEE International
+Conference on Robotics and Automation (ICRA), 2023, pp. 931–938.
+[9] J. Frey, M. Mattamala, N. Chebrolu, C. Cadena, M. Fallon, and
+M. Hutter, “Fast Traversability Estimation for Wild Visual Navi-
+gation,” in Proceedings of Robotics: Science and Systems, Daegu,
+Republic of Korea, July 2023.
+[10] J. Frey, M. Patel, D. Atha, J. Nubert, D. Fan, A. Agha, C. Pad-
+gett, P. Spieler, M. Hutter, and S. Khattak, “Roadrunner—learning
+traversability estimation for autonomous off-road driving,” IEEE
+Transactions on Field Robotics, vol. 1, pp. 192–212, 2024.
+[11] C. Pan, A. Datar, A. Pokhrel, M. Choulas, M. Nazeri, and
+X. Xiao, “Traverse the non-traversable: Estimating traversability for
+wheeled mobility on vertically challenging terrain,” arXiv preprint
+arXiv:2409.17479, 2024.
+[12] S. Triest, M. G. Castro, P. Maheshwari, M. Sivaprakasam, W. Wang,
+and S. Scherer, “Learning risk-aware costmaps via inverse rein-
+forcement learning for off-road navigation,” in IEEE International
+Conference on Robotics and Automation (ICRA), 2023, pp. 924–930.
+
+
+[13] D. D. Fan, A.-a. Agha-mohammadi, and E. A. Theodorou, “Learning
+risk-aware costmaps for traversability in challenging environments,”
+IEEE Robotics and Automation Letters, vol. 7, no. 1, pp. 279–286,
+2022.
+[14] D. D. Fan, K. Otsu, Y. Kubo, A. Dixit, J. Burdick, and A. akbar
+Agha-mohammadi, “STEP: Stochastic Traversability Evaluation and
+Planning for Risk-Aware Off-road Navigation,” in Proceedings of
+Robotics: Science and Systems, Virtual, July 2021.
+[15] X. Cai, J. Queeney, T. Xu, A. Datar, C. Pan, M. Miller, A. Flather,
+P. R. Osteen, N. Roy, X. Xiao et al., “Pietra: Physics-informed
+evidential learning for traversing out-of-distribution terrain,” Robotics
+and Automation Letters, vol. 10, no. 3, pp. 2359–2366, 2025.
+[16] Y. Lipman, R. T. Q. Chen, H. Ben-Hamu, M. Nickel, and M. Le, “Flow
+matching for generative modeling,” in The Eleventh International
+Conference on Learning Representations, 2023.
+[17] T.-Y. Lin, P. Doll´ar, R. Girshick, K. He, B. Hariharan, and S. Belongie,
+“Feature pyramid networks for object detection,” in IEEE Conference
+on Computer Vision and Pattern Recognition (CVPR), 2017, pp. 936–
+944.
+[18] A. Manoharan, A. Sharma, H. Belsare, K. Pal, K. M. Krishna, and
+A. K. Singh, “Bi-level trajectory optimization on uneven terrains
+with differentiable wheel-terrain interaction model,” in IEEE/RSJ
+International Conference on Intelligent Robots and Systems (IROS),
+2024, pp. 11 977–11 984.
+[19] P.
+Kidger
+and
+C.
+Garcia,
+“Equinox:
+neural
+networks
+in
+jax
+via callable pytrees and filtered transformations,” arXiv preprint
+arXiv:2111.00254, 2021.
+[20] E. M. Andrejev, A. Manoharan, K.-E. Unt, and A. K. Singh, “π-
+mppi: A projection-based model predictive path integral scheme for
+smooth optimal control of fixed-wing aerial vehicles,” IEEE Robotics
+and Automation Letters, vol. 10, no. 6, pp. 6496–6503, 2025.
+[21] E. B. Wilson, “Probable inference, the law of succession, and statistical
+inference,” Journal of the American Statistical Association, vol. 22, no.
+158, pp. 209–212, 1927.
+[22] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N.
+Gomez, Ł. Kaiser, and I. Polosukhin, “Attention is all you need,”
+Advances in neural information processing systems, vol. 30, 2017.
+VI. APPENDIX: FM NETWORK ARCHITECTURE
+A. Basic Building Blocks
+Fig. 2 shows the inputs: the reference path τ ff, height map
+H ∈R64×64, and validity mask Mvalid ∈{0, 1}64×64. The
+map and mask come from terrain point clouds. Observed
+cells have a mask value of one. Missing cells use zero height.
+Multi-Scale Terrain Features: An FPN [17] processes both
+map channels. A convolutional stem and three downsampling
+and refinement stages produce 32 × 32, 16 × 16, and 8 × 8
+features with 64, 128, and 256 channels, respectively. Top-
+down fusion and lateral 1 × 1 convolutions give three grids
+with df = 64 channels. We store these as Pj ∈Rdf×nj,
+where (n1, n2, n3) = (322, 162, 82). Each column represents
+one grid cell.
+Path-Wise Terrain Features: The ny × nx map covers
+[xmin, xmax] × [ymin, ymax]. We transform each reference
+waypoint into the robot-aligned map frame, normalize it us-
+ing the map bounds, and clip each coordinate to [−1, 1]. For
+the resulting location qmap
+k
+= (uk, vk)⊤, the grid coordinates
+are ξk = (uk + 1)(nx −1)/2 and ηk = (vk + 1)(ny −1)/2.
+Bilinear interpolation gives the height hk in meters, validity
+mk ∈[0, 1], and features fj,k ∈Rdf from each grid.
+Each feature grid uses its own resolution. We combine these
+samples as
+f terr
+k
+= col(f1,k, f2,k, f3,k, hk, mk),
+(24)
+where col stacks its arguments into a column vector.
+Reference-Path Feature: For nw ≥2 waypoints, set ∆qff
+k =
+qff
+k+1 −qff
+k for k < nw −1, and ∆qff
+nw−1 = 0. The position,
+displacement, and sequence index form
+xgeom
+k
+= col
+
+qff
+k , ∆qff
+k ,
+k
+nw −1
+
+∈R5.
+(25)
+B. Constructing the Tokens
+Each token has d features. The operator LN applies layer
+normalization to each row.
+Spatial Tokens: We project the coarsest terrain grid and add
+learned grid-position embeddings:
+Tspatial = LN
+
+P⊤
+3 W⊤
+spatial
+
++ Epos
+spatial ∈Rn3×d,
+(26)
+where Wspatial ∈Rd×df is learned.
+Path-Terrain Tokens: A two-layer GELU network com-
+bines geometry and terrain. A validity gate controls the
+terrain contribution:
+uterr
+k
+= MLPfuse
+ col(xgeom
+k
+, f terr
+k
+)
+
+,
+(27)
+gk = (0.1 + 0.9mk) σ(wgatemk + bgate).
+(28)
+The gate parameters are learned, and σ is the elementwise
+sigmoid. At mk = 0, each gate entry is at most 0.1. The
+geometry-only branch remains active:
+etway,k = Wgeomxgeom
+k
++ gk ⊙uterr
+k
++ epos
+k
+,
+tway,k = Dropout
+
+LN(etway,k)
+
+.
+(29)
+Here, Wgeom ∈Rd×5 and epos
+k
+are learned. The operator ⊙
+denotes elementwise multiplication. We stack the tokens in
+path order as rows of Tway ∈Rnw×d. We disable dropout
+at inference.
+Kinematic, Reference, and Goal Tokens: We compute
+pitch, roll, height, and twelve wheel–ground contact point
+coordinates (for 4 wheels) along the path using [18]. A
+three-layer transformer encoder with sinusoidal positional
+embeddings gives Tkin
+∈R(h+1)×d. The reference la-
+tent and the goal in the robot’s local frame give tref =
+Wref LN(zff),
+tgoal = Wgoal LN(ggoal).
+C. Latent-Flow Transformer
+We split zr ∈R32 into 16 pairs. We concatenate each pair
+with the same 64-dimensional sinusoidal embedding of flow
+time r. A shared 66 →256 projection, layer normalization,
+and group-position embeddings form Tlat ∈R16×256.
+Let Tlat = LN(Tlat) and C = LN(C). In multi-head
+attention MHA [22], the first argument supplies queries. The
+second supplies keys and values. The network computes
+T(0) = Tlat + 0.5 MHA(Tlat, C),
+(30)
+T(b) = Encb(T(b−1)),
+b = 1, . . . , 4,
+(31)
+vθ(zr, r, C) = flatten
+
+Head(T(4))
+
+.
+(32)
+Each pre-normalized encoder uses self-attention and a 256 →
+512 →256 GELU network with residual connections.
+Residual-branch dropout is 0.1 during training. All attention
+modules use four heads. Only the initial cross-attention uses
+C. The shared 256 →2 head produces two values per
+token. Flattening the rows in latent-group order gives the
+32-dimensional output.
+VII. AI ACKNOWLEDGMENT
+GPT6-Astra and Gemini4-Argon were used for language
+editing of this paper.

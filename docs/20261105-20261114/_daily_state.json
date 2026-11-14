@@ -1,8 +1,265 @@
 {
   "date": "20261105-20261114",
   "date_label": "2026-11-05 ~ 2026-11-14",
-  "generated_at": "2026-11-14 04:36:12 UTC",
+  "generated_at": "2026-11-14 06:57:24 UTC",
   "recommend_exists": true,
-  "run_count": 2,
-  "papers": []
+  "run_count": 3,
+  "papers": [
+    {
+      "paper_id": "2611.06453v1",
+      "route": "20261105-20261114/2611.06453v1-beyond-infraction-scores-failure-boundary-profiles-for-closed-loop-evaluation-of-driving-and-robot-navigation-agents",
+      "title": "Beyond Infraction Scores: Failure-Boundary Profiles for Closed-Loop Evaluation of Driving and Robot Navigation Agents",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 10.0,
+      "evidence": "提出失败边界画像用于驾驶智能体闭环评估，并批判违规分数指标",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.09888v1",
+      "route": "20261105-20261114/2611.09888v1-scenario-orchestration-for-closed-loop-policy-evaluation-of-autonomous-driving",
+      "title": "Scenario Orchestration for Closed-loop Policy Evaluation of Autonomous Driving",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向自动驾驶闭环策略评估的场景编排器",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.06229v1",
+      "route": "20261105-20261114/2611.06229v1-bug2scenario-root-cause-preserving-test-scenario-amplification-for-autonomous-driving-software",
+      "title": "Bug2Scenario: Root-Cause-Preserving Test Scenario Amplification for Autonomous Driving Software",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向自动驾驶回归测试的根因保持测试场景扩增",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.11627v1",
+      "route": "20261105-20261114/2611.11627v1-attack-injection-to-vehicle-reactions-extensible-closed-loop-adversarial-evaluation-framework",
+      "title": "Attack Injection to Vehicle Reactions: Extensible Closed-Loop Adversarial Evaluation Framework",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向自动驾驶系统的可扩展闭环对抗评估框架",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.12932v1",
+      "route": "20261105-20261114/2611.12932v1-url-sim-unified-and-regulated-lidar-simulation-for-high-fidelity-reconstruction-of-dynamic-driving-scenes",
+      "title": "URL-Sim: Unified and Regulated LiDAR Simulation for High-Fidelity Reconstruction of Dynamic Driving Scenes",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "用于自动驾驶安全验证的高保真激光雷达仿真",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.06204v1",
+      "route": "20261105-20261114/2611.06204v1-cosafe-cooperative-runtime-safety-assurance-for-mixed-traffic-autonomous-driving",
+      "title": "CoSafe: Cooperative Runtime Safety Assurance for Mixed-Traffic Autonomous Driving",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向自动驾驶系统的运行时安全保障与风险监控",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.07516v1",
+      "route": "20261105-20261114/2611.07516v1-training-independent-validation-of-a-learning-based-controller-for-stunt-maneuvers",
+      "title": "Training-Independent Validation of a Learning-Based Controller for Stunt Maneuvers",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "基于Sim2Real2Sim回路的训练无关验证",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.07939v1",
+      "route": "20261105-20261114/2611.07939v1-wam-sim01-world-anchored-memory-meets-online-rl-for-consistent-and-realistic-driving-simulation",
+      "title": "WAM-Sim0.1: World Anchored Memory Meets Online RL for Consistent and Realistic Driving Simulation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "驾驶世界模型生成一致且真实的仿真，用于自动驾驶测试",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.15020v1",
+      "route": "20261105-20261114/2611.15020v1-genie-sim-benchmark-real-to-sim-fidelity-and-evaluation",
+      "title": "Genie Sim Benchmark: Real-to-Sim Fidelity and Evaluation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "针对仿真基准的真实到仿真保真度评估与仿真-真机一致性度量",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.06627v1",
+      "route": "20261105-20261114/2611.06627v1-interactive-world-simulation-with-cosmos-for-physical-ai",
+      "title": "Interactive World Simulation with Cosmos for Physical AI",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用于训练与评估的自动驾驶仿真环境",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.09270v1",
+      "route": "20261105-20261114/2611.09270v1-egt-execution-grounded-traversability-through-learned-closed-loop-trajectory-distributions",
+      "title": "EGT: Execution-Grounded Traversability through Learned Closed-Loop Trajectory Distributions",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用于路径执行评估的闭环轨迹分布度量",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.11131v1",
+      "route": "20261105-20261114/2611.11131v1-crosslidar-controllable-multi-sensor-lidar-sequence-generation",
+      "title": "CrossLiDAR: Controllable Multi-Sensor LiDAR Sequence Generation",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向自主系统可扩展开发与验证的高保真激光雷达仿真",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.11532v1",
+      "route": "20261105-20261114/2611.11532v1-drivefoundry-co-evolving-data-and-model-for-efficient-closed-loop-iteration-in-autonomous-driving",
+      "title": "DriveFoundry: Co-Evolving Data and Model for Efficient Closed-Loop Iteration in Autonomous Driving",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "带结果评估的自动驾驶模型闭环迭代框架",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.13790v1",
+      "route": "20261105-20261114/2611.13790v1-rise-drive-risk-sensitive-long-horizon-candidate-evaluation-for-end-to-end-autonomous-driving",
+      "title": "RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "端到端驾驶中风险敏感的长时程候选评估框架",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.14815v1",
+      "route": "20261105-20261114/2611.14815v1-birddreams-joint-perspective-and-bev-video-generation-for-a-plausible-reactive-driving-world-model",
+      "title": "BirdDreams: Joint Perspective and BEV Video Generation for a Plausible, Reactive Driving World Model",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "可反应的驾驶世界模型在自车动作下模拟可信场景演化，用于测试",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    },
+    {
+      "paper_id": "2611.16767v1",
+      "route": "20261105-20261114/2611.16767v1-evaluating-video-llms-understanding-of-corner-cases-in-autonomous-driving",
+      "title": "Evaluating Video LLMs' Understanding of Corner Cases in Autonomous Driving",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向极端场景的驾驶模型评测基准",
+      "first_seen_at": "2026-11-14 06:57:24 UTC",
+      "updated_at": "2026-11-14 06:57:24 UTC"
+    }
+  ]
 }

@@ -1,0 +1,2999 @@
+Xiaomi EV
+DriveFoundry: Co-Evolving Data and Model for Efficient
+Closed-Loop Iteration in Autonomous Driving
+Xiaomi EV
+See the Contributions and Acknowledgments section for a list of contributors.
+Abstract
+A driving foundation model must learn reusable decision knowledge from rare critical events and
+apply it under strict runtime constraints. We introduce DriveFoundry, a closed-loop framework
+designed to improve iteration efficiency under data and computation budgets by coupling structured
+causal data refinement with adaptive inference. The Data Engine builds traceable scene–candidate
+records that link scene evidence and factor–decision relations to candidate trajectories and outcome
+assessments. Candidate comparisons and counterfactual annotations clarify how scene factors
+affect behavioral feasibility and preference. Verified model failures guide VLM-assisted annotation
+and expert correction, refining both the training data and the annotation system for subsequent
+learning.
+The model engine, Xiaomi-Drive-o1, unifies Perception, Causation, Action, World,
+and Value within a shared vision–language backbone, enabling cross-task knowledge transfer
+through joint training. Block-wise latent refill passes candidate-specific evidence and predicted
+visual consequences between task blocks, connecting scene understanding, planning, and outcome
+evaluation. A learned value-of-computation head selects additional tasks and allocates latent
+tokens according to their expected benefit and incremental cost, adapting inference to the demands
+of each decision.
+On PhysicalAI, the 9B model achieves the lowest ADE@1 across both evaluated splits and horizons
+among the tested models. In AlpaSim, it outperforms Alpamayo 1.5 on all reported metrics and
+achieves lower close-encounter and off-road rates than the 34B Alpamayo 2 Super, but trails it
+in progress and AlpaSim scores. For the 0.8B model, joint training reduces 5 s minADE@6 by
+approximately 54% without changing the inference path or token budget. Adaptive inference mode
+further balances the performance of full reasoning while using 28% of its tokens. Real-vehicle tests
+additionally demonstrate runtime feasibility. These results support a unified approach to learning
+from critical experience and adapting computation to the demands of each driving decision.
+Keywords: Autonomous driving, Driving foundation models, Latent Chain of Thought, Structured
+causal annotation, Multitask learning, Adaptive computation.
+Date: November 10, 2026
+Project page: https://Xiaomi-EV.github.io/Xiaomi-Drive-o1
+1
+arXiv:2611.11532v1  [cs.AI]  8 Nov 2026
+
+
+Contents
+1
+Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3
+2
+Problem Formulation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5
+3
+Method . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6
+3.1
+Overview
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7
+3.2
+Xiaomi-Drive-o1
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7
+3.2.1
+Practical Formulation
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7
+3.2.2
+Shared Backbone and Task Interfaces
+. . . . . . . . . . . . . . . . . . . . . . . . . . .
+8
+3.2.3
+From Joint Relations to Latent Refill . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+9
+3.2.4
+Execution Paths Within One Model
+. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+10
+3.3
+Structured Data Annotation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11
+3.3.1
+Structured Causal Modeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11
+3.3.2
+Data Annotation Loop . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12
+3.4
+Training Strategy . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+14
+3.4.1
+Pretraining . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+15
+3.4.2
+Mid-Training . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+15
+3.4.3
+Post-Training . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+16
+3.5
+Inference Scheduling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+18
+3.6
+Closed-Loop Data and Model Iteration . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+19
+4
+Experiments . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+19
+4.1
+Evaluation Protocol and Metrics
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+19
+4.2
+Reasoning Results
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+20
+4.3
+Main Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+22
+4.4
+Ablations and Dynamic Reasoning Analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+23
+4.5
+Field Test . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+26
+5
+Conclusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+26
+Contributions and Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+34
+Appendix
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+35
+A Related Work . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+35
+A.1 VLM and VLA for Autonomous Driving . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+35
+A.2 Chain-of-Thought Reasoning: Explicit and Latent Forms . . . . . . . . . . . . . . . . . . . . .
+35
+A.3 Adaptive Reasoning and Computation Allocation . . . . . . . . . . . . . . . . . . . . . . . . .
+36
+B
+Unified Causal Data Annotation Loop . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+36
+B.1
+Motivation, Overall Principles, and Annotation-Model Iteration . . . . . . . . . . . . . . . . .
+36
+B.2
+Unified Causation Annotation System
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+37
+B.3
+Deriving Task Data from Structured Annotations . . . . . . . . . . . . . . . . . . . . . . . . .
+40
+B.4
+Overall Structured-Annotation Production Pipeline . . . . . . . . . . . . . . . . . . . . . . . .
+40
+B.5
+Decision-Centric CoC Annotation Process . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+42
+B.6
+Quality Control and Annotation-Model Iteration Loop . . . . . . . . . . . . . . . . . . . . . .
+43
+C Supplementary Evaluation Details . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+44
+D Additional Qualitative Results
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+56
+2
+
+
+1
+Introduction
+Progress in physical intelligence hinges on converting physical experience into generalizable behavior under
+acceptable budgets [9, 17, 19]. This is particularly acute in production-level autonomous driving (SAE
+L2/L3) [13], where vehicles act in a partially observed world and their decisions shape subsequent interac-
+tions [80]. Each control cycle therefore requires identifying decision-relevant factors from observation histories,
+generating executable motion plans, predicting their consequences and selecting among alternatives under
+constraints. Fleet expert clips offer broad coverage of normal driving, yet failures that expose the system
+limits are condensed in critical events [15, 45, 48]. Improving in this regime requires a costly cycle of discovery
+and learning. The central learning objective for autonomous driving should therefore be closed-loop iteration
+efficiency for critical scenarios [33], learning transferable decision relationships from rare experiences at an
+acceptable cost and reusing them in subsequent driving.
+a Long-tail
+b E2E / VLA data pipelines
+c DriveFoundry
+Frequency
+Routine
+Critical
+Iteration cost
+Routine
+Critical
+Schematic
+World-model rollouts
+Building
+Critical clip
+World model
+Action-conditioned
+Yield
+Building
+Proceed
+Building
+Predicted futures
+Driving QA pretraining
+Driving QA
+VLA pretraining
+Perception
+Reasoning
+Action
+Task concepts
+Iterative causal & counterfactual annotation
+Scene evidence
+Decision
+Outcome
+Vary decision
+Conflict approaching
+Conflict cleared
+Building
+Building
+Later
+Yield
+Proceed
+Same scene, two decision states
+d Data learning loop
+e Model cognition loop
+VLM annotator
+Scene-candidate
+records
+Label validation
+VLM + rule checks
+Scene
+Building
+Policy
+Building
+Value
+Building
+Safety problem: 0
+Safety example: same scene, horizon and other-agent motion
+Approaching vehicle
+Intersecting paths
+Yield
+Proceed
+No collision
+Safety problem: 0
+Collision
+Safety problem: 1
+Expert refinement + annotator update
+Tasks
+Perception
+Causation
+Action
+World
+Value
+Xiaomi-Drive-o1
+Task supervision
+QA pretraining / SFT / post-training
+System 1
+Adaptive
+P
+C
+A
+W
+V
+VOC-guided compute allocation
+Filled: executed calls   Outline: unused budget
+Ego
+Other agent
+Dark: current
+Light: history
+Offline evaluation
+Critical-case feedback
+Figure 1
+DriveFoundry, a closed-loop engine coupling a structured causal data-learning loop with an adaptive
+model-cognition loop that enhances the closed-loop iteration efficiency for critical cases.
+General-purpose vision-language models (VLMs) provide visual and semantic representations [28, 70, 71, 87],
+but driving expertise further requires precise geometric and motion modeling, decision-relevant reasoning,
+candidate comparison and real-time control. This motivates unified learning across perception, decision and
+value, beyond direct observation–action mapping. Driving VLMs and vision-language-action models (VLAs)
+extend supervision to scene understanding, explanations and action prediction [26, 41, 59, 66, 73, 79, 89], while
+vision-action models (VAs) learn direct mappings through multitask pretraining [32, 49, 78]. Explicit language
+reasoning captures scene relationships and decision rationales, but introduces information bottlenecks and
+sequential decoding costs. World-action models (WAMs) predict action-conditioned futures [36, 65, 77, 92, 94],
+yet prediction alone does not explain which factors justify an action or favor it over counterfactual alternatives.
+Latent reasoning offers compact task representations [40, 51, 57], but fixed-capacity, one-step interfaces
+constrain adaptation to scene demands. These developments motivate shared latent reasoning that links scene
+evidence, action choices and outcome evaluation, with adaptive computation for efficient closed-loop iteration
+3
+
+
+under limited data and compute budgets.
+For a data engine, closed-loop iteration efficiency depends on coverage of critical experience and supervision
+density, supporting compositional generalization and reusable causal abstraction [3]. Data flywheels improve
+coverage and label quality through failure mining, targeted annotation and continual learning [5, 16, 91],
+while generative world models expand experience through controllable synthesis and action-conditioned
+prediction [1, 18, 23, 74]. World Engine integrates these capabilities with behavior modeling and reinforcement
+post-training, expanding rare critical scenarios for policy improvement [39]. Still, rollouts alone do not
+identify which evidence, causal relationships or behaviors require correction. Structured language annotations,
+including graph-structured QA, Chain of Causation (CoC) and structured chains of thought [60, 66, 69, 82,
+86], complement experience expansion by linking grounded evidence, interactions, decision rationales and
+outcomes. Effective abstraction further requires supervision of how causal factors determine the suitability
+and consequences of alternative behaviors. A data engine should therefore connect evidence, candidate
+decisions and consequences through structured causal annotations, using failure diagnosis and feedback to
+refine supervision so that corrections transfer across cases.
+We introduce DriveFoundry (Figure 1), a framework for learning reusable driving behavior from critical
+experience under constrained data and computation budgets. Its common interface is a scene–candidate
+record linking scene facts, a candidate’s semantic intent and continuous trajectory, and the evidence used to
+assess its outcome. Multiple candidates expose alternatives to the recorded behavior, while partial records
+allow annotation effort to focus on the distinctions that matter to the decision.
+The model engine, Xiaomi-Drive-o1, connects Perception, Causation, Action, World, and Value tasks through
+a shared vision–language backbone. Shared parameters support learning across tasks and scenes; block-wise
+latent refill passes intermediate results within the current decision. Inference starts with a fast Action–Value
+path. A value-of-computation (VOC) head guides further computation to expand candidate coverage or
+improve candidate evaluation when the expected benefit justifies the additional cost.
+The two feedback processes operate at different timescales. Online inference allocates computation to the
+current decision. Offline iteration traces failures to gaps in evidence, candidate coverage, or outcome assessment,
+then revises the corresponding supervision. Shared scene and candidate identifiers connect these revisions to
+both the driving model and the annotation system.
+Our contributions are threefold:
+• A closed-loop framework and structured causal data engine. We introduce DriveFoundry, which
+connects data refinement, model learning, and adaptive inference under data and computation budgets.
+Its scene–candidate records combine temporal factor–decision relations, candidate comparisons, and
+counterfactual assessments into reusable supervision. Verified failures guide targeted annotation and
+subsequent updates to both the driving model and the annotation system.
+• A unified driving foundation model with latent refill. We develop Xiaomi-Drive-o1, integrating Perception,
+Causation, Action, World, and Value through a shared vision–language backbone. Shared parameters
+allow cross-task learning to strengthen fast Action–Value inference, while block-wise latent refill connects
+intermediate results and preserves candidate correspondence across planning, future prediction, and
+evaluation. Staged training connects semantic and visual pretraining to continuous planning, with task
+supervision retained during reinforcement post-training.
+• Learned allocation of inference computation. A dedicated value-of-computation head estimates the
+benefit of further reasoning after accounting for its incremental execution cost. It learns from SFT
+rollouts using candidate-evaluation supervision shared with Value. At inference, it uses the already
+computed state to guide additional task execution and latent-token allocations under compute, latency,
+and memory constraints.
+4
+
+
+2
+Problem Formulation
+Let t index driving decisions, k index learning iterations, and Θ denote model parameters. Given training data
+D and a configuration m = (M, β, ρ) specifying the architecture, training strategy, and inference configuration.
+The closed-loop driving return is:
+Jdrive(π) = Eτ∼(µ0,Penv,Z,π)
+"T −1
+X
+t=0
+γtr(st, at; g)
+#
+,
+(1)
+Here, π is the driving policy, and τ is a closed-loop rollout generated from the initial-state distribution µ0,
+environment transition model Penv, and observation model Z under π. At decision step t, st is the underlying
+environment state, at is the selected action, and r(st, at; g) is its reward under navigation goal g. T is the
+evaluation horizon in decision steps, and γ is the discount factor. The overall optimization objective is:
+max
+D,m Jdrive(πD,m)
+s.t.
+Cres(D, m) ⪯Bres, πD,m ∈Πfeas.
+(2)
+where Cres and Bres denote resource consumption and budgets, respectively, and ⪯applies component-wise.
+The model loop improves driving capability for given data, while the data loop improves training utility for
+the current learning mechanism. Here, Πfeas enforces applicable behavioral constraints (χℓ= 1 ⇒gℓ= 1),
+where χℓand gℓindicate applicability and satisfaction; always-active constraints use χℓ≡1, while trade-offs
+among feasible behaviors enter the reward. Learning starts from pretrained and newly initialized parameters
+Θ0 = (θVLM, ϕ0), with β(k) controlling supervision, task weights, and parameter updates using annotated
+experience. Resource budgets bound data and training costs (CD, CT ) and inference compute, latency, and
+memory (CI, TI, MI). Inference compute is evaluated under the deployment distribution dπ, and the latency
+budget reserves τreserve for subsequent control execution.
+Constrained driving and candidate evaluation.
+Driving is partially observed. The policy therefore uses past
+observations, past actions, and the navigation goal to make each decision. We represent this information and
+the resulting uncertainty about the current state as
+ht = (o0:t, a0:t−1, g),
+bt(s) = p(st = s | ht).
+(3)
+Here, ot, at, and st are the observation, action, and underlying state at step t, and g is the navigation goal.
+The belief bt(s) gives the probability that the current state is s, based on the available history.
+Hard driving constraints determine which actions are allowed. Let Afeas(bt, g) denote these actions. A feasible
+policy must select from this set at every reachable history:
+Πfeas = {π : π(Afeas(bt, g) | ht) = 1 for every reachable ht} .
+(4)
+Here, π(Afeas(bt, g) | ht) is the probability of selecting an admissible action given history ht. Requiring this
+probability to equal one means that the policy selects only admissible actions.
+To compare allowed candidates, we evaluate the expected driving return from each choice. For candidate a,
+we assume at = a and that subsequent actions follow policy π:
+Qπ
+t (ht, a) = Eπ
+"T −1
+X
+u=t
+γu−tru
+ ht, at = a
+#
+.
+(5)
+Here, ru = r(su, au; g). The expectation accounts for uncertainty in the current state, future actions, and
+environment evolution. The overall driving return is the expected value of the initial decision:
+Jdrive(π) = Eh0, a0∼π(·|h0) [Qπ
+0(h0, a0)] .
+(6)
+The ideal reference policy maximizes this return while satisfying the driving constraints:
+π⋆∈arg max
+π∈Πfeas Jdrive(π).
+(7)
+5
+
+
+In practice, we approximate candidate returns using rule-based rewards and learned Value assessments. The
+resulting score bQπ
+t ranks candidates using the information available on the executed inference path.
+Causal data refinement and continual learning.
+Each learning iteration uses evaluation results to correct
+the training data. Driving failures and errors in decision reasoning guide case selection. For the selected cases,
+we add missing supervision or revise incorrect annotations. The model is then trained on these corrections
+together with a sample of previous data, and evaluated again to identify the next set of problems.
+For the cases Ek identified at iteration k, the data and model updates are:
+∆Dk = Annotatecausal (Select(Ek)) ,
+Dk+1 = Merge(Dk, ∆Dk),
+Θk+1 = Updateβ(k) (Θk; ∆Dk ∪Replay(Dk)) .
+(8)
+Here, Dk is the current training dataset, Θk the model parameters, and ∆Dk the new or revised supervision.
+The model update follows the training strategy β(k).
+Merge adds new records and replaces revised annotations.
+Replay samples previous records, excluding
+annotations superseded by ∆Dk. Including this previous data helps preserve existing capabilities while the
+model learns from the corrections.
+From closed-loop return to local decision gaps.
+A decision can lose driving return because the candidate set
+misses better behaviors or because the policy chooses a worse candidate from that set. We connect these
+two sources of loss to the overall closed-loop return. Assume that a feasible policy π⋆is optimal from every
+reachable history. Let Q⋆
+t = Qπ⋆
+t
+and J⋆
+drive = Jdrive(π⋆). At each history, V ⋆
+t is the value of the best feasible
+action, and δt is the loss from choosing at:
+V ⋆
+t (ht) =
+max
+a∈Afeas(bt,g) Q⋆
+t (ht, a),
+δt = V ⋆
+t (ht) −Q⋆
+t (ht, at),
+The evaluation ends at step T. No further rewards are counted beyond this point, so V ⋆
+T = 0.
+For any feasible policy π, the expected discounted sum of these decision gaps equals its overall return gap:
+J⋆
+drive −Jdrive(π) = Eπ
+"T −1
+X
+t=0
+γtδt
+#
+.
+(9)
+The overall return gap equals the expected discounted sum of these local gaps along rollouts induced by π.
+For a finite, nonempty candidate set Bt ⊆Afeas(bt, g) and a selected action at ∈Bt, this gap decomposes as
+δt = V ⋆
+t (ht) −max
+a∈Bt Q⋆
+t (ht, a)
+|
+{z
+}
+εcover,t
++ max
+a∈Bt Q⋆
+t (ht, a) −Q⋆
+t (ht, at)
+|
+{z
+}
+εselect,t
+.
+(10)
+The coverage term measures the value gap between the best feasible action and the best generated candidate.
+The selection term measures the additional loss from choosing a worse candidate within that set.
+These two gaps guide both data refinement and inference. Across learning iterations, observed failures guide
+corrections to the supervision for candidate generation and evaluation. Within a decision, additional task
+execution and latent computation can improve the candidates or their evaluation. The VOC head estimates
+whether the expected improvement justifies the additional cost. The following method connects these processes
+through structured scene–candidate records and a shared driving model.
+3
+Method
+6
+
+
+Navi
+TFL
+Ego
+Encode
+Scene
+Context
+ViT
+Xiaomi-Drive-o1
+Perception
+Perception
+Concepts
+Causation
+Causation
+Concepts
+Action
+Concepts
+World
+World
+Concepts
+Value
+Value
+Concepts
+P
+C
+W
+V
+Action
+Decision + Plan
+A
+VOC-guided allocation
+Same candidate: decision + trajectory
+Figure 2 Shared backbone and task interfaces in Xiaomi-Drive-o1. The five tasks use a common vision–language
+backbone with task-specific output heads. Block-wise latent refill passes intermediate representations to downstream
+tasks, while the Value interface supports computation scheduling.
+3.1
+Overview
+DriveFoundry links data annotation, model learning and inference to improve closed-loop iteration efficiency.
+Its common unit is a scene–candidate record connecting scene evidence, candidate behaviors and outcome
+assessments. These records provide complementary supervision for a shared driving model, while failures
+guide subsequent annotation and training updates. The two loops operate at different timescales: offline
+iteration improves the learned capabilities and online inference allocates computation to the current decision.
+Data annotation loop.
+The Data Engine organizes experience into scene facts and relations, semantic
+decisions and trajectories, and behavioral assessments. Multiple candidates expose alternatives to the recorded
+behavior, while partial records focus annotation on the information needed to resolve a failure. VLM-assisted
+annotation, human correction and verification produce training data and improve the annotation system itself.
+Model cognition loop.
+Xiaomi-Drive-o1 connects Perception, Causation, Action, World, and Value through a
+shared vision–language backbone, detailed in Figure 2. Shared parameters support learning across tasks and
+scenes. Latent refill passes intermediate information within a decision. The scheduler selects additional tasks
+and their latent-token budgets when further computation is useful. The following sections describe these
+model interfaces, their supervision, and the training and feedback processes that connect the two loops.
+3.2
+Xiaomi-Drive-o1
+3.2.1
+Practical Formulation
+At each decision time, the model encodes the available history, proposes behaviors a = (d, ξ) with a semantic
+decision d and a trajectory ξ, and selects among the admissible candidates:
+xt = fenc(ht),
+At = G(xt, cpre
+t,ρ ; ρ),
+At,adm = {a ∈At : Check(ht, a) = 1},
+ˆat ∈arg
+max
+a∈At,adm
+bQπ
+t (xt, a, ct,ρ(a)) .
+(11)
+Here, fenc encodes history into xt, G is the Action candidate generator, and Check is a separate rule-based
+feasibility module. ρ denotes the inference configuration controlling candidate generation, task execution,
+and per-task latent-token budgets. Before candidate generation, cpre
+t,ρ contains the available Perception and
+7
+
+
+Causation latent information and is empty on the fast path. Action uses this context to generate candidates.
+For each resulting candidate a, the evaluation context ct,ρ(a) retains the upstream information and incorporates
+the Action-side latents associated with that candidate. When the World block is executed, its candidate-
+conditioned prediction is added to this context. Value then uses ct,ρ(a) to evaluate a. Rule-based rewards and
+learned Value assessments jointly provide the engineering approximation bQπ
+t used to rank candidates.
+The five learned tasks support this process at different points. Perception extracts scene evidence; Causation
+identifies decision-relevant factors and relations; Action proposes candidate behaviors; World predicts their
+visual consequences; and Value estimates the action values used to score candidates.
+Together, these
+components support reducing the coverage and selection terms in Eq. (10) within the available computation
+budget.
+3.2.2
+Shared Backbone and Task Interfaces
+Xiaomi-Drive-o1 encodes driving history with a shared vision–language backbone and organizes five tasks
+through task queries, adapters, and output heads, detailed in Figure 3:
+Θ = (θ, {ϕj}j∈J ),
+J = {P, C, A, W, V },
+H0 = Eθ(h).
+(12)
+Here, θ denotes shared parameters, while ϕj contains the queries, adapters, and heads for task j. Eθ encodes
+the current history h into the initial scene context H0, with the decision-time index omitted. Action plans
+motion over 6.4 s. World uses the first 3 s of that plan, sampled at 2 Hz, to predict visual evidence at future
+horizons of 1, 2, and 3 s. The two tasks thus model motion and its near-term consequences at different horizons.
+Table 1 Task interfaces and outputs of Xiaomi-Drive-o1.
+Interface
+Outputs
+Perception (P)
+Objects, road geometry, segmentation, and depth.
+Causation (C)
+Key factors, factor–decision relations, roles, and temporal validity.
+Action (A)
+Semantic decisions, meta-actions, and candidate trajectories.
+World (W)
+Candidate-conditioned future visual tokens.
+Value (V)
+Five-dimensional driving-quality ratings and inference-budget recommendations.
+Inputs
+Navi
+TFL
+Ego
+Input
+encoders
+Xiaomi-Drive-o1  ·  Shared backbone
+Perception
+P latent
+Causation
+C latent
+Action
+A latent
+World
+W latent
+given aᵢ
+Value
+V latent
+given aᵢ
+Dashed arrows: latent refill.  World and Value use the same candidate aᵢ.
+Objects & road geometry
+Segmentation
+Depth
+Decoded scene evidence
+Perception heads
+Objects · segmentation · depth
+Decision-relevant evidence
+Factor–decision relation
+“A pedestrian is
+crossing the road;
+yield while keeping
+its lane.”
+Causation decoder
+Factors · decisions · explanation
+Candidate aᵢ
+Continuous trajectory ξᵢ
+Decoded meta-actions
+Straight
+Decelerate
+Keep lane; yield to the pedestrian.
+AR
+decoder
+Meta-actions
+Diffusion
+decoder
+Trajectory
++1 s
++2 s
++3 s
+Visual decoder
+Visual tokens → frames
+Candidate aᵢ
+0
+0.5
+1
+Safety
+Comfort
+Efficiency
+Compliance
+Navigation
+following
+Five problem probabilities · 0–1
+Lower is better · schematic profile
+Value head
+Five-dimensional problem probabilities
+Figure 3 Qualitative visualization of multi-task inference results from Xiaomi-Drive-o1, showing the ego vehicle
+decelerating to yield to a crossing pedestrian.
+8
+
+
+Figure 4 Knowledge transfer through shared weights and the role of gradient alignment in joint training.
+Shared training for fast-path inference.
+The five tasks use distinct interfaces but update a common
+backbone. Driving Visual Question Answering (VQA) pretraining connects visual observations with the
+concepts used to describe scene evidence and decisions. Joint training then allows Perception, Causation, and
+the meta-action and trajectory objectives within Action to shape the representation used for planning.
+A first-order expansion explains how an auxiliary update can benefit the fast path. Let R1(θ) be a smooth
+surrogate loss for the fixed System 1 execution path, and let L2(θ) be an auxiliary-task loss. With step size
+η > 0, updating the shared parameters gives
+θ′ = θ −η∇θL2(θ),
+R1(θ′) −R1(θ) = −η ⟨∇θR1(θ), ∇θL2(θ)⟩+ O(η2).
+(13)
+A positive gradient inner product means that the auxiliary update locally reduces the fast-path loss for a
+sufficiently small step size. Alignment can vary across tasks, layers, and scenes.
+System 1 uses the resulting shared backbone without executing all the auxiliary tasks that contributed to its
+training. Figure 4 illustrates this transfer mechanism.
+3.2.3
+From Joint Relations to Latent Refill
+Shared parameters transfer learning across tasks, while latent refill passes intermediate results within the
+current decision.
+For an active route of L tasks j1, . . . , jL, the block Bθ,ϕjℓuses task queries qjℓto compute a latent represen-
+tation, produce a prediction byjℓ, and update the context:
+Uℓ= Bθ,ϕjℓ(Hℓ−1, qjℓ; κℓ),
+byjℓ= Headϕjℓ(Uℓ),
+Hℓ= Refill(Hℓ−1, Uℓ).
+(14)
+Here, Uℓis the task latent, and Hℓretains the initial scene context and information from completed blocks.
+For Perception, Causation, and World, the length of Uℓdepends on the selected computation configuration.
+Skipped tasks are omitted from the active route. For World and Value, κℓ= a = (d, ξ) specifies the realized
+9
+
+
+candidate being evaluated; for Perception, Causation, and Action, this additional candidate condition is
+empty.
+Causation therefore reads the context updated by Perception. After Action generates candidates, subsequent
+computation follows a separate branch for each candidate. World predicts the consequence of that candidate,
+and Value reads the same candidate together with the refilled World information when available. This
+correspondence is maintained even when several trajectories are sampled from the same Action latent.
+The full route follows P →C →A →W →V . Let Y j denote the random output of task j, and let p be the
+reference joint distribution of histories and task outputs. For a fixed route, the conditional dependence follows
+the chain rule:
+p(Y j1, . . . , Y jL | h) =
+L
+Y
+ℓ=1
+p(Y jℓ| h, Y j1, . . . , Y jℓ−1).
+(15)
+Latent refill provides a compact interface for carrying information needed by these conditional predictions.
+Queries within a block can run in parallel, and candidate branches can be evaluated in parallel once their
+conditions are fixed. The autoregressive meta-action and diffusion decoders inside Action operate within a
+task block; refill organizes information flow between task blocks.
+Reduced Structural Information Gap.
+Independent task predictions can miss dependencies between outputs.
+The following idealized comparison measures how much of this dependence can be retained by passing upstream
+information through refill.
+Write Yℓ= Y jℓand Y<ℓ= (Y1, . . . , Yℓ−1) along the fixed route and candidate branch.
+Let H denote
+driving history with realization h. Independent composition ignores the conditional dependence among
+Y = (Y1, . . . , YL):
+Lind = EhDKL
+ 
+p(Y | h)
+
+L
+Y
+ℓ=1
+p(Yℓ| h)
+!
+= TCp(Y | H).
+(16)
+Here, DKL denotes KL divergence, TCp conditional total correlation, and Ip below conditional mutual
+information under p. For an idealized comparison, let Sℓ−1 = sℓ−1(h, Y<ℓ) summarize the upstream information
+available to task ℓ, including the realized candidate for World and Value. This summary represents the
+information supplied through both the refill state Hℓ−1 and the candidate condition κℓ.
+Using the exact conditional distributions given these summaries defines
+qref(Y | h) =
+L
+Y
+ℓ=1
+p(Yℓ| h, Sℓ−1).
+(17)
+The remaining structural mismatch is
+Lres = EhDKL(p(Y | h) ∥qref(Y | h))
+=
+L
+X
+ℓ=1
+Ip(Yℓ; Y<ℓ| H, Sℓ−1)
+≤Lind.
+(18)
+The reduction depends on how much downstream-relevant information the summaries retain from realized
+upstream outputs.
+This comparison motivates preserving candidate-specific results across tasks.
+The
+implemented model follows this information flow through candidate conditioning and learned latent refill; its
+practical benefit depends on the learned representations and conditional prediction accuracy.
+3.2.4
+Execution Paths Within One Model
+Table 2 summarizes representative task routes within the same model. System 1 generates and evaluates
+candidates directly. System 2 adds Perception and Causation before candidate generation and evaluation.
+10
+
+
+Full reasoning additionally invokes World to predict candidate-specific visual consequences. The System 1
+and System 2 terminology provides a functional analogy to fast and deliberative processing.
+All paths use the same backbone and task interfaces. The model supports multiple configurations of task-
+specific latent-token budgets for Perception, Causation, and World. The scheduler selects which tasks to
+execute and how much latent computation to allocate to each, according to the expected benefit, incremental
+cost, and remaining resource budget. Latent refill carries the resulting intermediate information to downstream
+tasks.
+Table 2 Task routes specify execution order; latent-token allocations depend on the selected computation configuration.
+Path
+Task route
+Purpose
+System 1
+A →V
+Generates and evaluates candidates directly using the shared backbone.
+System 2
+P →C →A →V
+Uses explicit scene evidence and factor–decision relations to generate and
+evaluate candidates.
+Full reasoning
+P →C →A →W →V
+Additionally predicts candidate-conditioned visual consequences for eval-
+uation.
+3.3
+Structured Data Annotation
+3.3.1
+Structured Causal Modeling
+Structured causal annotation organizes scene factors that affect action feasibility or the relative value of
+candidates. A key object identifies an entity, whereas a key factor describes a state or relation relevant to the
+current decision. For example, “pedestrian” identifies an object; “the pedestrian is entering the ego vehicle’s
+path” identifies a factor that affects whether to proceed. We represent this at time t as a directed bipartite
+graph:
+GC
+t = (VC
+t , EC
+t ),
+VC
+t = Ft ˙∪Ddec
+t
+,
+EC
+t ⊆Ft × Ddec
+t
+.
+(19)
+Here, Ft = {fi} contains factor nodes and Ddec
+t
+= {dj} contains decision nodes. A decision node specifies a
+lateral or longitudinal semantic behavior and, when needed, its associated object. A candidate action a = (d, ξ)
+also specifies a trajectory, so multiple trajectories may realize the same decision. An edge (fi, dj) ∈EC
+t
+indicates that factor fi affects the feasibility or preference of decision dj. Nodes retain stable identities across
+time. Each active edge has a role, a set of valid times, and an evidence attribute:
+∅̸ = ℓij(t) ⊆{MOTIVE, CONSTRAINT},
+Iij = {t : (fi, dj) ∈EC
+t }.
+(20)
+Here, ℓij(t) specifies the active role or roles of the relation, and Iij records when the relation is valid. Each
+relation also stores links to supporting observations, scene labels, or verification records.
+Table 3 Roles of causal relations in structured annotation.
+Role
+Meaning
+Relation to the driving objective
+MOTIVE
+Supports or sustains a decision through the navi-
+gation goal or expected benefit.
+Provides evidence for preferring a candidate.
+CONSTRAINT
+Restricts a behavior through conditions, risks, or
+other costs.
+Defines a feasibility boundary or a candidate cost.
+A factor may both motivate a decision and constrain its execution. Each relation has its own validity interval,
+allowing lateral and longitudinal decisions to overlap or change asynchronously. Mandatory conditions restrict
+feasibility, while negotiable costs enter candidate evaluation.
+Counterfactual comparison asks two questions: does changing a factor alter whether an action is feasible, and
+does it alter the relative value of two actions? Let eh be a comparable, physically consistent scene in which
+11
+
+
+Table 4 Supervision sources and their roles in driving computation.
+Computation
+Main supervision
+Purpose
+Perception and Cau-
+sation
+Scene facts, key objects, and factor–decision
+relations.
+Retain information needed to generate and
+compare candidates.
+Action
+Decisions, meta-actions, and continuous tra-
+jectories.
+Improve candidate coverage.
+World
+Executed actions and observed future scenes.
+Improve consequence prediction.
+Value
+Five-dimensional ratings, outcome evidence,
+and candidate preferences.
+Improve candidate selection.
+Feasibility check
+Physical quantities, rules, violations, and sup-
+porting evidence.
+Determine whether behavioral constraints
+are met.
+factor f is changed to ef. Using the same feasible reference policy ¯π in both scenes, define
+∆feas
+f→e
+f(a) = 1[a ∈Afeas(h)] −1[a ∈Afeas(eh)],
+∆value
+f→e
+f (a, a′) =
+
+Q¯π
+t (h, a) −Q¯π
+t (h, a′)
+
+−
+
+Q¯π
+t (eh, a) −Q¯π
+t (eh, a′)
+
+.
+(21)
+Here, Afeas(h) abbreviates the admissible action set under the belief induced by h and its navigation goal.
+The first quantity tests whether feasibility changes. The second compares the relative values of candidates
+that are feasible and semantically comparable in both scenes. A nonzero change for candidates associated with
+dj indicates that f contains information relevant to that decision; the preferred candidate need not change.
+Counterfactual supervision therefore compares both altered scene factors and alternative behaviors within
+the same scene and planning horizon. Observations, rule checks, simulation, and human review turn these
+comparisons into feasibility labels, outcome assessments, and preference pairs. The explicit graph GC
+t supports
+annotation and interpretation, while task latents support online computation. Text, structured labels, and
+behavior feedback provide different training interfaces to the same relations.
+3.3.2
+Data Annotation Loop
+Each scene–candidate record combines scene evidence, candidate behavior, and quality assessments. Seman-
+tic labels capture decision-relevant distinctions, while physical measures such as clearance, time margins,
+smoothness, and progress ground candidate assessments in physical outcomes. More details can be found in
+Appendix. Section B.
+Five-dimensional assessments cover safety, comfort, efficiency, compliance, and navigation following. Their
+textual analyses provide VQA supervision during pretraining; the associated labels and physical measures
+support candidate evaluation, post-training, and allocation of inference computation.
+We organize experience into scene–candidate records:
+Ri =
+
+hi, yP
+i , GC
+i , {(ain, yW
+in , vin, νin)}Ni
+n=1, ωi, ζi
+
+.
+(22)
+Here, i indexes a scene and decision time, and n indexes one of the Ni candidates in the record. yP
+i denotes
+scene labels, yW
+in a future visual target, vin ∈{0, 1}5 the five-dimensional assessment, with 1 indicating a
+problem in the corresponding dimension, and νin a feasibility label. The mask ωi indicates which supervision
+items are valid; ζi stores provenance, time range, confidence, and version information. Causation labels are
+derived from the graph’s factors, decisions, roles, and valid times.
+The record binds supervision to the same scene, time range, and candidate identity. Observed futures supervise
+World predictions for executed actions. Consequences and preferences for unexecuted candidates come from
+rules, simulation, or human review, with their sources retained. Decision inputs contain only information
+available at decision time; later observations are stored separately as outcome supervision.
+12
+
+
+Figure 5 Annotation pipeline for key factor–decision pairs and CoC, illustrated using a 20-second driving clip. The
+pipeline bridges perception and reasoning through four stages: (a) atomic Meta Actions sequence, categorized into
+lateral and longitudinal maneuvers; (b) visual inputs at selected keyframes, with detected objects annotated; (c) a
+timeline of lateral and longitudinal decisions associated with key factors; and (d) CoC generation, linking key factor
+IDs to their associated decisions and natural-language explanations. Timings and factor states are illustrative.
+Causal annotation starts from action and semantic key moments to define decision segments. Within each
+segment, annotators identify Key factors, link them to lateral or longitudinal decisions, and record roles, valid
+times, and evidence. Each factor–decision relation forms a decision instance; instances may overlap or change
+asynchronously. Language explanations are generated from currently valid instances, while structured labels
+directly supervise objects, decisions, and relations.
+Table 5 Categories and names of all candidate decisions.
+Category
+Name
+Lateral
+Lane Keep, Lane Change, Nudge, Merge/Split, Turn
+Longitudinal
+Gap Search, Passing with Lateral Movement, Proceed with Priority, Speed Adap-
+tation, Yield, Start up, Stop for Static Constraints, Lead Obstacle Following, Set
+Speed Tracking
+Decision Definition
+The names of all decision candidates are listed in Table 5, and the specific definition of
+each decision is given in Table 14 in the Appendix.
+13
+
+
+CoC Autolabeling Pipeline.
+Inspired by AR1 [82], the pipeline combines rule-based annotation, VLM
+prediction, and human correction to produce factor–decision annotations and grounded explanations. Its
+inputs include multi-view and historical images, navigation, ego and surrounding-vehicle trajectories, lane
+geometry, and traffic-control information. Figure 5 illustrates the autolabeling pipeline, which consists of four
+interconnected stages:
+1. Annotate meta-actions. Ego trajectories provide atomic meta-action labels. Lateral meta-actions include
+Steer Left, Steer Right, and Straight, while longitudinal meta-actions include Accelerate, Decelerate,
+and Maintain Speed.
+2. Select keyframes. Changes in meta-actions identify keyframes for subsequent decision analysis. Repre-
+sentative multi-view images are extracted at these times.
+3. Generate rule-based factors and decisions. Lane topology, cross-line events, and yaw changes support
+lateral annotation. For longitudinal annotation, the rules use time headway derived from the space–time
+(ST) representation, together with traffic-signal states and speed limits. The rules also identify relevant
+objects and road elements.
+4. Refine annotations with a VLM. Given rule-based labels and keyframes, a VLM predicts key factors
+and decisions. It generates natural-language CoC reasoning by linking key factor IDs to decisions (e.g.,
+yielding to an in-path object). Human review corrects these outputs and refines trajectory assessments
+for safety, comfort, efficiency, compliance, and navigation following.
+The final outputs link key factors to their associated decisions and explanations. Prompts organize the
+available evidence, priorities, and scenario-specific conditions. Verified human corrections iteratively improve
+both the annotation model and the data for downstream driving-model training.
+The record collection R = {Ri} yields pretraining, SFT, and feedback datasets: R −→{Dpre, DFT, Dfeedback}.
+Data cost depends on which annotation operations are performed: CD = P
+i,r κircir. Here, r indexes an
+annotation operation, κir ∈{0, 1} indicates whether it is performed, and cir includes automatic production,
+verification, and rework. The validity mask ωi is recorded separately. A verified fact or relation can support
+multiple training targets.
+3.4
+Training Strategy
+1
+Pretraining
+Semantic and visual sequences
+2
+Mid-training
+Supervised fine-tuning (SFT)
+3
+Post-training
+Joint driving-task learning and separate scheduling
+Driving videos
+Scene context
+Navi
+TFL
+Ego
+ViT
+Qwen3.5-VL
+Driving
+VQA
+Future visual
+tokens
+Sequence prediction loss
+Five driving-task interfaces
+P
+Perception
+Scene facts
+C
+Causation
+Factor-decision relations
+A
+Action
+Decisions + trajectories
+W
+World
+Candidate-matched futures
+V
+Value
+5D problems + quality
+Offline SFT rollouts
+Diverse candidates
+Feasible compute expansions
+Human-calibrated annotator
+Value pairs + VOC records
+Driving-model training
+Current Action
+rollout
+Online rule
+rewards
+Action RL loss
+Fixed scene-candidate
+Value pairs
+Value supervision
+5D problems + quality
+Value loss
+Retained SFT
+targets
+Planning + P + C
+World: valid targets
+Supervised
+task losses
+Update shared backbone + driving-task heads
+Computation allocation
+Saved prefix +
+proposed expansion
+Stop-grad
+VOC head ψ
+Scheduling loss
+Update ψ only
+Fixed rollout
+net-benefit target
+Figure 6 Training pipeline of Xiaomi-Drive-o1, comprising pretraining, mid-training (SFT), and post-training.
+Xiaomi-Drive-o1 is built on Qwen-3.5-VL and trained in three stages. Pretraining establishes a shared
+semantic and visual sequence interface through VQA and visual-token prediction. Mid-training performs
+14
+
+
+supervised fine-tuning (SFT), training the Action decoder to generate continuous trajectories and grounding
+the task interfaces in their corresponding supervision. Post-training adds policy optimization for Action using
+rule-based rewards while retaining the supervised objectives from mid-training. It continues Value supervision,
+applies World supervision on valid executed paths, and trains inference-budget allocation.
+3.4.1
+Pretraining
+Figure 7 Example of a training sample in the pretraining stage.
+Pretraining establishes a shared sequence interface for driving understanding. VQA targets cover key factor
+identification, longitudinal and lateral decision prediction, counterfactual analysis, and five-dimensional
+trajectory analysis. A visual tokenizer represents future visual targets as discrete tokens. Text tokens, visual
+tokens, and task markers form a common vocabulary.
+Each training example pairs an input X with a target sequence Y . X contains observations, task conditions,
+and the question prompt; candidate evaluation and future prediction additionally specify the corresponding
+action. The model learns to predict each target token from the input and preceding target tokens:
+Lpre = −E(X,Y )
+|Y |
+X
+q=1
+log pΘpre(Yq | X, Y<q).
+(23)
+Here, pΘpre is the token-prediction distribution of the pretraining model. Yq is the target token at position
+q, Y<q contains the preceding tokens, and |Y | is the sequence length. The expectation is over pretraining
+examples. This stage connects scene evidence, decision concepts, and outcome assessments in the shared
+backbone. The continuous Action decoder is trained later during SFT.
+Figure 7 shows the front-camera view and associated QA targets of a training sample. Red boxes highlight key
+factors; the yellow line represents a candidate future trajectory of the ego vehicle; and the right side shows the
+question–answer pairs for each task. The language-model loss is computed on the target text shown in blue.
+3.4.2
+Mid-Training
+Mid-training performs SFT on the multi-task interfaces. The Action decoder learns continuous trajectory
+generation from planning supervision. Candidate search expands its proposals into alternative plans, which
+human experts and foundation models assess to provide supervision beyond the recorded behavior. Perception
+and Causation learn scene evidence and factor–decision relations, while World and Value learn from available
+future visual targets and candidate assessments. The objectives are:
+LMid = Lplan + λP LP + λCLC + λW LW + λV LV .
+(24)
+15
+
+
+Here, Lplan supervises Action, while Lj and λj denote the supervised loss and its weight for task j ∈
+{P, C, W, V }. Each term uses only valid supervision. The objectives can be optimized in separate updates;
+World and Value training does not require gradients through candidate search or a simultaneous planner
+update.
+3.4.3
+Post-Training
+Post-training combines policy optimization for Action using rule-based rewards with continued supervision
+of the previously learned tasks.
+The supervised objectives and their loss weights are retained to limit
+degradation of existing capabilities as the shared backbone changes. Value continues to learn from annotated
+scene–candidate pairs, while World receives supervision only on enabled paths with valid candidate-matched
+future targets. Although rollout annotations for post-training can also be collected online, we prepare them
+offline from rollouts of the SFT model before this stage to avoid the substantial generation and annotation
+overhead during training.
+Preparing Value supervision.
+Automatic annotations of obstacles, roads, traffic signals, and motion states
+support five-dimensional assessment of recorded driving trajectories. Human-refined judgments train and
+calibrate the annotation model, which then evaluates diverse candidates generated by the SFT model. Recorded
+trajectories with human-refined assessments and annotated candidates generated by the SFT model form the
+supervision set
+DV = {(hi, ai, yi, mi)},
+(25)
+where ai = (di, ξi) specifies the candidate decision and trajectory. The binary target yi ∈{0, 1}5 indicates
+problems in safety, comfort, efficiency, compliance, and navigation following, with yij = 1 denoting a problem.
+The mask mij = 1 identifies a valid and applicable judgment. This dataset remains fixed within a post-training
+phase and is refreshed in subsequent data iterations.
+Joint Action and Value training.
+Alongside continued supervision of the previously learned tasks, each
+training iteration combines two branches. In the Action branch, the current policy generates trajectories,
+and online rules compute rewards from scene geometry, traffic constraints, and trajectory kinematics. Policy
+optimization updates Action using these rewards. In the Value branch, fixed scene–candidate pairs are
+sampled from DV for supervised prediction of the five problem probabilities. Supervised batches for planning,
+Perception, and Causation remain in the training mixture to preserve their existing capabilities.
+Training covers sampled task paths and latent-length configurations with budgets b = (bP , bC, bA, bW ). The
+components bP , bC, bW specify the latent-token allocations for Perception, Causation, and World, respectively,
+and vary across supported inference configurations. The Action latent-token budget bA remains fixed. For a
+Value sample (h, a), the context cb(h, a) is computed for that specific candidate. When World is enabled, it
+conditions on the same a and supplies future information to Value. World loss is computed only when the
+block is executed and a valid future visual target for that candidate is available.
+The joint task-training objective retains the supervised losses from mid-training and adds policy optimization:
+Lpost
+joint = LRL
+A + Lplan + λP LP + λCLC
++ λV LV + λW Lvalid
+W
+.
+(26)
+The supervised terms retain their mid-training definitions and loss weights. Each term uses valid supervision
+on the corresponding executed path.
+Value retains its binary and continuous supervision. For the binary judgments in DV , its loss component on a
+sampled path is
+Lbin
+V
+= E(h,a,y,m)∼DV
+
+
+5
+X
+j=1
+mj BCE (pj(h, a, cb(h, a)), yj)
+
+.
+(27)
+Here, BCE is binary cross-entropy, and pj is the predicted probability of a problem in dimension j. The
+continuous component of LV supervises candidate-quality scores derived from clearance, time margins,
+smoothness, and progress, using the retained supervised data.
+16
+
+
+Gradient flow.
+All five tasks share the backbone while retaining their task interfaces and output heads.
+The RL loss updates Action and the shared backbone. The retained supervised losses continue to train their
+corresponding tasks. Gradients also propagate through upstream modules connected by continuous latent
+refill, so the shared backbone receives the weighted contributions of the joint objective.
+Online rule rewards, offline candidate trajectories, and annotation targets are treated as fixed within each
+update. The gradient connections described above apply to the driving-task losses. The value-of-computation
+(VOC) loss uses detached inputs and targets and updates only the dedicated scheduling head.
+Learning computation allocation.
+A dedicated VOC head within the Value interface predicts whether
+additional computation is worth its cost. Let σ0 denote the current inference state, containing the latents of
+executed blocks, candidate trajectories, their five-dimensional Value outputs, the executed-task mask, the
+current budget b0, and the remaining compute, time, and memory budgets. For a proposed feasible expansion
+b ⪰b0, the head predicts
+xsched = sg(σ0),
+[
+VOCψ(b | σ0) = fψ(xsched, b),
+(28)
+Here, ψ denotes the parameters of the dedicated scheduling head within ϕV , and sg is the stop-gradient
+operator. Unexecuted blocks are marked by the mask and contribute no latent information. Proposed
+expansions include activating skipped tasks and allocating additional latent computation to tasks already in
+use. The head scores each expansion without first executing the proposed computation.
+Scheduling supervision is collected using an SFT checkpoint. Alternative feasible expansions are executed from
+the same saved inference prefix, and their resulting candidates are evaluated through human annotation and
+automatic scoring. These evaluations provide shared supervision for Value and VOC: Value learns to assess
+individual candidates, whereas VOC learns the improvement in the selected candidate relative to stopping at
+the current prefix, after accounting for additional execution cost. The shared evaluations define the return
+estimates bR used below. The target and scheduling loss are
+yVOC = sg
+h
+bR(σ0, b) −bR(σ0, b0) −λI∆CI(σ0, b | b0)
+i
+,
+(29)
+Lsched = E
+h
+(fψ(xsched, b) −yVOC)2i
+.
+(30)
+Here, bR estimates the driving return of the finally selected candidate. Both returns use the same evaluation
+setting, horizon, and return criterion. ∆CI counts the additional execution cost, including required downstream
+recomputation, and λI ≥0 weights compute cost relative to driving return. The expectation in Lsched is over
+the offline scheduling records.
+At the system level, computation allocation aims to improve driving return while keeping average inference
+compute within budget. The corresponding Lagrangian objective is
+max
+Θ,ρ
+min
+λI≥0 Fbudget(Θ, ρ; λI),
+Fbudget(Θ, ρ; λI) = bJdrive(πM,Θ,ρ) −λI(Eh∼dπ[CI(h, ρ)] −BI) .
+(31)
+Here, πM,Θ,ρ is the policy specified by the architecture, parameters, and inference configuration, and bJdrive
+estimates its closed-loop return. CI(h, ρ) is inference compute for history h; dπ is the distribution of histories
+encountered under the deployed policy, and BI is the budget for average inference compute. This expresses
+the design objective; the practical updates use the task and scheduling losses above. Per-decision latency and
+memory limits remain runtime constraints.
+Training cost sums the resource use of all training iterations:
+CT =
+Ktrain−1
+X
+k=0
+cstep
+ M, β(k), Dk
+
+.
+Here, Ktrain is the total number of training iterations across all stages, and cstep is the resource cost of one
+iteration.
+17
+
+
+Dynamic inference scheduling
+Xiaomi-Drive-o1  ·  One shared model
+Scene history
+Past → current
+System 1
+Action
+Value
+Initial candidates + Value estimates
+VOC scheduler
+Latents · trajectories · Value
+Remaining budget
+Estimate VOC
+Net benefit of more computation
+Stop computing
+Otherwise
+Candidate selection
+Rule checks
+Value ranking
+Selected trajectory
+Expand
+VOC > 0 & feasible
+Choose next budget
+Example feasible expansion
+P
+50%
+C
+100%
+W
+0%
+P/C/W levels: 0%, 50%, 100%
+A/V latent budgets: fixed per call
+Execute expansion
+Run selected blocks
+Latent refill per block
+Recompute affected tasks
+Refresh affected outputs
+Updated state
+Representative task routes
+System 1
+A
+V
+System 2
+P
+C
+A
+V
+Full reasoning
+P
+C
+A
+W
+V
+Budgets vary within the selected route
+Expansion cost includes required downstream recomputation.
+W predicts candidate-specific consequences.
+Figure 8 Dynamic inference scheduling. The Action–Value path first generates and evaluates candidates and the
+scheduler uses value-of-computation (VOC) estimates to select additional tasks and latent-token budgets within the
+remaining resources. Perception and Causation refine candidate generation, while World supplies candidate-conditioned
+future evidence for Value. Rule-based checks and Value assessments support candidate selection; a predefined fallback
+is invoked when no acceptable candidate can be obtained within the runtime budget.
+3.5
+Inference Scheduling
+Inference scheduling adapts the task path and latent-token budgets to the needs of the current decision,
+as illustrated in Figure 8. Each decision begins with the Action–Value path: Action generates candidate
+trajectories, Value predicts their problem probabilities across the five evaluation dimensions, and Check applies
+rule-based feasibility tests. Rule-based rewards and learned Value assessments jointly rank the admissible
+candidates. If the selected candidate meets the acceptance criteria, inference terminates without invoking
+additional tasks. When the initial result is insufficient, the scheduler uses the trained VOC head to compare
+feasible computation expansions. These expansions can activate Perception, Causation, or World, or increase
+the latent-token budgets of these tasks; the Action latent-token budget remains fixed. Value assesses the
+current candidates, whereas VOC estimates how much an expansion could improve the final choice relative to
+stopping, after accounting for its additional cost. The scheduler combines these estimates with candidate
+acceptance criteria and the remaining resources to decide whether and how to continue computation.
+Each selected expansion follows the task dependencies. Perception and Causation provide additional scene
+evidence and factor–decision relations for Action to generate updated candidates. World instead conditions
+on a generated candidate and predicts its visual consequences, supplying future evidence for Value. Latent
+refill carries the realized intermediate outputs to the downstream blocks, keeping candidate generation and
+evaluation aligned with the information actually computed. A skipped block contributes no new result, and
+any downstream recomputation required by an expansion is included in its incremental cost.
+After an expansion, the updated candidates are re-evaluated, problematic candidates are filtered, and the
+remaining candidates are re-ranked. The highest-ranked candidate is returned if it meets the acceptance
+criteria; otherwise, the system generates further candidates or expands reasoning while resources permit.
+When no acceptable candidate is available and the remaining budget cannot support further computation, the
+predefined fallback procedure is invoked. Because online rule rewards can miss problematic Action proposals,
+on-vehicle validation checks the candidates and their predicted consequences to intercept identifiable problems
+before execution.
+18
+
+
+Runtime constraints bound every computation expansion. We represent an execution as a directed acyclic
+graph Gρ(h) = (Nρ(h), Eρ(h)), with computation calls as nodes and task dependencies and device scheduling
+order as edges. Total compute, critical-path latency, and peak memory usage are
+CI(h, ρ) =
+X
+v∈Nρ(h)
+cv,
+TI(h, ρ) = Tfixed +
+max
+p∈Paths(Gρ(h))
+X
+v∈p
+∆v,
+MI(h, ρ) = Mweights + max
+u
+Mactive(u).
+(32)
+cv and ∆v are the compute and duration of call v; Paths(Gρ(h)) contains the directed execution paths,
+and Tfixed covers overhead outside the graph. Mweights is resident model-weight memory, and Mactive(u) is
+additional active memory at execution time u, including caches and workspaces. Repeated calls are counted
+separately. The scheduler admits additional calls only when time and memory remain available, including the
+reserve for control execution.
+3.6
+Closed-Loop Data and Model Iteration
+Offline iteration uses driving failures to identify gaps in supervision. Diagnosis examines the generated
+candidates, their supporting evidence, and their evaluation. Missing behaviors motivate additional decision
+or trajectory targets. Incorrect candidate rankings motivate review of consequence and Value assessments.
+Feasibility errors motivate review of scene facts, factor relations, and checks.
+Incorrect rule judgments, problems missed by Value, and World prediction errors identified during training or
+deployment are fed back into the data loop. Human review identifies which scene–candidate fields require
+correction and updates the annotation model, labeled candidate records, or rules accordingly. Newly generated
+candidates are included when constructing DV for subsequent training phases. Evaluation of the updated
+model checks improvement on related cases and supplies the next set of failures.
+Let e be an experience segment, ℓan annotation addition or revision, and Θ+(e, ℓ) the parameters after
+training with that supervision. Its ideal expected learning gain is
+G(e, ℓ) = E
+
+Jdrive
+ πΘ+(e,ℓ)
+
+−Jdrive(πΘ)
+
+.
+The comparison holds the architecture and inference configuration fixed. In practice, failure severity, scene
+coverage, model disagreement, and annotation cost guide prioritization; subsequent closed-loop evaluation
+measures the realized gain.
+Online scheduling allocates computation to the current decision; offline iteration allocates annotation and
+training effort to improving future decisions. Shared records connect both processes through the same scene
+evidence, candidates, and outcome assessments.
+4
+Experiments
+The evaluation focuses on two questions: whether structured causal supervision improves driving understanding
+and planning, and whether Value-guided dynamic reasoning allocates computation effectively. Using Qwen3.5-
+VL as the pretrained vision–language backbone, we compare Xiaomi-Drive-o1 with Alpamayo 1.5 [60] Alpamayo
+2 Super [30] and Qwen-Drive-1.0 [99] on NVIDIA’s PhysicalAI-Autonomous-Vehicles [61] dataset using a
+shared evaluation protocol that combines semantic causal assessment with geometric planning assessment.
+4.1
+Evaluation Protocol and Metrics
+We evaluate Xiaomi-Drive-o1 on NVIDIA’s PhysicalAI–Autonomous–Vehicles (PAI-AV) benchmark [61]. The
+benchmark provides the scenes and recorded trajectories used to construct the linked annotation records
+in Section B; each evaluation unit therefore retains the correspondence among a scene, candidate behavior,
+expected consequence, and value label. Our high-quality test subset is drawn from clips excluded from our
+19
+
+
+training and validation data. Candidate-selection rules and inference thresholds are calibrated on the validation
+split. Comparisons include Alpamayo 1.5 (AR1.5) [60], Alpamayo 2 Super (AR2) [30], and Qwen-Drive-1.0 [99].
+For every run, we record the released checkpoint, input configuration, output format, candidate count, and
+inference budget. The protocol scores observable outputs under a common scorer and does not assume that
+an AR baseline exposes the dedicated Perception, World, or Value heads used by Xiaomi-Drive-o1.
+Open-loop PhysicalAI evaluation.
+PAI-AV requires each method to predict six candidate trajectories for
+every scene. We evaluate the selected trajectory with ADE@1 and the candidate set with minADE@6, where
+ADE@1 measures the geometric accuracy of the directly executed prediction and minADE@6 measures whether
+at least one candidate covers the recorded motion. Both metrics are reported at 3 s and 5 s horizons, with lower
+values indicating better trajectory fidelity. The standard 644-example Physical-AI NV split overlaps publicly
+available training data by its official construction. To make the comparison leakage-aware, we additionally
+report results on a high-quality subset curated exclusively from held-out test clips;
+Closed-loop AlpaSim evaluation.
+AlpaSim evaluates behavior after the ego vehicle interacts with the
+simulated scene, exposing errors that accumulate beyond the recorded trajectory. We run 1,607 scenarios
+with PAI-AV-NuRec version 26.04. Following the evaluation protocol used by Alpamayo [82], we report
+close-encounter rate for all and at-fault events, off-road rate, progress, and AlpaSim score for all and at-fault
+events. Lower values are preferred for encounter and off-road rates, whereas higher values are preferred for
+progress and score. The at-fault variants exclude events not caused by the ego vehicle; together, these metrics
+measure close-proximity events, roadway departures, scenario progress, and distance traveled between events.
+4.2
+Reasoning Results
+CoC output quality.
+To validate the quality of the CoC outputs produced by our proposed method, we
+manually curated 298 cases from the test split of the NVIDIA PhysicalAI-Autonomous-Vehicles dataset, all
+of which are critical scenarios involving interaction with the ego vehicle. We then generated CoC outputs
+using the Qwen-Drive-1.0-SFT model, the Alpamayo 2 Super model, and our proposed method, after which
+human annotators were asked to vote without knowing which model produced each CoC. The voting rule was
+that a CoC statement could only receive a vote if it simultaneously satisfied the evaluation criteria across
+the following four dimensions: correct identification of key factors, correct recall and correctness of decisions,
+correct attribution of decisions, and absence of hallucination. The CoC pass rates are reported in Table 6,
+and two examples are shown in Figure 9.
+Figure 9 Two examples comparing the CoC outputs generated by the Qwen-Drive-1.0-SFT model, the Alpamayo 2
+Super model, and our proposed method.
+The structured CoC output reaches a CoC pass rate of 84.2%, compared with 78.5% for Alpamayo 2 Super
+and 68.1% for Qwen-Drive-1.0-SFT. This gap indicates that explicitly representing factors, decisions, and
+20
+
+
+Table 6 Human evaluation comparison of CoC outputs generated by the Qwen-Drive-1.0-SFT model, the Alpamayo 2
+Super model, and our proposed method.
+Model
+Qwen-Drive-1.0-SFT
+Alpamayo 2 Super
+Xiaomi-Drive-o1
+CoC pass rate
+68.1%
+78.5%
+84.2%
+their causal attribution improves the completeness and factual consistency of decision explanations.
+Counterfactual reasoning
+We also evaluate counterfactual reasoning on keyframes from the same test
+split. For each keyframe, we first use Qwen3.8-27B to generate counterfactual QA pairs, and then manually
+correct erroneous questions and answers to obtain a counterfactual QA test set. We then evaluate our model’s
+counterfactual reasoning capability using the following pipeline: for each counterfactual question, the model
+predicts a corresponding answer; the predicted answer and the human-corrected ground-truth answer are then
+fed together into Qwen3.8-27B for scoring. Xiaomi-Drive-o1 obtains a judge score of 61.1 out of 100. Figure 10
+presents two examples of counterfactual reasoning results.
+Figure 10 Two examples of model predictions for counterfactual reasoning.
+Table 7 Evaluation metrics of our proposed model for identifying key factors and producing longitudinal and lateral
+decisions on keyframes.
+Causation
+Accuracy
+F1
+Key factors
+75.2%
+72.5%
+Longitudinal decision
+81.5%
+73.6%
+Lateral decision
+72.1%
+71.8%
+Key factors, decisions, and trajectories.
+We evaluate whether the predicted evidence is translated into the
+correct discrete decisions and then into executable trajectories. We select 1,000 high-quality keyframes from
+the test split of NVIDIA’s PhysicalAI-Autonomous-Vehicles dataset and manually annotate their key factors
+and longitudinal/lateral decisions. Table 7 reports the corresponding accuracy and F1 scores. Key-factor
+identification obtains 75.2% accuracy and 72.5% F1, while longitudinal decisions reach 81.5% accuracy and
+21
+
+
+Figure 11 Two examples of model predictions for key factors and decisions.
+73.6% F1. Lateral decisions are lower at 72.1% accuracy and 71.8% F1, indicating that lateral interactions
+remain the more difficult semantic decision class. Two cases are shown in Figure 11. Trajectory prediction is
+evaluated separately using ADE@1 and minADE@6 at 3 s and 5 s in Table 8. Closed-loop driving performance
+is reported in Table 9, while per-class meta-action recall is analyzed in Figure 13.
+4.3
+Main Results
+Tables 8 and 9 report the open-loop trajectory and closed-loop driving results on PhysicalAI. The semantic
+decision and causal-reasoning measurements are reported separately above, allowing the geometric and
+closed-loop effects of the shared representation to be examined independently.
+Table 8 Open-loop trajectory prediction results on PhysicalAI–Autonomous–Vehicles. The high-quality test set is
+curated exclusively from the PhysicalAI test split, with high-quality, challenging cases selected manually through
+rigorous screening for evaluation.
+Method
+Params.
+(B)
+Physical-AI NV split
+High-quality test set
+minADE@6 ↓
+ADE@1 ↓
+minADE@6 ↓
+ADE@1 ↓
+3 s
+5 s
+3 s
+5 s
+3 s
+5 s
+3 s
+5 s
+Qwen-Drive-1.0-SFT w / o reasoning
+5.0
+0.62
+1.72
+0.65
+1.82
+0.64
+1.78
+0.67
+1.86
+Qwen-Drive-1.0-SFT w / reasoning
+5.0
+0.61
+1.70
+0.64
+1.80
+0.64
+1.77
+0.66
+1.84
+Qwen-Drive-1.0-SFT-RL
+5.0
+0.64
+1.67
+0.68
+1.77
+0.67
+1.80
+0.71
+1.89
+Alpamayo 1.5
+9.8
+0.20
+0.55
+0.51
+1.34
+0.24
+0.64
+0.62
+1.60
+Alpamayo 2 Super
+34.0
+0.21
+0.55
+0.52
+1.35
+0.23
+0.65
+0.60
+1.51
+Xiaomi-Drive-o1-0.8B
+0.8
+0.21
+0.60
+0.54
+1.40
+0.30
+0.80
+0.53
+1.47
+Xiaomi-Drive-o1-9B
+9.0
+0.18
+0.56
+0.29
+0.71
+0.25
+0.43
+0.36
+0.83
+Open-loop planning.
+Table 8 evaluates open-loop planning on the standard Physical-AI NV split and the
+leakage-free high-quality split. We report minADE@6 for coverage of the six predicted candidates and ADE@1
+for the selected trajectory, both at 3 s and 5 s. The two splits separate performance on the benchmark
+construction from performance on held-out, challenging clips.
+The Xiaomi-Drive-o1-9B model delivers the strongest overall open-loop performance. It achieves the lowest
+ADE@1 across both splits and horizons and leads minADE@6 in most settings, including 0.18 m at 3 s on
+the NV split and 0.43 m at 5 s on the high-quality split. AR models retain only narrow advantages in the
+two remaining minADE@6 cases, so the main gain is consistent accuracy of the selected trajectory together
+with strong long-horizon candidate coverage rather than uniform dominance at every horizon. This result
+is obtained with 9B parameters, compared with 34B for AR2. The 0.8B variant remains competitive on
+22
+
+
+Table 9 Closed-loop comparison on PhysicalAI–Autonomous–Vehicles. Reference results use 1607 AlpaSim scenarios
+with PAI-AV-NuRec version 26.04. Params. excludes LLM token embeddings and is reported in billions.
+Method
+Params.
+(B)
+Close Encounter Rate (%) ↓
+Off-Road
+Rate (%) ↓
+Progress
+(%) ↑
+AlpaSim Score (km) ↑
+All
+At-fault
+All
+At-fault
+Qwen-Drive-1.0-SFT w/ reasoning
+5.0
+38.0
+12.0
+24.0
+54.0
+0.16
+0.27
+Qwen-Drive-1.0-RL
+5.0
+41.0
+11.0
+12.0
+48.0
+0.16
+0.37
+Alpamayo 1.5
+9.8
+20.7
+5.9
+19.9
+59.0
+0.32
+0.50
+Alpamayo 2 Super
+34.0
+21.9
+5.7
+10.3
+64.3
+0.44
+0.75
+Xiaomi-Drive-o1-0.8B
+0.8
+23.7
+6.1
+12.7
+58.0
+0.28
+0.49
+Xiaomi-Drive-o1-9B
+9.0
+19.1
+5.4
+9.8
+62.6
+0.38
+0.68
+ADE@1 but is weaker on minADE@6, showing that single-trajectory accuracy alone does not guarantee
+reliable candidate coverage.
+Closed-loop driving.
+Table 9 evaluates the same models in 1,607 AlpaSim scenarios. The 9B model obtains
+the lowest close-encounter rate (19.1%), at-fault rate (5.4%), and off-road rate (9.8%) among the listed
+methods, improving all three safety measures over AR1.5 and AR2. Its progress (62.6%) and AlpaSim scores
+(0.38/0.68) are below AR2 (64.3% and 0.44/0.75) but above AR1.5 (59.0% and 0.32/0.50). Thus, the 9B
+configuration trades a small amount of progress and score for a lower observed safety risk, while remaining
+more favorable than AR1.5 on every reported closed-loop measure.
+4.4
+Ablations and Dynamic Reasoning Analysis
+We evaluate the contribution of each cognitive component and the behavior of the adaptive inference policy
+through controlled ablations. Keeping the shared backbone architecture, data splits, and Action decoder
+architecture fixed, we progressively add Perception, Causation, Value, and World modules to the Action
+baseline.
+Each added module is trained with its corresponding objective and participates in inference.
+We evaluate these module configurations and compare System 1 with adaptive inference under a common
+evaluation protocol.
+Adaptive computation ablation.
+Table 10 isolates the effect of joint training and adaptive mode under
+the same runtime and candidate-scoring configuration. The System 1 baseline uses the Action–Value path
+described in Table 2. Adaptive inference selects among supported task and latent-budget configurations for
+Perception, Causation, and World according to the current decision. With the same System 1 inference
+path and token consumption, joint training reduces 3/5 s minADE@6 from 0.66/1.93 m to 0.35/0.89 m.
+Adaptive inference further reduces these errors to 0.30/0.80 m and the close-encounter rate from 30.8% to
+23.7%. It approaches the performance of the evaluated full-reasoning configuration while using 28% of its
+token consumption.
+Table 10 PhysicalAI quality–compute ablation within Xiaomi-Drive-o1-0.8B. Metrics follow the evaluation protocol
+described in Section 4.1. All policies use the same planning scorer.
+Open-Loop
+Closed-Loop (AlpaSim)
+Model
+configuration
+Inference
+mode
+Token
+Consumption
+minADE@6↓
+3s
+minADE@6↓
+5s
+Close Encounter Rate
+↓(%)
+Off-Road Rate
+↓(%)
+AlpaSim Score
+(km)↑
+System 1
+–
+13%
+0.66
+1.93
+43.6
+23.9
+0.10
+Joint training
+System1
+13%
+0.35
+0.89
+30.8
+19.7
+0.18
+Joint training
+Full reasoning
+100%
+0.29
+0.83
+23.5
+12.5
+0.30
+Joint training
+Adaptive
+28%
+0.30
+0.80
+23.7
+12.7
+0.28
+Modular component ablation.
+Table 11 cumulatively adds Perception, Causation, Value, and World to the
+Action baseline. ADE@1 decreases from 0.66/1.93 m to 0.53/1.47 m at 3/5 s, while collision rate falls from
+17.05% to 11.40%. Adding Value produces the largest incremental reduction in collision rate in this sequence,
+from 16.07% to 13.17%. Adding World further lowers collision rate to 11.40%, with unchanged 3 s ADE@1
+23
+
+
+Table 11 Modular ablation on PhysicalAI–Autonomous–Vehicles. Modules are added cumulatively to the Action
+baseline; ✓and ✗indicate enabled and disabled components. Planning is evaluated on the high-quality test set (2574
+examples) using ADE@1 (m) at 3 s and 5 s and Collision Rate.
+Task components
+ADE@1 (m) ↓
+(High-quality Test)
+Collision Rate
+(%) ↓
+Action
+Perception
+CoC
+Value
+World
+3 s
+5 s
+✓
+✗
+✗
+✗
+✗
+0.66
+1.93
+17.05
+✓
+✓
+✗
+✗
+✗
+0.60
+1.61
+16.38
+✓
+✓
+✓
+✗
+✗
+0.55
+1.57
+16.07
+✓
+✓
+✓
+✓
+✗
+0.53
+1.46
+13.17
+✓
+✓
+✓
+✓
+✓
+0.53
+1.47
+11.40
+and a small increase in 5 s ADE@1.
+Table 12 Model evaluation on two 200-clip adversarial scenarios. Each variant uses 20k new training samples with a
+1:1 positive/negative ratio. We report decision F1 and clip pass rate for each scenario. A, P, and C denote Action,
+Perception, and Chain-of-Causation reasoning, respectively.
+Model
+variant
+Pipeline
+architecture
+Scenario A: Advance lane
+change for roadwork
+Scenario B: Stationary vehicle
+detection and detour
+Decision
+F1
+Clip pass
+rate
+Decision
+F1
+Clip pass
+rate
+Perception + Action
+(Baseline)
+P + A
+(without CoC or
+adaptive reasoning)
+68.5%
+60.5%
+57.0%
+45.5%
+Perception + CoC
++ Action (Ours)
+P →C →A
+(with causal chain)
+89.0%
+84.5%
+82.5%
+73.5%
+Adversarial causal disambiguation.
+Table 12 isolates explicit causal reasoning with two 200-clip scenarios
+under a 1:1 mixture of visually similar positive–negative pairs, with examples shown in Figure 12. The
+comparison tests whether the causal chain can identify lane-topology intrusion and the cause of a stationary
+obstacle before action selection, using decision F1 and clip pass rate as complementary measures.
+• Causal disambiguation. Given only four frames over two seconds, the A + P baseline often confuses a
+roadside barrier with lane-blocking roadwork or queued traffic with a disabled vehicle, yielding decision
+F1 scores of 68.5% on Scenario A and 57.0% on Scenario B. The P →C →A path uses Causation
+latents to represent whether an obstacle intrudes into the drivable lane and why it is stationary, then
+passes this information to Action through latent refill. Decision F1 rises to 89.0% and 82.5% (+20.5 and
++25.5 percentage points), while clip pass rates increase from 60.5% to 84.5% on Scenario A and from
+45.5% to 73.5% on Scenario B.
+• Early detour commitment. The CoC-conditioned path supports earlier detour commitment and helps
+avoid near-obstacle failures. The baseline often waits until the ego vehicle is close to a cone or stopped
+vehicle before changing lanes; on visually similar positive–negative pairs, this late response produces
+unstable decisions. In stationary-vehicle detours, the delayed maneuver can leave the end of the 6-second
+open-loop evaluation trajectory in a safety-risk region, so clip pass rate trails decision F1. By identifying
+the obstacle’s effect on lane feasibility earlier, CoC enables a timely maneuver.
+meta-action ablation.
+We isolate the contribution of the Perception and Causation modules to discrete
+action prediction with the Xiaomi-Drive-o1-0.8B variant. Figure 13 compares an Action-only baseline with
+Perception + Action and Perception + CoC + Action, reporting per-class recall for lateral and longitudinal
+meta-actions.
+24
+
+
+(a) Positive case in a roadwork scenario.
+(b) Similar negative case in a roadwork scenario.
+(c) Positive case in a temporary-parking scenario.
+(d) Similar negative case in a temporary-parking scenario.
+Figure 12 Examples of positive and similar negative cases in construction and temporary-parking scenarios. For each
+case, the key factors, CoC, and decisions are shown.
+Figure 13 meta-action recall in the Xiaomi-Drive-o1-0.8B ablation. We compare Action only, Perception + Action,
+and Perception + CoC + Action for lateral actions (a) and longitudinal actions (b); bars report per-class recall (%).
+25
+
+
+The gains are concentrated on difficult maneuvers. For lateral actions, adding Perception raises recall for
+sharp-right decisions from 40.0% to 80.1%, while adding CoC further improves sharp-left recall from 70.5%
+to 82.1%. The same pattern appears for longitudinal actions: CoC increases recall for strong acceleration
+from 48.9% to 75.0% and for strong deceleration from 51.9% to 74.0%. Recall on straight or gentle actions
+changes little, indicating that causal supervision mainly resolves ambiguous maneuver conditions rather than
+improving already easy cases.
+Figure 14 8 CoC examples from real-vehicle road test.
+4.5
+Field Test
+We assess runtime feasibility through real-vehicle road tests using the NVIDIA RTX 4090. The deployed
+system receives synchronized multi-camera observations and ego state and executes the task path selected by
+the inference scheduler. The inference pipeline operates at 10 Hz in the tested configuration. The in-vehicle
+CoC visualization results are shown in Figure 14.
+5
+Conclusion
+We introduced DriveFoundry, a framework that connects learning from critical driving experience with
+adaptive computation at decision time. Its Data Engine organizes scene evidence, factor–decision relations,
+candidate trajectories, and outcome assessments into traceable scene–candidate records. Its model engine,
+Xiaomi-Drive-o1, integrates Perception, Causation, Action, World, and Value through a shared vision–language
+backbone. Shared weights transfer learning across tasks and support fast-path inference; candidate-conditioned
+latent refill carries intermediate results between tasks; and a dedicated value-of-computation head guides
+further reasoning. Verified failures feed back into both annotation and driving-model updates, connecting
+inference-time decisions with subsequent learning. Public-benchmark comparisons and targeted ablations
+demonstrate strong trajectory prediction and closed-loop driving performance, with benefits from additional
+task modules, joint training, and adaptive inference. Real-vehicle tests further demonstrate on-vehicle runtime
+feasibility. These results support the integration of scene understanding, candidate generation, consequence
+prediction, and evaluation within a shared driving model.
+The broader contribution is an integrated technical foundation for Xiaomi spanning data production, model
+learning, adaptive inference, and vehicle validation. Its central principle is to make critical experience reusable:
+failures can be examined in terms of missing evidence, omitted candidate behaviors, or inaccurate outcome
+assessments, allowing verified corrections to inform subsequent annotation and training. This establishes a
+concrete path toward learning more transferable decision knowledge from each critical event and directing
+additional computation to decisions where it is expected to improve the final choice.
+26
+
+
+Limitations.
+Structured causal supervision depends on scene coverage and annotation quality. The CoC
+and counterfactual evaluations measure agreement with reviewed labels; controlled changes to scene factors
+are still needed to assess whether the learned relationships support appropriate closed-loop behavior under
+unfamiliar conditions. Learning from this supervision also depends on the balance among task objectives.
+The gradient-alignment analysis describes a local condition that can vary across tasks, scenes, and training
+stages, leaving the trade-off between planning improvement and auxiliary-task retention to be evaluated over
+repeated training cycles.
+At inference, candidate selection is limited by both behavioral coverage and evaluation reliability. World
+receives visual supervision at 1, 2, and 3 s, whereas Action plans over 6.4 s, leaving longer-horizon consequences
+without direct World supervision. Shared representations may also correlate World and Value errors, while
+verification cannot recover unproposed behaviors or correct every scene-interpretation error. These limitations
+also affect computation allocation.
+Adaptive inference operates over supported task and latent-budget
+configurations, and its VOC estimates, learned from offline expansions of an SFT checkpoint, may become
+inaccurate as the model, scene distribution, or execution costs change. Detached scheduling inputs do not
+remove this shift, so scheduling records and allocation quality require reassessment across checkpoints and
+deployment platforms.
+27
+
+
+References
+[1] Niket Agarwal, Arslan Ali, Maciej Bala, Yogesh Balaji, Erik Barker, Tiffany Cai, Prithvijit Chattopadhyay,
+Yongxin Chen, Yin Cui, Yifan Ding, et al. Cosmos world foundation model platform for physical ai. arXiv
+preprint arXiv:2501.03575, 2025.
+[2] Jinze Bai, Shuai Bai, Shusheng Yang, Shijie Wang, Sinan Tan, Peng Wang, Junyang Lin, Chang Zhou, and
+Jingren Zhou. Qwen-vl: A versatile vision-language model for understanding, localization, text reading, and
+beyond. arXiv preprint arXiv:2308.12966, 2023.
+[3] Peter W Battaglia, Jessica B Hamrick, Victor Bapst, Alvaro Sanchez-Gonzalez, Vinicius Zambaldi, Mateusz
+Malinowski, Andrea Tacchetti, David Raposo, Adam Santoro, Ryan Faulkner, et al. Relational inductive biases,
+deep learning, and graph networks. arXiv preprint arXiv:1806.01261, 2(3):5, 2018.
+[4] Xu Cao, Tong Zhou, Yunsheng Ma, Wenqian Ye, Can Cui, Kun Tang, Zhipeng Cao, Kaizhao Liang, Ziran Wang,
+James M Rehg, et al. Maplm: A real-world large-scale vision-language benchmark for map and traffic scene
+understanding. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages
+21819–21830, 2024.
+[5] Zhong Cao, Kun Jiang, Weitao Zhou, Shaobing Xu, Huei Peng, and Diange Yang. Continuous improvement
+of self-driving cars using dynamic confidence-aware reinforcement learning. Nature Machine Intelligence, 5(2):
+145–158, 2023.
+[6] Hao Chen, Jiaming Liu, Zhonghao Yan, Nuowei Han, Renrui Zhang, Chenyang Gu, Jialin Gao, Ziyu Guo, Siyuan
+Qian, Yinxi Wang, et al. Last-r1: Reinforcing action via adaptive physical latent reasoning for vla models. arXiv
+preprint arXiv:2604.28192, 2026.
+[7] Jiahong Chen, Jing Wang, Long Chen, Chuwei Cai, and Jinghui Lu. Nanovla: Routing decoupled vision-language
+understanding for nano-sized generalist robotic policies. arXiv preprint arXiv:2510.25122, 2025.
+[8] Kai Chen, Yanze Li, Wenhua Zhang, Yanxin Liu, Pengxiang Li, Ruiyuan Gao, Lanqing Hong, Meng Tian, Xinhai
+Zhao, Zhenguo Li, et al. Automated evaluation of large vision-language models on self-driving corner cases. In
+IEEE/CVF Winter Conference on Applications of Computer Vision, pages 7817–7826, 2025.
+[9] Li Chen, Penghao Wu, Kashyap Chitta, Bernhard Jaeger, Andreas Geiger, and Hongyang Li. End-to-end
+autonomous driving: Challenges and frontiers. IEEE Transactions on Pattern Analysis and Machine Intelligence,
+46(12):10164–10183, 2024.
+[10] Shaoyu Chen, Bo Jiang, Hao Gao, Bencheng Liao, Qing Xu, Qian Zhang, Chang Huang, Wenyu Liu, and
+Xinggang Wang. Vadv2: End-to-end vectorized autonomous driving via probabilistic planning. arXiv preprint
+arXiv:2402.13243, 2024.
+[11] Jeffrey Cheng and Benjamin Van Durme. Compressed chain of thought: Efficient reasoning through dense
+representations. arXiv preprint arXiv:2412.13171, 2024.
+[12] Kashyap Chitta, Aditya Prakash, Bernhard Jaeger, Zehao Yu, Katrin Renz, and Andreas Geiger. Transfuser:
+Imitation with transformer-based sensor fusion for autonomous driving. IEEE transactions on pattern analysis
+and machine intelligence, 45(11):12878–12895, 2022.
+[13] On-Road Automated Driving (ORAD) Committee. Taxonomy and definitions for terms related to driving
+automation systems for on-road motor vehicles. SAE international, 2021.
+[14] Yuntian Deng, Yejin Choi, and Stuart Shieber. From explicit cot to implicit cot: Learning to internalize cot step
+by step. arXiv preprint arXiv:2405.14838, 2024.
+[15] Shuo Feng, Haowei Sun, Xintao Yan, Haojie Zhu, Zhengxia Zou, Shengyin Shen, and Henry X Liu. Dense
+reinforcement learning for safety validation of autonomous vehicles. Nature, 615(7953):620–627, 2023.
+[16] Shuo Feng, Haojie Zhu, Haowei Sun, Xintao Yan, Linxuan He, Jingxuan Yang, Guangzhen Su, Boqi Li, Shu Li,
+Ling Wang, et al. Breaking through safety performance stagnation in autonomous vehicles with dense learning.
+Nature Communications, 17(1):3163, 2026.
+[17] Roya Firoozi, Johnathan Tucker, Stephen Tian, Anirudha Majumdar, Jiankai Sun, Weiyu Liu, Yuke Zhu, Shuran
+Song, Ashish Kapoor, Karol Hausman, et al. Foundation models in robotics: Applications, challenges, and the
+future. The International Journal of Robotics Research, 44(5):701–739, 2025.
+28
+
+
+[18] Shenyuan Gao, Jiazhi Yang, Li Chen, Kashyap Chitta, Yihang Qiu, Andreas Geiger, Jun Zhang, and Hongyang
+Li. Vista: A generalizable driving world model with high fidelity and versatile controllability. Advances in Neural
+Information Processing Systems, 37:91560–91596, 2024.
+[19] Agrim Gupta, Silvio Savarese, Surya Ganguli, and Li Fei-Fei. Embodied intelligence via learning and evolution.
+Nature communications, 12(1):5721, 2021.
+[20] Shibo Hao, Sainbayar Sukhbaatar, DiJia Su, Xian Li, Zhiting Hu, Jason Weston, and Yuandong Tian. Training
+large language models to reason in a continuous latent space. arXiv preprint arXiv:2412.06769, 2024.
+[21] Chong He, Yuechen Luo, Fang Li, Shaoqing Xu, and Fuxi Wen. Drivever: Lightweight trajectory evaluator as
+test-time verifier for autonomous driving. arXiv preprint arXiv:2607.00399, 2026.
+[22] Zhiyi Hou, Enhui Ma, Fang Li, Zhiyi Lai, Kalok Ho, Zhanqian Wu, Lijun Zhou, Long Chen, Chitian Sun,
+Haiyang Sun, et al. Drivemrp: Enhancing vision-language models with synthetic motion data for motion risk
+prediction. arXiv preprint arXiv:2507.02948, 2025.
+[23] Anthony Hu, Lloyd Russell, Hudson Yeo, Zak Murez, George Fedoseev, Alex Kendall, Jamie Shotton, and
+Gianluca Corrado. Gaia-1: A generative world model for autonomous driving. arXiv preprint arXiv:2309.17080,
+2023.
+[24] Xiaotao Hu, Wei Yin, Mingkai Jia, Junyuan Deng, Xiaoyang Guo, Qian Zhang, Xiaoxiao Long, and Ping Tan.
+Drivingworld: Constructing world model for autonomous driving via video gpt. arXiv preprint arXiv:2412.19505,
+2024.
+[25] Yihan Hu, Jiazhi Yang, Li Chen, Keyu Li, Chonghao Sima, Xizhou Zhu, Siqi Chai, Senyao Du, Tianwei Lin,
+Wenhai Wang, et al. Planning-oriented autonomous driving. In Proceedings of the IEEE/CVF conference on
+computer vision and pattern recognition, pages 17853–17862, 2023.
+[26] Yuzhou Huang, Benjin Zhu, Hengtong Lu, Victor Shea-Jay Huang, Haiming Zhang, Wei Chen, Jifeng Dai, Yan
+Xie, and Hongsheng Li. Mindvla-u1: Vla beats va with unified streaming architecture for autonomous driving.
+arXiv preprint arXiv:2605.12624, 2026.
+[27] Zhijian Huang, Chengjian Feng, Feng Yan, Baihui Xiao, Zequn Jie, Yujie Zhong, Xiaodan Liang, and Lin Ma.
+Robotron-drive: All-in-one large multimodal model for autonomous driving. In Proceedings of the IEEE/CVF
+International Conference on Computer Vision, pages 8011–8021, 2025.
+[28] Jyh-Jing Hwang, Runsheng Xu, Hubert Lin, Wei-Chih Hung, Jingwei Ji, Kristy Choi, Di Huang, Tong He, Paul
+Covington, Benjamin Sapp, et al. Emma: End-to-end multimodal model for autonomous driving. arXiv preprint
+arXiv:2410.23262, 2024.
+[29] Ayesha Ishaq, Jean Lahoud, Ketan More, Omkar Thawakar, Ritesh Thawkar, Dinura Dissanayake, Noor Ahsan,
+Yuhao Li, Fahad Shahbaz Khan, Hisham Cholakkal, et al. Drivelmm-o1: A step-by-step reasoning dataset and
+large multimodal model for driving scenario understanding. arXiv preprint arXiv:2503.10621, 2025.
+[30] Boris Ivanovic and Marco Pavone.
+Generate trajectories,
+reasoning traces,
+and auto-labels with
+nvidia alpamayo 2 super.
+NVIDIA Technical Blog, 2026.
+URL https://developer.nvidia.com/blog/
+generate-trajectories-reasoning-traces-and-auto-labels-with-nvidia-alpamayo-2-super/. Published
+August 4, 2026; accessed September 20, 2026.
+[31] Anqing Jiang, Yu Gao, Yiru Wang, Zhigang Sun, Shuo Wang, Yuwen Heng, Hao Sun, Shichen Tang, Lijuan Zhu,
+Jinhao Chai, et al. Irl-vla: Training an vision-language-action policy via reward world model. arXiv preprint
+arXiv:2508.06571, 2025.
+[32] Changhui Jing, Haochen Tian, Hongchen Li, Tianyu Li, Caojun Wang, Zihao Zhang, Yanhao Liu, Chengen Xie,
+Bailin Li, Hao Zhao, et al. Simvta: Simulation-grounded video-trajectory alignment for driving world action
+models. arXiv preprint arXiv:2610.13781, 2026.
+[33] Peter Karkus, Maximilian Igl, Yuxiao Chen, Kashyap Chitta, Jef Packer, Bertrand Douillard, Ran Tian,
+Alexander Naumann, Guillermo Garcia-Cobo, Shuhan Tan, et al. Beyond behavior cloning in autonomous
+driving: a survey of closed-loop training techniques. 2025.
+[34] Jinkyu Kim, Anna Rohrbach, Trevor Darrell, John Canny, and Zeynep Akata. Textual explanations for self-driving
+vehicles. In Proceedings of the European conference on computer vision, pages 563–578, 2018.
+29
+
+
+[35] Moo Jin Kim, Karl Pertsch, Siddharth Karamcheti, Ted Xiao, Ashwin Balakrishna, Suraj Nair, Rafael Rafailov,
+Ethan Foster, Grace Lam, Pannag Sanketi, et al. Openvla: An open-source vision-language-action model. arXiv
+preprint arXiv:2406.09246, 2024.
+[36] Moo Jin Kim, Yihuai Gao, Tsung-Yi Lin, Yen-Chen Lin, Yunhao Ge, Grace Lam, Percy Liang, Shuran Song,
+Ming-Yu Liu, Chelsea Finn, et al. Cosmos policy: Fine-tuning video models for visuomotor control and planning.
+arXiv preprint arXiv:2601.16163, 2026.
+[37] Pengna Li, Kangyi Wu, Shaoqing Xu, Fang Li, Lin Zhao, Long Chen, Zhi-Xin Yang, and Nanning Zheng. Think
+before go: Hierarchical reasoning for image-goal navigation. In Proceedings of the 64th Annual Meeting of the
+Association for Computational Linguistics (Volume 1: Long Papers), pages 29336–29357, 2026.
+[38] Pengxiang Li, Yinan Zheng, Yue Wang, Huimin Wang, Hang Zhao, Jingjing Liu, Xianyuan Zhan, Kun Zhan,
+and Xianpeng Lang. Discrete diffusion for reflective vision-language-action models in autonomous driving. arXiv
+preprint arXiv:2509.20109, 2025.
+[39] Tianyu Li, Li Chen, Caojun Wang, Haochen Liu, Kashyap Chitta, Zhenjie Yang, Yuhang Lu, Naisheng Ye,
+Yihang Qiu, Yufei Wang, et al. World engine: Towards the era of post-training for autonomous driving. arXiv
+preprint arXiv:2606.19836, 2026.
+[40] Yingyan Li, Lue Fan, Jiawei He, Yuqi Wang, Yuntao Chen, Zhaoxiang Zhang, and Tieniu Tan. Enhancing end-
+to-end autonomous driving with latent world model. In International Conference on Learning Representations,
+volume 2025, pages 42942–42959, 2025.
+[41] Yingyan Li, Shuyao Shang, Weisong Liu, Bing Zhan, Haochen Wang, Yuqi Wang, Yuntao Chen, Xiaoman Wang,
+Yasong An, Chufeng Tang, et al. Drivevla-w0: World models amplify data scaling law in autonomous driving.
+arXiv preprint arXiv:2510.12796, 2025.
+[42] Yongkang Li, Kaixin Xiong, Xiangyu Guo, Fang Li, Sixu Yan, Gangwei Xu, Lijun Zhou, Long Chen, Haiyang
+Sun, Bing Wang, et al. Recogdrive: A reinforced cognitive framework for end-to-end autonomous driving. arXiv
+preprint arXiv:2506.08052, 2025.
+[43] Bencheng Liao, Shaoyu Chen, Haoran Yin, Bo Jiang, Cheng Wang, Sixu Yan, Xinbang Zhang, Xiangyu Li, Ying
+Zhang, Qian Zhang, et al. Diffusiondrive: Truncated diffusion model for end-to-end autonomous driving. In
+Proceedings of the Computer Vision and Pattern Recognition Conference, pages 12037–12047, 2025.
+[44] Hongbin Lin, Yiming Yang, Yifan Zhang, Chaoda Zheng, Jie Feng, Sheng Wang, Zhennan Wang, Shijia Chen,
+Boyang Wang, Yu Zhang, et al. Futurex: Enhance end-to-end autonomous driving via latent chain-of-thought
+world model. arXiv preprint arXiv:2512.11226, 2025.
+[45] Haochen Liu, Tianyu Li, Haohan Yang, Li Chen, Caojun Wang, Ke Guo, Haochen Tian, Hongchen Li, Hongyang
+Li, and Chen Lv. Reinforced refinement with self-aware expansion for end-to-end autonomous driving. IEEE
+Transactions on Pattern Analysis and Machine Intelligence, 2026.
+[46] Haotian Liu, Chunyuan Li, Qingyang Wu, and Yong Jae Lee. Visual instruction tuning. Advances in neural
+information processing systems, 36:34892–34916, 2023.
+[47] Haotian Liu, Chunyuan Li, Yuheng Li, and Yong Jae Lee. Improved baselines with visual instruction tuning.
+In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages 26296–26306,
+2024.
+[48] Henry X Liu and Shuo Feng. Curse of rarity for autonomous vehicles. nature communications, 15(1):4808, 2024.
+[49] Mengmeng Liu, Diankun Zhang, Jiuming Liu, Jianfeng Cui, Hongwei Xie, Guang Chen, Hangjun Ye, Michael Ying
+Yang, Francesco Nex, and Hao Cheng. Driveva: Video action models are zero-shot drivers. In European Conference
+on Computer Vision, pages 315–335. Springer, 2026.
+[50] Hao Lu, Ziyang Liu, Guangfeng Jiang, Yuanfei Luo, Sheng Chen, Yangang Zhang, and Ying-Cong Chen.
+Uniugp: Unifying understanding, generation, and planing for end-to-end autonomous driving. arXiv preprint
+arXiv:2512.09864, 2025.
+[51] Jinghui Lu, Jiayi Guan, Zhijian Huang, Jinlong Li, Guang Li, Lingdong Kong, Yingyan Li, Han Wang, Shaoqing
+Xu, Yuechen Luo, et al. Xiaomi onevl: One-step latent reasoning and planning with vision-language explanation.
+arXiv preprint arXiv:2604.18486, 2026.
+30
+
+
+[52] Pan Lu, Swaroop Mishra, Tony Xia, Liang Qiu, Kai-Wei Chang, Song-Chun Zhu, Oyvind Tafjord, Peter Clark,
+and Ashwin Kalyan. Learn to explain: Multimodal reasoning via thought chains for science question answering.
+In Advances in Neural Information Processing Systems, volume 35, pages 2507–2521, 2022.
+[53] Yuhang Lu, Yichen Yao, Jiadong Tu, Jiangnan Shao, Yuexin Ma, and Xinge Zhu. Can lvlms obtain a driver’s
+license? a benchmark towards reliable agi for autonomous driving. In Proceedings of the AAAI Conference on
+Artificial Intelligence, volume 39, pages 5838–5846, 2025.
+[54] Yuechen Luo, Fang Li, Shaoqing Xu, Zhiyi Lai, Lei Yang, Qimao Chen, Ziang Luo, Zixun Xie, Shengyin Jiang,
+Jiaxin Liu, et al. Adathinkdrive: Adaptive thinking via reinforcement learning for autonomous driving. arXiv
+preprint arXiv:2509.13769, 2025.
+[55] Yuechen Luo, He Chong, Fang Li, Shaoqing Xu, Hexin Zhang, Ruiqi Zhang, Ziying Song, Lei Yang, Zhi-Xin
+Yang, and Fuxi Wen. Reflect-vla: Internalizing reflective guidance via dual-path on-policy self-distillation for
+autonomous driving. arXiv preprint arXiv:2610.13453, 2026.
+[56] Yuechen Luo, Fang Li, Qimao Chen, Shaoqing Xu, Jiaxin Liu, Ziying Song, Zhi-xin Yang, and Fuxi Wen.
+Unleashing vla potentials in autonomous driving via explicit learning from failures. In Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 24833–24842, 2026.
+[57] Yuechen Luo, Fang Li, Shaoqing Xu, Yang Ji, Zehan Zhang, Bing Wang, Yuannan Shen, Jianwei Cui, Long Chen,
+Guang Chen, et al. Last-vla: Thinking in latent spatio-temporal space for vision-language-action in autonomous
+driving. arXiv preprint arXiv:2603.01928, 2026.
+[58] Yingzi Ma, Yulong Cao, Wenhao Ding, Shuibai Zhang, Yan Wang, Boris Ivanovic, Ming Jiang, Marco Pavone,
+and Chaowei Xiao. dvlm-ad: Enhance diffusion vision-language-model for driving via controllable reasoning.
+arXiv preprint arXiv:2512.04459, 2025.
+[59] Ana-Maria Marcu, Long Chen, Jan Hünermann, Alice Karnsund, Benoit Hanotte, Prajwal Chidananda, Saurabh
+Nair, Vijay Badrinarayanan, Alex Kendall, Jamie Shotton, et al. Lingoqa: Visual question answering for
+autonomous driving. In European Conference on Computer Vision, pages 252–269, 2024.
+[60] NVIDIA. Alpamayo 1.5. Hugging Face model card, 2026. URL https://huggingface.co/nvidia/Alpamayo-1.
+5-10B. Released March 19, 2026; accessed September 20, 2026.
+[61] NVIDIA. PhysicalAI–Autonomous–Vehicles. Hugging Face dataset card, 2026. URL https://huggingface.co/
+datasets/nvidia/PhysicalAI-Autonomous-Vehicles. Accessed September 20, 2026.
+[62] Tianwen Qian, Jingjing Chen, Linhai Zhuo, Yang Jiao, and Yu-Gang Jiang. Nuscenes-qa: A multi-modal visual
+question answering benchmark for autonomous driving scenario. In Proceedings of the AAAI Conference on
+Artificial Intelligence, volume 38, pages 4542–4550, 2024.
+[63] Shuyao Shang, Yuntao Chen, Yuqi Wang, Yingyan Li, and ZHAO-XIANG ZHANG. Drivedpo: Policy learning
+via safety dpo for end-to-end autonomous driving. Advances in Neural Information Processing Systems, 38:
+81565–81585, 2026.
+[64] Zhenyi Shen, Hanqi Yan, Linhai Zhang, Zhanghao Hu, Yali Du, and Yulan He. Codi: Compressing chain-of-
+thought into continuous space via self-distillation. In Conference on Empirical Methods in Natural Language
+Processing, pages 677–693, 2025.
+[65] Chen Shi, Jinrui Xu, Shaoshuai Shi, Kehua Sheng, Bo Zhang, and Li Jiang. Drivewam: Video generative priors
+enable scalable world-action modeling for autonomous driving. arXiv preprint arXiv:2605.28544, 2026.
+[66] Chonghao Sima, Katrin Renz, Kashyap Chitta, Li Chen, Hanxue Zhang, Chengen Xie, Jens Beißwenger, Ping
+Luo, Andreas Geiger, and Hongyang Li. Drivelm: Driving with graph visual question answering. In European
+conference on computer vision, pages 256–274, 2024.
+[67] Ziying Song, Lin Liu, Hongyu Pan, Bencheng Liao, Mingzhe Guo, Lei Yang, Yongchang Zhang, Shaoqing Xu,
+Caiyan Jia, and Yadan Luo. Diver: Reinforced diffusion breaks imitation bottlenecks in end-to-end autonomous
+driving. arXiv preprint arXiv:2507.04049, 2025.
+[68] Dijia Su, Hanlin Zhu, Yingchen Xu, Jiantao Jiao, Yuandong Tian, and Qinqing Zheng. Token assorted: Mixing
+latent and text tokens for improved language model reasoning. arXiv preprint arXiv:2502.03275, 2025.
+[69] Foundation Model Team and XPeng Inc. Xcot-vla: Executable chain-of-thought for vision-language-action
+driving. arXiv preprint arXiv:2608.10976, 2026.
+31
+
+
+[70] Gemma Team, Sherif El Abd, Vaibhav Aggarwal, Robin Algayres, Alek Andreev, Olivier Bachem, Ian Bal-
+lantyne, Cormac Brick, Victor Cărbune, Michelle Casbon, et al. Gemma 4 technical report. arXiv preprint
+arXiv:2607.02770, 2026.
+[71] Qwen Team. Qwen3. 5-omni technical report. arXiv preprint arXiv:2604.15804, 2026.
+[72] Xiaomi Embodied Intelligence Team, Yuechen Luo, Chong He, Fang Li, Shaoqing Xu, Jingkai Wang, Menglun
+Su, Jiaxin Liu, Shengyin Jiang, Zhiyi Lai, et al. Omnibrain-0: A unified agentic model for embodied intelligence.
+arXiv preprint arXiv:2610.36013, 2026.
+[73] Xiaomi Embodied Intelligence Team, Shaoqing Xu, Fang Li, Guozhi Zhan, Zhixiang Duan, Yuhan Wang, Yuechen
+Luo, Shengyin Jiang, Hanbing Li, Zhiying Du, et al. One policy, many embodiments: Unified camera-centric
+action geometry pre-training for heterogeneous embodied manipulation. arXiv preprint arXiv:2608.26058, 2026.
+[74] Haochen Tian, Tianyu Li, Haochen Liu, Jiazhi Yang, Yihang Qiu, Guang Li, Junli Wang, Yinfeng Gao, Zhang
+Zhang, Liang Wang, et al. Simscale: Learning to drive via real-world simulation at scale. arXiv preprint
+arXiv:2511.23369, 2025.
+[75] Peter Tong, Ellis Brown, Penghao Wu, Sanghyun Woo, Adithya Jairam Vedagiri IYER, Sai Charitha Akula,
+Shusheng Yang, Jihan Yang, Manoj Middepogu, Ziteng Wang, et al. Cambrian-1: A fully open, vision-centric
+exploration of multimodal llms. Advances in Neural Information Processing Systems, 37:87310–87356, 2024.
+[76] Hang Wang, Xin Ye, Feng Tao, Chenbin Pan, Abhirup Mallik, Burhan Yaman, Liu Ren, and Junshan Zhang.
+Adawm: Adaptive world model based planning for autonomous driving. In International Conference on Learning
+Representations, volume 2025, pages 85591–85615, 2025.
+[77] Linbo Wang, Yupeng Zheng, Qiang Chen, Shiwei Li, Yichen Zhang, Zebin Xing, Qichao Zhang, Xiang Li, Deheng
+Qian, Pengxuan Yang, et al. Latent-wam: Latent world action modeling for end-to-end autonomous driving.
+arXiv preprint arXiv:2603.24581, 2026.
+[78] Linhan Wang, Zichong Yang, Chen Bai, Guoxiang Zhang, Xiaotong Liu, Xiaoyin Zheng, Xiao-Xiao Long,
+Chang-Tien Lu, and Cheng Lu. Drive-jepa: Video jepa meets multimodal trajectory distillation for end-to-end
+driving. arXiv preprint arXiv:2601.22032, 2026.
+[79] Shihao Wang, Zhiding Yu, Xiaohui Jiang, Shiyi Lan, Min Shi, Nadine Chang, Jan Kautz, Ying Li, and Jose M
+Alvarez. Omnidrive: A holistic vision-language dataset for autonomous driving with counterfactual reasoning. In
+Proceedings of the Computer Vision and Pattern Recognition Conference, pages 22442–22452, 2025.
+[80] Wenshuo Wang, Letian Wang, Chengyuan Zhang, Changliu Liu, and Lijun Sun. Social interactions for autonomous
+driving: A review and perspectives. Foundations and Trends® in Robotics, 10(3-4):198–377, 2022.
+[81] Xiaofeng Wang, Zheng Zhu, Guan Huang, Xinze Chen, Jiagang Zhu, and Jiwen Lu. Drivedreamer: Towards
+real-world-drive world models for autonomous driving. In European conference on computer vision, pages 55–72.
+Springer, 2024.
+[82] Yan Wang, Wenjie Luo, Junjie Bai, Yulong Cao, Tong Che, Ke Chen, Yuxiao Chen, Jenna Diamond, Yifan
+Ding, Wenhao Ding, et al. Alpamayo-r1: Bridging reasoning and action prediction for generalizable autonomous
+driving in the long tail. arXiv preprint arXiv:2511.00088, 2025.
+[83] Yuqi Wang, Jiawei He, Lue Fan, Hongxin Li, Yuntao Chen, and Zhaoxiang Zhang. Driving into the future:
+Multiview visual forecasting and planning with world model for autonomous driving. In Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 14749–14759, 2024.
+[84] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi, Quoc V Le, Denny Zhou, et al.
+Chain-of-thought prompting elicits reasoning in large language models. In Advances in Neural Information
+Processing Systems, volume 35, pages 24824–24837, 2022.
+[85] Julong Wei, Shanshuai Yuan, Pengfei Li, Qingda Hu, Zhongxue Gan, and Wenchao Ding. Occllama: An
+occupancy-language-action generative world model for autonomous driving. arXiv preprint arXiv:2409.03272,
+2024.
+[86] Xilin Wei, Xiaoran Liu, Yuhang Zang, Xiaoyi Dong, Yuhang Cao, Jiaqi Wang, Xipeng Qiu, and Dahua Lin.
+Sim-cot: Supervised implicit chain-of-thought. arXiv preprint arXiv:2509.20317, 2025.
+[87] LLM-Core-Team Xiaomi. Mimo-vl technical report, 2025. URL https://arxiv.org/abs/2506.03569.
+32
+
+
+[88] Yige Xu, Xu Guo, Zhiwei Zeng, and Chunyan Miao. Softcot: Soft chain-of-thought for efficient reasoning with
+llms. In Annual Meeting of the Association for Computational Linguistics, pages 23336–23351, 2025.
+[89] Zhenhua Xu, Yujia Zhang, Enze Xie, Zhen Zhao, Yong Guo, Kwan-Yee K Wong, Zhenguo Li, and Hengshuang
+Zhao. Drivegpt4: Interpretable end-to-end autonomous driving via large language model. IEEE Robotics and
+Automation Letters, 2024.
+[90] Tianyi Yan, Tao Tang, Xingtai Gui, Yongkang Li, Jiasen Zheng, Weiyao Huang, Lingdong Kong, Wencheng Han,
+Xia Zhou, Xueyang Zhang, et al. Ad-r1: Closed-loop reinforcement learning for end-to-end autonomous driving
+with impartial world models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, pages 1085–1095, 2026.
+[91] Haohan Yang, Yanxin Zhou, Xiaosong Hu, Haochen Liu, Chaoyue Chen, and Chen Lv. Human-guided continual
+learning for multifaceted improvement of self-driving vehicles. Nature Communications, 2026.
+[92] Ziyang Yao, Haochen Liu, Yuncheng Jiang, Zeyu Zhu, Zibin Guo, Jingru Wang, Tianle Liu, Jianwei Cui, Kuiyuan
+Yang, Hongwei Xie, et al. Discrete-wam: Unified discrete vision-action token editing for world-policy learning.
+arXiv preprint arXiv:2606.05645, 2026.
+[93] Bowen Ye, Bin Zhang, and Hang Zhao. Dap: A discrete-token autoregressive planner for autonomous driving.
+arXiv preprint arXiv:2511.13306, 2025.
+[94] Tianyuan Yuan, Zibin Dong, Yicheng Liu, and Hang Zhao. Fast-wam: Do world action models need test-time
+future imagination? arXiv preprint arXiv:2603.16666, 2026.
+[95] Shuang Zeng, Xinyuan Chang, Mengwei Xie, Xinran Liu, Yifan Bai, Zheng Pan, Mu Xu, and Xing Wei. Future-
+sightdrive: Thinking visually with spatio-temporal cot for autonomous driving. arXiv preprint arXiv:2505.17685,
+2025.
+[96] Enming Zhang, Xingyuan Dai, Min Huang, Yisheng Lv, and Qinghai Miao.
+Minidrive:
+More efficient
+vision-language models with multi-level 2d features as text tokens for autonomous driving. arXiv preprint
+arXiv:2409.07267, 2024.
+[97] Kewei Zhang, Jin Wang, Sensen Gao, Chengyue Wu, Yulong Cao, Songyang Han, Boris Ivanovic, Langechuan
+Liu, Marco Pavone, Song Han, et al. Fast-ddrive: Efficient block-diffusion vlm for autonomous driving. arXiv
+preprint arXiv:2605.23163, 2026.
+[98] Songyan Zhang, Jinyuan Tian, Hanbing Li, Daqi Liu, Hao Chen, Wenhui Huang, Fang Li, Guang Chen, Hangjun
+Ye, Long Chen, et al. Geoworldad: Geometry world action model for autonomous driving. arXiv preprint
+arXiv:2607.17521, 2026.
+[99] Xin Zhou, Zongchuang Zhao, Zhibo Yang, Mingsheng Li, Humen Zhong, Shuai Bai, Du Chu, Ruizhe Chen,
+Zhaohai Li, Jun Tang, Qiuyue Wang, Mingkun Yang, Jiazhao Zhang, Dayiheng Liu, Dingkang Liang, and Xiang
+Bai. Qwen-drive-1.0: An initial step towards a vision-language foundation model for autonomous driving, 2026.
+URL https://arxiv.org/abs/2609.00111.
+[100] Zewei Zhou, Tianhui Cai, Seth Z Zhao, Yun Zhang, Zhiyu Huang, Bolei Zhou, and Jiaqi Ma. Autovla: A
+vision-language-action model for end-to-end autonomous driving with adaptive reasoning and reinforcement
+fine-tuning. arXiv preprint arXiv:2506.13757, 2025.
+[101] Rui-Jie Zhu, Zixuan Wang, Kai Hua, Tianyu Zhang, Ziniu Li, Haoran Que, Boyi Wei, Zixin Wen, Fan Yin,
+He Xing, et al. Scaling latent reasoning via looped language models. arXiv preprint arXiv:2510.25741, 2025.
+[102] Brianna Zitkovich, Tianhe Yu, Sichun Xu, Peng Xu, Ted Xiao, Fei Xia, Jialin Wu, Paul Wohlhart, Stefan
+Welker, Ayzaan Wahid, et al. Rt-2: Vision-language-action models transfer web knowledge to robotic control. In
+Conference on Robot Learning, pages 2165–2183. PMLR, 2023.
+[103] Sicheng Zuo, Zixun Xie, Wenzhao Zheng, Shaoqing Xu, Fang Li, Hanbing Li, Long Chen, Zhi-Xin Yang, and Jiwen
+Lu. Dvgt-2: Vision-geometry-action model for autonomous driving at scale. arXiv preprint arXiv:2604.00813,
+2026.
+33
+
+
+Contributions and Acknowledgments
+Core Contributors
+• Ziyang Yao
+• Yuncheng Jiang
+• Fang Li
+• Wen Zhang
+• Xiangyang Chu
+• Zibin Guo
+• Haochen Liu✉
+• Shaoqing Xu✉
+Project Leader
+• Jingwei Zhao
+Project Advisors
+• Guang Chen
+• Hangjun Ye
+Contributors
+• Jiale Hou
+• Chuang Wan
+• Jia Hua
+• Gengzhao Xiang
+• Xiaoran Luo
+• Chong He
+• Yuechen Luo
+• Junzhe Wang
+• Zhiyu Sun
+• Jun Zhang
+• Wei Li
+• Lei Li
+• Hongwei Xie
+• Bing Wang
+• Yuannan Shen
+• Jianwei Cui
+Technical details: { liuhaochen1, xushaoqing}@xiaomi.com
+Acknowledgments
+We thank the Alpamayo team for their insightful advice on data processing and model deployment. We also
+express our gratitude to the development teams behind Qwen and the other open-source models, as well
+as the creators of the PhysicalAI-Autonomous-Vehicles datasets, benchmarks, and simulation environments
+utilized in this work. These resources were used exclusively for research and evaluation purposes.
+34
+
+
+Appendix
+A
+Related Work
+A.1
+VLM and VLA for Autonomous Driving
+Vision-language models (VLMs) connect visual observations with language supervision for driving-scene
+understanding, building on visual instruction tuning and general-purpose multimodal language models [2,
+46, 47, 75]. LingoQA [59] evaluates video-based driving question answering, while DriveLM [66] organizes
+perception, prediction, and planning questions through graph-structured dependencies. OmniDrive [79]
+extends this supervision to holistic scene understanding and counterfactual reasoning. DriveGPT4 [89]
+further connects visual evidence and language explanations with end-to-end vehicle control. Driving-specific
+benchmarks [4, 8, 22, 53, 62] provide complementary coverage of VQA, map understanding, and scene-level
+assessment. Together, these efforts establish language as an interface for expressing scene semantics and
+relating them to driving behavior.
+Vision-language-action (VLA) models incorporate action prediction into the multimodal interface, connecting
+semantic reasoning with executable motion. General VLA systems [35, 102] transfer visual-language knowledge
+into control and open-ended action prediction, while driving planners [10, 12, 25, 43, 98, 103] have progressed
+from sensor-fusion and vectorized planning to trajectory-generating models. Recent driving VLAs add
+cognitive, causal, or world-model signals: Alpamayo-R1 [82] couples structured Chain-of-Causation (CoC)
+traces with trajectory generation, FutureSightDrive [95] introduces spatio-temporal reasoning for future-aware
+planning, and related systems [6, 21, 27, 41, 50, 55, 56, 72, 100] combine multimodal reasoning with end-to-end
+action learning. World-model-based driving methods [23, 24, 81, 83] provide future-state supervision or
+interactive prediction. These approaches motivate treating scene understanding, reasoning, and action as
+interdependent capabilities. DriveFoundry extends this organization to include auxiliary perception, causal
+decision formation, action-conditioned future prediction, and candidate evaluation within a shared latent
+interface. Its supervision connects discrete policy decisions to continuous trajectories and their evaluated
+consequences, giving these capabilities a common scene–candidate reference.
+A.2
+Chain-of-Thought Reasoning: Explicit and Latent Forms
+Explicit Chain-of-Thought. Explicit Chain-of-Thought (CoT) [14, 37, 52, 84] represents intermediate reasoning
+as a sequence of discrete language tokens between an observation and a final prediction. Its central benefit is
+supervision: intermediate steps expose which evidence supports a conclusion and can improve compositional
+reasoning. Grounded visual explanations [34] connect such steps to visual entities and spatial relations. For
+autonomous driving, an effective trace should identify relevant agents and traffic constraints, reason about
+their interactions and likely consequences, and use this evidence to select a maneuver. Such supervision
+teaches how a decision is formed, rather than only how its final trajectory is decoded.
+Driving-oriented models increasingly instantiate this structure. DriveLMM-o1 [29] learns step-by-step driving
+traces; FutureSightDrive [95] introduces spatio-temporal reasoning to connect current observations with future
+outcomes; and Alpamayo-R1 [82] organizes the trace as a structured Chain-of-Causation (CoC) that conditions
+trajectory generation. CoC gives this textual interface a driving-specific structure by linking decision-relevant
+evidence to the maneuver being explained or predicted. It therefore makes the evidence–decision relationship
+explicit while retaining the inspectable form of language supervision.
+The same discrete representation creates a systems trade-off for closed-loop driving. Autoregressive decoding
+incurs computation for every generated token, so latency grows with trace length [51, 54]. Language tokens
+describe constraints semantically but do not directly encode the continuous geometry and dynamics required for
+a feasible trajectory. These limitations motivate latent and implicit CoT methods, which retain intermediate
+computation in continuous hidden states and are discussed next.
+Latent and Implicit Chain-of-Thought.
+Latent reasoning moves some or all intermediate computation
+from discrete text into continuous hidden states.
+Step-by-step internalization and continuous thought
+models [11, 14, 20, 64] progressively remove or replace explicit reasoning steps during training.
+Other
+approaches [68, 86, 88, 101] combine soft representations, latent–text mixtures, auxiliary supervision, or
+35
+
+
+recurrent latent refinement. These methods vary in how they compress, supervise, and expose intermediate
+reasoning, but share the goal of reducing the cost of generating a long discrete trace.
+Driving-specific methods connect latent computation to spatial, temporal, and action prediction. LaST-
+VLA [57] performs reasoning in latent spatio-temporal space, FutureX [44] combines latent CoT with world
+modeling, and other driving models [38, 51, 58, 93] use compact visual or discrete action latents for controllable
+planning. World-model-based representation learning [23, 24, 41, 81, 85] supplies complementary future-state
+constraints. OneVL [51] couples language reconstruction and future visual prediction to supervise compact
+latent representations, then uses prefill inference to avoid decoding an explicit reasoning trace. Our focus is the
+organization of latent computation around decision dependencies. Perception, CoC, Action, World, and Value
+concepts have distinct supervision targets, and block-wise autoregressive refill makes an upstream block’s
+output available to downstream queries. This allows evidence extraction, candidate formation, consequence
+prediction, and evaluation to share intermediate states while retaining their different roles in the decision
+process.
+A.3
+Adaptive Reasoning and Computation Allocation
+Adaptive reasoning makes inference computation depend on the scene and the expected benefit of further
+reasoning. AdaThinkDrive [54] studies how explicit CoT affects driving across different scenario complexities
+and learns to select between direct prediction and reasoning-conditioned prediction. AutoVLA [100], LaST-
+R1 [6], and cognitive or adaptive world-model planners [42, 76] extend this idea through reinforcement
+fine-tuning, physical latent reasoning, or adaptive future prediction. Their hybrid supervised and reinforcement-
+learning objectives jointly account for trajectory quality and reasoning economy. These methods establish
+a concrete alternative to executing the same reasoning procedure for every input: learn when intermediate
+reasoning improves the action enough to justify its computational cost.
+Efficient VLM/VLA systems [7, 51, 96, 97] also study token routing, block-wise execution, and reduced-cost
+action decoding. In parallel, closed-loop reinforcement-learning and policy-refinement methods [31, 45, 63, 67,
+90] optimize action quality under safety or interaction feedback. Our method connects this allocation decision
+to candidate verification. An initial Action–Value computation produces and evaluates a candidate. An initial
+Action–Value computation generates and evaluates candidates. The VOC head then guides the selection of
+task execution and latent-token allocations for Perception, Causation, and World, using the current inference
+state and remaining budget. This adapts both task activation and the amount of latent computation within
+each enabled task. The shared latent state carries information across these routes, while Value feedback links
+additional computation to the quality of the current candidate. Adaptive inference thus operates over the
+same evidence, decision, and consequence structure used by the annotation system.
+B
+Unified Causal Data Annotation Loop
+B.1
+Motivation, Overall Principles, and Annotation-Model Iteration
+The development efficiency of a production autonomous-driving system depends not only on open-loop or
+closed-loop performance on fixed evaluation sets, but also on how efficiently real-vehicle risks can be converted
+into learnable data and then into improved driving experience. Conventional data systems often center on
+a single type of supervision, such as trajectories, object boxes, or lane lines. Such supervision supports
+perception and behavioral imitation, but it does not fully specify which scene facts affect a decision, why a
+candidate behavior is selected, or how the outcomes of different candidates differ.
+Annotation contents differ substantially in information complexity, production cost, throughput, and degree
+of automation. Object geometry, road elements, and basic states can be generated at scale by rules, sensor-
+geometry systems, and autolabeling models. Driving relations, decision factors, causal explanations, and
+value judgments require more expensive model assistance or human annotation. DriveFoundry therefore uses
+hierarchical annotation both to organize information and to allocate data-production resources: low-cost,
+high-throughput supervision is used mainly for pretraining, while high-cost, high-value supervision is used for
+Chain-of-Causation (CoC) reasoning, planning SFT, and Value Model training.
+36
+
+
+DriveFoundry is designed to support multiple tasks and training stages. Structured annotations provide
+a common factual source from which Perception QA, CoC QA, decision and causal SFT data, planning
+trajectory data, and Value evaluation data are derived according to task requirements. World learns to predict
+visual observations at future horizons of 1, 2, and 3 s, conditioned on the scene history and a candidate
+trajectory. Its visual targets are derived from image sequences and linked to the corresponding scene and
+candidate records.
+The system follows four principles. First, supervision is stratified by content and production cost. Second,
+automatic annotation provides scale, while human annotation supplies complex relations, causal explanations,
+decisions, and value judgments. Third, low-cost Scene annotation covers basic scene facts, while the evidence
+required by a concrete driving candidate, decision segment, or Critical Factor in Policy determines where
+expensive annotation and review are allocated. Fourth, human annotation, annotation models, and quality
+review form a loop that progressively increases annotation automation.
+Annotation automation follows an iterative process. Human annotators first build high-quality seed data,
+which is used to train annotation models for different label types. The models then pre-label new data in
+batches, while humans focus on low-confidence samples, long-tail scenes, and cases in which models disagree.
+Reviewed results are added back to the training set and used to update the annotation models and rules. The
+process applies to objects, road relations, decisions, Critical Factors, and CoC. For CoC, humans initially
+identify Critical Factor instances, bind the associated decision labels to those factors, and annotate their
+attributes and roles to establish reliable supervision. As the annotation model improves, production gradually
+shifts toward model-based labeling, human sampling inspection, and difficult-case review.
+B.2
+Unified Causation Annotation System
+The basic data unit of DriveFoundry is a scene–candidate record. Every record is based on recorded driving
+data that includes the actual ego trajectory. The scene describes environmental observations and ego state
+over the time interval, while the candidate in the base record denotes the executed driving behavior, including
+discrete decisions and a continuous trajectory. When counterfactual analysis is required, additional candidate
+behaviors can be introduced under the same scene and planning horizon and linked to their feasibility, outcome
+judgments, and value evaluations. Each record preserves label sources, confidence, and evidence references,
+and distinguishes observed outcomes from counterfactual outcome judgments. The annotation system groups
+labels into Scene, Policy, and Value. Scene labels describe observed entities, states, and relations; Policy labels
+describe factor–decision relations and behavior; Value labels assess individual candidates. These annotation
+families supply supervision for the model’s Perception, Causation, Action, and Value tasks. Each supervision
+family is stratified by content complexity, production method, and training use. Table 13 summarizes the
+hierarchy and its downstream uses.
+Scene annotation is organized progressively from physical evidence to structured state and then to scene
+relations. L0 Physical / Evidence records physical evidence that is directly observed or computed. L1
+Structured State organizes objects, road elements, signals, and ego state into a structured state. L2 Driving
+Relation describes the objective relations among these entities.
+Policy annotation uses the continuous driving decision process as its organizing object and expands across
+physical execution, decision segments, decision instances, and counterfactual candidates. The Physical /
+Execution level records actual ego motion, action execution, the recorded trajectory, velocity, acceleration,
+and spatial relations, while referencing the corresponding Scene states. The Event level represents Decision
+Segments obtained by partitioning an entire clip through rule–model collaboration. Rules generate lateral and
+longitudinal action keyframes defined by Meta Action, while human annotators mark lateral and longitudinal
+semantic keyframes. Rules and large language models then jointly merge and filter these keyframes to produce
+event-level temporal segments, termed Decision Segments. The Decision level consists of factor-decision
+causal pairs within each Decision Segment. Annotation first identifies a Critical Factor instance and then
+binds the associated lateral or longitudinal decision label to that factor. The resulting pair constitutes a
+Decision Instance. A segment may contain multiple instances, which retain their own valid time ranges and
+are managed asynchronously across different factors and lateral or longitudinal decisions. The Counterfactual
+level records controlled changes to scene factors and comparisons among alternative candidate behaviors.
+37
+
+
+Table 13 Annotation hierarchy, production methods, and training uses in DriveFoundry.
+Annotation level
+Content and targets
+Production
+Training use
+Scene
+L0–L1
+Objects, road geometry, signals,
+occupancy, and motion states;
+structured labels and QA.
+Rules, sensor geometry, and
+autolabeling with sampling
+inspection.
+Perception pretraining
+and SFT.
+Scene
+L2
+Relations among objects, roads, and
+signals; relation labels and grounded
+QA.
+Rule–model fusion and
+VLM pre-labeling with
+human verification.
+Perception and Causation
+training.
+Policy
+Execution
+Recorded trajectories, kinematics, and
+meta-action labels.
+Trajectory processing and
+rule-based labeling.
+Action SFT; temporal
+grounding for CoC.
+Policy
+Event
+Decision Segments and their temporal
+boundaries.
+Rule–LLM merging of
+action keyframes and
+human-marked semantic
+keyframes.
+Temporal alignment for
+Causation and Action.
+Policy
+Decision
+Factor–decision pairs (Decision
+Instances), roles, valid time ranges, and
+grounded CoC explanations.
+Factor extraction,
+decision-label binding, and
+human review.
+Causation pretraining
+and SFT.
+Policy
+Counterfactual
+Controlled changes to scene factors and
+alternative candidate behaviors;
+feasibility and preference comparisons.
+Controlled comparisons,
+candidate generation, rule
+checks, and expert review.
+Causation and Value
+supervision.
+Value
+Five-dimensional binary problem labels
+and textual assessments; continuous
+quality scores, feasibility labels, and
+preferences.
+Rules and calibrated
+annotators with human
+review.
+Value training; shared
+candidate assessments for
+VOC supervision.
+Feasibility labels support rule-based checks. World supervision comes from candidate-matched future visual targets.
+Annotation first extracts Critical Factor instances that affect the formation, persistence, or realization of
+a decision. It then annotates each factor with the associated lateral or longitudinal decision label, relation
+type, valid time range, source object, source state, affected aspect, and evidence source. The decision label
+identifies the concrete lateral or longitudinal decision that the factor affects and constitutes the decision
+end of the causal pair. The source object and source state identify the entity and state from which the
+factor arises. The evidence source references Scene labels or raw observations supporting the judgment. The
+relation type distinguishes MOTIVE, which promotes or maintains a decision, from CONSTRAINT, which limits
+its realization or feasible set. The affected aspect specifies the planning aspect influenced by the factor. The
+factor and its bound decision label, together with these attributes and their valid time range, are recorded as
+one Decision Instance. Different factors associated with the same behavior label retain separate instances; a
+factor associated with both lateral and longitudinal labels likewise forms separate pairs. A source object is
+an evidence index rather than a Decision Instance: its state and planning relevance identify the factor. The
+referenced Scene facts can be reused across instances.
+Table 14 summarizes the semantic decision labels used in factor–decision pairs. Lateral and longitudinal labels
+may co-occur.
+Value annotation records binary problem indicators for safety, comfort, efficiency, compliance, and route
+adherence, with 1 indicating a problem in the corresponding dimension. Separate feasibility labels record
+hard-constraint violations, while physical measures such as clearance, time margins, smoothness, and progress
+support continuous quality supervision and candidate preferences.
+Labels retain their evidence, confidence, and applicability. Uncertain or unobservable judgments are masked,
+and incomparable pairs do not supply preference supervision. At inference, hard-constraint tests are performed
+by the separate rule-based Check module. Figure 15(a–b) summarizes the annotation structure and the shared
+scene–candidate record.
+38
+
+
+Table 14 Semantic decision labels used in factor–decision annotation.
+Decision label
+Meaning
+Lateral decisions
+Lane Keep
+Remain within lane boundaries, allowing in-lane offsets below 0.3 m.
+Lane Change
+Move to an adjacent lane; specify left or right.
+Nudge
+Temporarily offset within the lane, or briefly cross a lane line and return, to
+increase clearance.
+Merge/Split
+Follow a ramp/main-road transition or a lane merge/split at an intersection.
+Turn
+Enter another road segment with a significant heading change; specify left or right.
+Longitudinal decisions
+Gap Searching
+Adjust speed to match the target traffic flow or create a suitable gap for a lateral
+maneuver.
+Passing with Lateral Movement
+Adjust speed to pass an obstacle with a lateral maneuver, or move ahead of an
+adjacent vehicle or its blind spot.
+Overtaking
+Proceed with the ego vehicle’s right of way, adjusting speed or lateral position as
+needed.
+Speed Adaptation
+Adjust speed for road geometry, topology, or visibility; excludes blind spots caused
+by vehicles.
+Yield
+Give way to a specific road user.
+Start up
+Move from rest without interference from other road users; excludes restarting
+while following another vehicle.
+Stop for Static Constraints
+Stop and remain stopped at a required control point, such as a stop line or traffic
+signal.
+Lead Obstacle Following
+Follow the nearest same-direction road user on the ego path at a safe time gap,
+including stops and restarts.
+Set Speed Tracking
+Track the target speed when no other driving constraint applies.
+All decisions remain subject to safety and feasibility constraints.
+(a) Annotation hierarchy
+(b) Scene-candidate record
+(c) Task data
+Scene
+Policy
+Value
+L0  Evidence
+L1  States
+L2  Relations
+Execution
+Decision segments
+Decision instances
+Counterfactual
+Feasibility
+5D problem labels
+Quality & preference
+Decision segment
+Causal pair = decision instance
+Critical factors
+Decision labels
+Valid time
+t0
+t1
+I1
+Navigation goal [M]
+Turn [Lat]
+I2
+Turn-only lane [C]
+Turn [Lat]
+I3
+Crossing agent A [M]
+Yield to A [Long]
+M: Motive   C: Constraint
+One pair / instance per row
+Shared scene
+Same decision time & horizon
+Executed
+Alternative
+Observed
+outcomes
+Counterfactual
+judgments
+Candidate assessments
+Scene
+Perception QA
+Scene + Policy
+CoC QA
+Causal pairs
+CoC SFT
+Meta Action + Trajectory
+Planning SFT
+Candidate assessments
+Value QA + supervision
+History + trajectory + matched future
+World prediction
+Figure 15 Unified annotation hierarchy, scene–candidate records, and task-data derivation.
+39
+
+
+B.3
+Deriving Task Data from Structured Annotations
+Structured annotations provide a common factual source for Perception, CoC, Action, and Value tasks.
+Perception pretraining uses hierarchical QA translated from Scene states L0–L2 labels and covers physical
+evidence, structured state, and objective scene relations. CoC pretraining jointly uses Scene and Policy
+ground truth to generate QA about scene evidence, Decision Segments, Critical Factor instance extraction,
+decision-label binding on each factor, and the attributes and roles of the resulting factor-decision causal pairs
+(Decision Instances). Because Scene and Policy are hierarchical, the derived QA retains the source level,
+question type, and difficulty. Value pretraining also uses textual analyses of candidate trajectories in the
+five evaluation dimensions. The continuous Action decoder is introduced during SFT. Figure 15(c) maps the
+structured annotations to task data and separates the raw-image World-model interface.
+A large language model performs linguistic translation during QA production but does not create facts. Every
+QA example must trace back to its source record, source fields, and annotation version. After generation,
+factual-consistency checks prevent the QA from introducing objects, states, relations, or future information
+that are absent from the structured ground truth.
+During SFT, Perception learns from the corresponding scene labels, while Causation learns factor extraction,
+decision-label binding, relation roles, and grounded CoC explanations. Action learns meta-actions and
+continuous trajectories. Temporal annotations align the factors and decisions with the corresponding trajectory
+segments.
+World predicts visual tokens for future observations at 1, 2, and 3 s, conditioned on the scene history and
+a specific candidate trajectory. For recorded behavior, the corresponding future observations provide the
+supervision targets. Alternative candidates require their own valid future targets; the recorded future is
+not automatically assigned to them. World loss is computed only on executed World paths with valid
+candidate-matched targets.
+Value uses the five-dimensional binary problem labels and continuous quality supervision defined above, with
+invalid or inapplicable targets masked. These signals are retained separately during data production.
+For post-training, human-refined assessments of recorded trajectories train and calibrate the annotation
+model. The calibrated annotator evaluates diverse candidates generated by the SFT model, forming fixed
+scene–candidate supervision for Value.
+VOC supervision reuses these candidate assessments. Alternative task and latent-budget expansions are
+executed from the same saved SFT inference prefix, recording the current state, proposed task and latent-
+budget configuration, selected candidate, and incremental execution cost. Value learns individual candidate
+quality; VOC learns the improvement in the selected candidate relative to stopping, minus the additional
+execution cost.
+These rollout annotations are prepared offline before post-training to reduce generation and annotation
+overhead. Online collection is also possible. Rule rewards for Action are computed separately during RL.
+B.4
+Overall Structured-Annotation Production Pipeline
+The DriveFoundry data-production process starts from recorded driving data containing raw observations
+and the actual ego trajectory. After synchronization, cleaning, and segmenting, the data enter an automatic
+annotation line and a CoC annotation line. The two lines share raw observations, ego trajectories, and basic
+labels. The automatic line provides reusable Scene facts, while the CoC line organizes Policy annotations and
+feeds evidence gaps discovered during analysis back to the relevant annotation modules. Human annotation and
+evaluation run through both lines, and reviewed outputs are assembled into unified Labels and scene–candidate
+records. Table 15 lists the production modules and quality gates. Figure 16 shows their organization into
+parallel production lines and the exchange of Scene evidence.
+The automatic annotation line generates Scene information at scale. Autolabeling models use available sensor
+data and geometric auxiliary information to generate objects, lanes, stop lines, drivable areas, attributes,
+occlusion, signal states, and cross-frame tracks. Rule modules compute kinematic quantities, temporal
+40
+
+
+Table 15 Production modules, quality checks, and feedback targets in the DriveFoundry annotation pipeline.
+Module
+Main outputs
+Quality checks
+Feedback target
+Rule-based
+Kinematic quantities and feasibility
+labels.
+Physical validity and
+boundary-case tests.
+Rules and thresholds.
+Autolabeling
+Objects, attributes, and tracks
+(L0–L1).
+Stratified inspection, confidence,
+and temporal consistency.
+Labeling model and
+sampling policy.
+Rule–model fusion
+Scene relations, road topology, and
+associations (L2).
+Rule–model conflicts, topology, and
+temporal consistency.
+Fusion rules and
+model.
+CoC annotation
+Decision segments, factor–decision
+pairs, and CoC.
+Factor accuracy and coverage;
+label/role binding; timing and
+evidence.
+CoC model and
+annotation
+guidelines.
+Human / expert
+Semantic keyframes, reviewed
+relations, and candidate
+assessments.
+Annotator agreement, evidence
+support, and observability.
+Guidelines and hard
+cases.
+Record release
+Versioned scene–candidate records
+and task datasets.
+Field completeness, provenance,
+and cross-module consistency.
+Data version and
+training
+configuration.
+boundaries, collision relations, and explicit safety constraints from the available geometry, states, and
+trajectories. Rule–model fusion establishes associations between objects and road elements, road topology,
+and temporal relations, and checks physical boundaries and cross-frame consistency. The line covers L0, L1,
+and L2 relations that can be generated reliably by rules and models; complex or ambiguous relations are
+supplemented by VLM pre-labeling and human review.
+The CoC annotation line combines recorded clips with Scene annotations to produce temporal factor–decision
+pairs and grounded explanations, as detailed in Section B.5. Evidence gaps trigger supplementation and review
+in the automatic annotation line. The resulting records link decisions to trajectories, observed outcomes, and
+candidate assessments.
+Annotation production
+Driving clips
+Prepare
+Sync + clean
+Recorded trajectory
+Rules
+Autolabeling
+Rule-model
+fusion
+Scene L0-L2
+Reusable evidence
+Evidence
+completion
+Evidence gap
+Evidence
+CoC annotation
+Segments
+Factors
+Bind labels
+Causal pairs = decision instances
+Policy / CoC
+Trajectory alignment
+Recorded + SFT candidates
+Same scene & horizon
+Candidate evaluation
+Rules + calibrated annotator
+Consistency checks
+Evidence / time / IDs
+Scene-candidate records
+Versioned labels
+Human review: Scene, CoC, Value labels, and consistency
+Figure 16 Overall structured-annotation production pipeline.
+41
+
+
+B.5
+Decision-Centric CoC Annotation Process
+A frame-level CoC record can pair a Meta Action keyframe with one factor and one decision label to explain
+the recorded trajectory. Restricting annotation to this form leaves six aspects of continuous decision-making
+under-specified:
+1. No temporal representation of the decision process. A frame-level Decision Label and Critical Factor
+cannot describe the process from intent formation through execution, completion, or interruption, nor
+can they represent changes in the entry, exit, and influence of associated factors.
+2. No asynchronous lateral and longitudinal decisions. Lateral and longitudinal decisions have different
+formation, persistence, and switching rhythms, which are difficult to express with a frame-level label or
+a joint lateral–longitudinal category.
+3. No representation of multiple objects and simultaneous decisions. A vehicle may turn, yield to one
+object, and pass before another object at the same time. A single decision label loses the factors and
+composition of these local decisions.
+4. No planning-role semantics for Critical Factors. The same scene factor may motivate or maintain
+a decision, or constrain the feasible set for realizing it. Merely recording a Critical Factor does not
+distinguish these roles.
+5. No counterfactual candidate analysis. Recording only the executed trajectory prevents comparison
+with alternative trajectories in safety, efficiency, comfort, and rule compliance, and cannot distinguish
+an infeasible candidate from a feasible but inferior one.
+6. Unstable machine semantics in free-text CoC. Free text can introduce hallucination and post-hoc
+rationalization and is difficult to validate as a closed set, analyze statistically, or use as stable ground
+truth.
+DriveFoundry represents CoC as a temporally structured set of factor-decision causal pairs grounded in Scene
+evidence. This representation supports concurrent lateral and longitudinal decisions and traceable causal
+explanations across a driving clip.
+Meta Action defines the lateral and longitudinal actions used by rules to generate action keyframes over the
+clip. Human annotators separately mark lateral and longitudinal semantic keyframes reflecting meaningful
+decision boundaries. Rules and large language models jointly merge and filter the two keyframe sources,
+retaining the temporal anchors used to partition the clip into Decision Segments with explicit start and end
+times. These segments constitute the Event level, as shown in Figure 17(a).
+Within each Decision Segment, annotation first extracts Critical Factor instances and forms a Critical Factor
+List. It then binds the associated lateral or longitudinal decision label to each factor and records the applicable
+role or roles (MOTIVE, CONSTRAINT, or both), valid time range, source object, source state, affected aspect,
+and evidence source. Each resulting factor-decision causal pair constitutes a Decision Instance at the Decision
+level; the decision label is the decision end of the pair rather than a separate instance. These instances are
+managed asynchronously according to their factors, decision dimensions, and valid time ranges, allowing
+multiple local decisions to coexist. Figure 17(b) summarizes this factor extraction and decision-label binding.
+Changes in factor state, role, or bound label are recorded on the corresponding pair timeline, with object
+identity, state, and relation references kept consistent with Scene evidence.
+Structured CoC organizes the Decision Instances within each segment, together with their temporal relations
+and outcomes. These explicitly typed relations can be checked for consistency. Natural-language reasoning
+derives a concise causal explanation from these relations for CoC SFT, analysis, and debugging. Each
+explanation states the relevant factors before the decisions they support, using the explicit form “Because
+[factors], the ego vehicle [decisions].” The clauses trace back to the same structured pairs and evidence
+available at the decision time. Trajectory alignment uses the actual ego trajectory already recorded in the
+driving data and associates it with the valid time ranges of the Decision Segment, Decision Instance, and
+Critical Factors. It describes how a decision is realized as action execution and whether the action is completed,
+interrupted, or switched.
+42
+
+
+Counterfactual annotation covers both changes to scene factors and comparisons among alternative behaviors.
+Factor interventions specify a physically consistent change and assess its effect on decision feasibility or
+candidate preference.
+For behavior comparisons, at least two candidates with alternative semantic decisions or trajectories are
+evaluated under the same scene history and planning horizon. Feasibility and mandatory constraints are
+checked first. Feasible candidates are then compared using the five-dimensional assessments and continuous
+quality measures. Each judgment retains its evidence source and confidence, including those for unexecuted
+candidates.
+Figure 17 Decision-Centric CoC: clip segmentation, factor-decision grounding, and optional candidate comparison.
+Figure 5 illustrates the temporal alignment of visual evidence, lateral and longitudinal decisions, and CoC
+explanations in an intersection scenario. The ego vehicle changes lanes to prepare for a left turn, yields to
+conflicting traffic, and follows the vehicle ahead after turning.
+B.6
+Quality Control and Annotation-Model Iteration Loop
+Before release, the data undergo stratified quality checks. Rule labels are tested with unit tests and boundary-
+case regression. Autolabeling results are sampled by category and scenario and checked for cross-frame
+consistency. The fusion module is checked for model–rule conflict rate, topological validity, and temporal
+consistency. CoC annotation is checked for action and semantic keyframe coverage, rule–LLM merging and
+filtering, Event-level decision-segment boundaries, membership of each factor-decision causal pair as one
+Decision Instance within its segment, and asynchronous intervals across factors and lateral or longitudinal
+labels. Critical Factor instance extraction is checked for omission, wrong selection, duplicates, and object-
+identity consistency; attribute and role annotation is checked for accurate binding of each lateral or longitudinal
+decision label to its factor, agreement between the causal-pair record and Decision Instance identity and
+valid time range, state accuracy, MOTIVE/CONSTRAINT and affected-aspect consistency, valid time ranges,
+and Scene evidence references. Decision causes must be supported by evidence available at the decision
+time, while observed outcomes and decision evidence are recorded separately. Value annotation is checked
+for consistency in candidate comparison, the rate of incomparable cases, and conflicts among dimensions.
+QA data are checked for source-field traceability and factual correctness. Figure 18 connects these checks to
+accepted-data release, issue-specific corrections, and annotation-model iteration. Its quality gate also checks
+the temporal CoC example in Figure 5: each explanation must include all factors valid in its interval, preserve
+the associated decisions, and place the factor clause before the decision clause.
+Quality control is also the entry point for annotation-model iteration. Human-confirmed high-quality labels
+43
+
+
+are added to the corresponding annotation-model training set. The model pre-labels new data in batches,
+and confidence, scene difficulty, and model disagreement determine which samples require human review.
+Low-quality rules trigger rule revision; weak model performance on particular scenes triggers difficult-sample
+mining and retraining; disagreement among human annotators triggers specification updates and expert
+adjudication; and factual errors in QA trigger updates to generation templates or translation models.
+For CoC, human-confirmed Critical Factor instances, their bound decision labels, factor attributes and roles,
+and Structured CoC continuously train and update the annotation model. Evaluation covers factor-instance
+extraction accuracy and completeness, factor–label binding accuracy, consistency of pair and instance identity
+and timing, and the consistency of role semantics and evidence references. Weak scenes are fed into the
+next round of sampling and human review. As performance improves, human work shifts toward high-value
+samples, low-confidence review, and long-tail evaluation, forming a loop of seed annotation, batch model
+pre-labeling, difficult-case review, and model retraining.
+Verified failures from development evaluation and fleet operation also guide scene selection, candidate
+generation, and targeted label correction. Reviewed records feed subsequent driving-model training as well as
+annotation-model updates.
+Derived QA, generated candidates, and scheduling records inherit the split assignment of their source clips.
+Held-out test records are excluded from driving-model and annotation-model training and from calibration.
+Figure 18 Quality-gated data release and annotation-model iteration loop.
+C
+Supplementary Evaluation Details
+CoC evaluation.
+Following the evaluation protocol in the main text, a CoC output passes only if it correctly
+identifies key factors, covers the relevant decisions correctly and completely, attributes those decisions correctly,
+and contains no hallucinated claims. Trajectory quality is evaluated separately from explanation quality.
+Prediction horizons.
+Action generates a 6.4-second trajectory at 10 Hz. World conditions on the first 3 s of
+that trajectory, sampled at 2 Hz, and predicts visual tokens at future horizons of 1, 2, and 3 s. Its prediction
+therefore covers the near-term consequences of the longer Action plan.
+44
+
+
+Figure 19 Cases of Our CoC compared with AR2’s CoC
+45
+
+
+Figure 20 Qualitative case study on 6 sign-dense scenes (1–6). Each case presents the key factors that the ego vehicle
+must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take, and
+the counterfactual QA pairs.
+46
+
+
+Figure 21 Qualitative case study on 6 sign-dense scenes (7–12). Each case presents the key factors that the ego vehicle
+must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take, and
+the counterfactual QA pairs.
+47
+
+
+Figure 22 Qualitative case study on 6 sign-dense scenes (13–18). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+48
+
+
+Figure 23 Qualitative case study on 6 sign-dense scenes (19–24). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+49
+
+
+Figure 24 Qualitative case study on 6 sign-dense scenes (25–30). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+50
+
+
+Figure 25 Qualitative case study on 6 sign-dense scenes (31–36). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+51
+
+
+Figure 26 Qualitative case study on 6 sign-dense scenes (37–42). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+52
+
+
+Figure 27 Qualitative case study on 6 sign-dense scenes (43–48). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+53
+
+
+Figure 28 Qualitative case study on 6 sign-dense scenes (49–54). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+54
+
+
+Figure 29 Qualitative case study on 6 sign-dense scenes (55–60). Each case presents the key factors that the ego
+vehicle must attend to in the current frame, the CoC, the lateral and longitudinal decisions the ego vehicle should take,
+and the counterfactual QA pairs.
+55
+
+
+Figure 30 Qualitative results of trajectory-conditioned world model generation on the Physical AI test set.
+D
+Additional Qualitative Results
+To qualitatively evaluate our model’s ability to understand driving scenes, we first compare the CoC outputs of
+our method and AR2 on six cases (Fig. 19). We then present 60 representative visualized cases (Figs. 20–29).
+For each scene, we list the critical factors that the ego vehicle must attend to, the CoC, the lateral and
+longitudinal decisions the ego vehicle should take, and the counterfactual QA pairs.
+Figure 30 presents qualitative results of our world model on the Physical AI dataset. We examine future-
+frame generation under both ground-truth trajectory conditioning and counterfactual interventions. The
+counterfactual examples modify the conditioning trajectory through mirroring or speed scaling, illustrating
+how the generated visual predictions respond to changes in the specified ego motion. Figure 31 presents
+four qualitative examples of planning results from Xiaomi-Drive-o1 and the corresponding CoC boxes on the
+PhysicalAI test set.
+56
+
+
+(a)
+(b)
+(c)
+(d)
+Figure 31 Four qualitative examples of planning results from Xiaomi-Drive-o1 and the corresponding CoC boxes on
+the Physical AI test set.
+57

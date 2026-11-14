@@ -1,0 +1,698 @@
+Title: RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving
+
+URL Source: https://arxiv.org/pdf/2611.13790v1
+
+Published Time: Wed, 11 Nov 2026 02:30:50 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+# RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving 
+
+# Yu Zhao 
+
+School of Software Technology Zhejiang University Ningbo, China y.zhao@zju.edu.cn 
+
+# Hongyi Duan 
+
+School of Software Technology Zhejiang University Ningbo, China 22551120@zju.edu.cn 
+
+# Ming Yin 
+
+School of Software Technology Zhejiang University Ningbo, China ming.yin@zju.edu.cn 
+
+# Hongyuan Zhang 
+
+School of Software Technology Zhejiang University Ningbo, China metastarxx@gmail.com 
+
+# Fan Yang 
+
+School of Software Technology Zhejiang University Hangzhou, China fyoung@zju.edu.cn 
+
+# Hongzhi Wang 
+
+School of Software Technology Zhejiang University Ningbo, China 1030168088@qq.com 
+
+# Xiubo Liang 
+
+School of Software Technology Zhejiang University Ningbo, China xiubo@zju.edu.cn Scores 
+
+> Scores Of Different Possible Future Conditions Under Candidate 1
+
+M-quantiles 
+
+> Possible Risky Conditions Under Candidate 1
+
+Scores M-quantiles    
+
+> Moderate or Safe Conditions Under Candidate 1 Moderate or Safe Conditions Under Candidate 2 Scores Of Different Possible Future Conditions Under Candidate 2High ⚠
+> lower-tail Shortfall Low ✅
+> lower-tail Shortfall High-Risk Candidate
+> Low-Risk Candidate
+> Candidate 1 Candidate 2
+> 3.04 2.98
+> Just Pick Higher Score ？Really Better ？
+> High-Risk conditions are hidden behind Single Mean Score!
+
+Which One to Pick ? 
+
+Figure 1: Why deterministic mean scoring can fail. Two ego candidates may have similar mean scores, yet one can still hide a small set of catastrophic future-condition branches. RiSE-Drive therefore evaluates each candidate under multiple future-condition branches, forms a distribution over branch-level long-horizon outcomes, and ranks candidates with risk-sensitive statistics such as the mean, lower quantiles, and CVaR. 
+
+This work is licensed under a Creative Commons Attribution 4.0 International License. 
+
+MM ’26, Rio de Janeiro, Brazil 
+
+© 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2213-4/2026/11 https://doi.org/10.1145/3767308.3836337 
+
+## Abstract 
+
+End-to-end autonomous driving systems increasingly rely on gen-erating multiple trajectory candidates and selecting one for exe-cution. In this setting, a central challenge is no longer only candi-date generation, but how to evaluate candidates according to their long-horizon consequences under uncertainty. Existing methods still mainly use deterministic point scores, heuristic subscores, or single-outcome evaluations, which makes it difficult to capture de-layed failures , tail risk , and ranking instability under plausible arXiv:2611.13790v1 [cs.RO] 10 Nov 2026 MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil Zhao et al., Yu Zhao, Hongyi Duan, Ming Yin, Hongyuan Zhang, Fan Yang, Hongzhi Wang, and Xiubo Liang 
+
+future perturbations. We present RiSE-Drive , a framework for risk-sensitive long-horizon candidate evaluation in end-to-end au-tonomous driving. RiSE-Drive first performs candidate-conditioned latent future rollout, then estimates long-horizon outcome distri-butions instead of single scalar scores, and finally ranks candidates using a tail-risk-aware and perturbation-robust decision criterion. This reformulates candidate scoring from deterministic oracle-style evaluation into distributional outcome assessment with explicit risk control. As a result, the evaluator is encouraged to prefer candidates that are not only strong under nominal conditions, but also reliable under long-horizon rollout and safety-critical deviations. Experi-ments on the NAVSIM-v1 and NAVSIM-v2 benchmarks , as well as the closed-loop HUGSIM benchmark , show that RiSE-Drive achieves state-of-the-art performance and significantly improves the robustness of candidate selection. 
+
+## CCS Concepts 
+
+• Computing methodologies → Planning and scheduling .
+
+## Keywords 
+
+End-to-End Autonomous Driving, NAVSIM, Multimodal Trajectory Planning, CVaR   
+
+> ACM Reference Format:
+> Yu Zhao, Hongyi Duan, Ming Yin, Hongyuan Zhang, Fan Yang, Hongzhi Wang, and Xiubo Liang. 2026. RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving. In Proceedings of the 34th ACM International Conference on Multimedia (MM ’26), November 10–14, 2026, Rio de Janeiro, Brazil. ACM, New York, NY, USA, 10 pages. https://doi.org/10.1145/3767308.3836337
+
+## 1 Introduction 
+
+End-to-end autonomous driving aims to map raw multi-view ob-servations directly to a safe, rule-compliant, and route-progressive future ego trajectory in a unified learned planner [6, 13, 15, 47]. Modern systems increasingly adopt a generate-and-select paradigm, where a proposal module enumerates multiple feasible futures and a selector chooses one for execution [11, 18, 20, 25]. Under behavior-grounded evaluation such as NAVSIM and NAVSIM-v2 [3, 8], the central challenge is therefore not only to generate plausible can-didates, but to evaluate which candidate remains best under long-horizon interactions and future uncertainty. Among recent ResNet-34-based planners, MindDrive [40] is a strong representative of richer future reasoning. Yet, at the surface level, even strong planners can remain brittle in safety-critical long-tail scenes and perturbed rollouts: several candidates may receive similar nominal scores, while the selected one fails after down-stream interactions. The deeper reason is that candidate quality is not a deterministic scalar, but a distribution of long-horizon conse-quences induced by uncertain future conditions. Existing methods still largely compress this uncertainty into point scores, heuristic subscores, or single-outcome estimates, without explicit candidate-conditioned counterfactual rollout and lower-tail risk modeling. As a result, hidden tail failures remain invisible to the selector, and ranking becomes unstable exactly when robustness matters most. We address this limitation with RiSE-Drive , a risk-sensitive long-horizon candidate evaluator for end-to-end driving. RiSE-Drive leaves the upstream perception and proposal-generation pipeline unchanged and modifies only the evaluation stage. For each candidate, it predicts a compact set of future-condition branches, performs candidate-conditioned latent consequence propagation, decodes one long-horizon outcome sample for each branch, esti-mates an outcome distribution through ordered quantiles, and ranks candidates using a criterion that combines the mean, lower-tail Con-ditional Value-at-Risk (CVaR) [36], and cross-condition instability. This design directly targets the root cause above: branchwise roll-out captures delayed interaction effects, distributional estimation exposes hidden tail failures, and CVaR-based ranking favors tra-jectories that remain reliable not only in expectation but also in the lower tail under plausible future deviations. Instantiated on top of DrivoR [18], RiSE-Drive is orthogonal to backbone scaling and isolates the value of better candidate evaluation. Our contributions are summarized as follows: (1) We identify a central evaluation mismatch in candidate-based end-to-end driving: candidate quality should be modeled as a distribution over future-condition-dependent long-horizon outcomes, rather than reduced to a single deterministic score. (2) We propose RiSE-Drive , a unified evaluator that combines future-condition modeling, candidate-conditioned latent con-sequence propagation, distributional outcome estimation, and CVaR-based risk-sensitive ranking to make trajectory selection explicitly tail-risk aware. (3) RiSE-Drive achieves state-of-the-art results on NAVSIM-v1 [8], NAVSIM-v2 [3], and HUGSIM [55]. Under a matched DrivoR setup [18], it improves PDMS from 93.1 to 94.2, EPDMS from 48.3 to 51.3, and average HD-Score from 35.7 to 39.5, while consistently improving safety-critical and closed-loop robustness on hard and perturbation-heavy settings. 
+
+## 2 Related Work 
+
+End-to-end autonomous driving planning. Viewed chrono-logically, the development of end-to-end planning is less a story of ever-heavier perception backbones than a redefinition of the planner’s output space. Early systems such as VAD, TransFuser, UniAD, and PARA-Drive established the viability of unified plan-ners built on learned scene representations, stronger sensor fu-sion, and planning-oriented supervision [6, 13, 15, 47]. The next bottleneck, however, was objective mismatch: optimizing a single demonstrated trajectory encourages an average-case imitation pol-icy, even though urban driving is fundamentally set-valued and often admits multiple near-optimal behaviors. This motivated a second wave that recast planning as sequence modeling or density estimation, including autoregressive methods [5, 10], probabilistic or generative planners [4, 30, 53], and diffusion/flow-based formu-lations [16, 28, 32, 39, 44, 49]. In this regime, the decisive question is not merely whether a model can output a plausible future, but whether its decision space preserves sufficient behavioral support to remain reliable when multiple futures are simultaneously feasi-ble. NAVSIM and NAVSIM-v2 make this shift explicit, since their behavior-grounded metrics reward safety, progress, compliance, RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil 
+
+and robustness under perturbation rather than mere open-loop trajectory closeness [3, 8, 31, 52]. 
+
+Candidate generation, trajectory scoring, and selection. 
+
+An increasingly influential design pattern formulates E2E plan-ning as maintaining a candidate set and learning a selector over it. Early structured planners such as SparseDrive already expose this decomposition through sparse scene representations and explicit proposal reasoning [42], while Hydra-MDP and Hydra-MDP++ make multimodal candidate generation a first-class objective via hydra-distillation [20, 25]. Under NAVSIM-style evaluation [3, 8], this decomposition becomes even more consequential: the main difficulty is often not producing nominally plausible trajectories, but deciding which candidate is safest and most decision-optimal under safety, progress, and rule-compliance trade-offs. Accordingly, TransDiffuser emphasizes the support quality and decorrelation of the candidate set [16]; WoTE and World4Drive rank candidates through future-aware world modeling [23, 54]; and DriveSuprim, GTRS, ZTRS, and DrivoR make trajectory scoring itself a primary design axis [18, 26, 27, 50]. Among them, DrivoR is a particularly relevant baseline: it couples efficient transformer-based perception with disentangled proposal generation and oracle-supervised sub-score prediction, showing that lightweight proposal-and-selection pipelines can be highly competitive on NAVSIM [18]. Importantly, DrivoR is not a plain point predictor—it produces multiple propos-als and learns to rank them—but its proposal set is still generated by a one-shot deterministic decoder from fixed learned queries under winner-takes-all supervision, and the selector operates with-out explicit action-conditioned rollout of future scene responses, forcing long-horizon consequences to be inferred from the current compressed scene representation alone [18]. As a result, when sev-eral candidates are locally plausible but diverge mainly through downstream interactions, selection quality can still be bottlenecked by limited counterfactual consequence modeling. Related proposal-centric formulations such as ComDrive and iPad further reinforce that modern E2E planning is increasingly governed by candidate coverage, scoring fidelity, and risk-sensitive selection rather than raw trajectory regression [11, 43]. 
+
+## 3 Preliminary 3.1 Candidate-Based End-to-End Driving with DrivoR 
+
+Candidate-based end-to-end driving methods first generate a finite set of feasible future ego trajectories and then select one trajectory for execution via a learned evaluation module. DrivoR provides a representative generate-and-score formulation and serves as the baseline planning pipeline in our framework. It consists of a com-pact multi-camera scene encoder, a proposal generator that outputs multiple trajectory candidates, and a scoring module that evaluates these candidates by predicted driving-quality sub-scores. At discrete time step 𝑡 , the observation is defined as 
+
+𝑜 𝑡 =
+
+n
+
+I(𝑛 )
+
+> 𝑡
+
+o𝑁 𝑛 =1 , e𝑡 
+
+
+
+, (1) where I(𝑛 ) 
+
+> 𝑡
+
+∈ R𝐻 𝐼 ×𝑊 𝐼 ×3 is the RGB image from the 𝑛 -th onboard camera, 𝑁 is the number of cameras, and e𝑡 ∈ R𝑑 𝑒 is the ego-state vector containing pose, velocity, acceleration, and navigation command. The perception encoder maps the observation to a compact scene-token representation 
+
+R𝑡 = 𝐹 enc (𝑜 𝑡 ) ∈ R𝑁 𝑟 ×𝐷 , (2) where 𝑁 𝑟 is the number of scene tokens and 𝐷 is the token dimen-sion. The proposal generator then predicts a set of 𝐾 candidate ego trajectories, 
+
+T𝑡 = {𝜏 1, 𝜏 2, . . . , 𝜏 𝐾 } = 𝐺 prop (R𝑡 , e𝑡 ). (3) Each candidate trajectory is a sequence of 𝐻 future ego states, 
+
+𝜏 𝑖 = p𝑖,ℎ  
+
+> 𝐻 ℎ=1
+
+, p𝑖,ℎ = (𝑥 𝑖,ℎ , 𝑦 𝑖,ℎ , 𝜃 𝑖,ℎ ) ∈ R3, (4) where 𝑥 𝑖,ℎ and 𝑦 𝑖,ℎ denote the longitudinal and lateral displace-ments in the ego-local frame, and 𝜃 𝑖,ℎ denotes the heading angle at prediction step ℎ.Given the candidate set T𝑡 , the scoring network predicts a 𝐶 -dimensional sub-score vector for each candidate, 
+
+s𝑖 = 𝐺 score (R𝑡 , 𝜏 𝑖 ) ∈ R𝐶 , (5) and aggregates it into a scalar score 
+
+𝑢 𝑖 = 𝝀 ⊤s𝑖 , 𝝀 ∈ R𝐶 . (6) The final plan is selected as 
+
+𝜏 ★ 
+
+> 𝑡
+
+= arg max  
+
+> 𝜏 𝑖 ∈ T 𝑡
+
+𝑢 𝑖 . (7) This formulation separates candidate generation from candidate evaluation: the proposal module produces diverse feasible futures, and the scoring module selects the candidate to execute. 
+
+## 3.2 From Deterministic Candidate Scores to Long-Horizon Outcome Variables 
+
+The deterministic scoring rule above can be written compactly as 
+
+𝑢 𝑖 = 𝑓 𝜓 (𝑜 𝑡 , 𝜏 𝑖 ), (8) where 𝑓 𝜓 denotes the candidate scoring function induced by the perception encoder, the scoring module, and the final linear aggre-gation, and 𝜓 denotes its parameters. The quality of a candidate is determined by the long-horizon consequences induced by executing that candidate. Let 𝜔 denote a future-condition variable and define 
+
+𝑌 𝑖 = 𝑌 (𝜏 𝑖 , 𝜔 ), 𝜔 ∼ 𝑝 (𝜔 | 𝑜 𝑡 ), (9) where 𝑌 𝑖 ∈ R is the long-horizon outcome associated with can-didate 𝜏 𝑖 , and 𝑝 (𝜔 | 𝑜 𝑡 ) is the conditional distribution of future conditions given the current observation. Under this formulation, the deterministic score 𝑢 𝑖 is only a point estimate of 𝑌 𝑖 and does not model the distribution of future consequences. Our objective is therefore to replace pointwise candidate evalu-ation with distributional candidate evaluation. Instead of ranking candidates by a single deterministic score, we rank them using statistics of the long-horizon outcome distribution, including its mean, lower-tail risk, and cross-condition stability. MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil Zhao et al., Yu Zhao, Hongyi Duan, Ming Yin, Hongyuan Zhang, Fan Yang, Hongzhi Wang, and Xiubo Liang 
+
+## 4 Method 4.1 Overview 
+
+RiSE-Drive leaves the upstream perception and proposal generation pipeline unchanged and modifies only the candidate-evaluation stage. As summarized in Fig. 2, it predicts a small set of future-condition branches for each scene, rolls each candidate under each branch to obtain branch-level long-horizon outcome samples, ag-gregates these samples into a candidate-level outcome distribution, and finally ranks candidates with a risk-sensitive criterion based on the mean, lower-tail CVaR, and cross-condition instability. 
+
+## 4.2 Future-Condition Modeling 
+
+We first summarize the scene tokens by mean pooling: ¯r𝑡 = 1
+
+𝑁 𝑟 𝑁 𝑟 ∑︁ 
+
+> 𝑗 =1
+
+R( 𝑗 ) 
+
+> 𝑡
+
+∈ R𝐷 , (10) where R( 𝑗 ) 
+
+> 𝑡
+
+∈ R𝐷 is the 𝑗 -th scene token. Based on ¯ r𝑡 , the future-condition generator produces 𝐿 branch-specific future-condition codes, 
+
+𝜔 𝑙 = 𝑃 (𝑙 ) 
+
+> ctx
+
+(¯r𝑡 ) ∈ R𝑑 𝜔 , 𝑙 = 1, . . . , 𝐿. (11) The resulting set 
+
+Ω𝑡 = {𝜔 1, . . . , 𝜔 𝐿 } (12) defines the set of rollout branches used in candidate evaluation. Each 𝜔 𝑙 is a learned condition code used to initialize and modulate one rollout branch. 
+
+## 4.3 Candidate-Conditioned Long-Horizon Consequence Propagation 
+
+For each candidate trajectory 𝜏 𝑖 , we compute a candidate-level embedding 
+
+c𝑖 = 𝐸 𝜏 (𝜏 𝑖 ) ∈ R𝑑 𝑐 , (13) where 𝐸 𝜏 is the candidate trajectory level encoder . We further define a step-wise trajectory-state embedding 
+
+z𝑖,ℎ = 𝐸 𝑝 (p𝑖,ℎ ) ∈ R𝑑 𝑝 , ℎ = 1, . . . , 𝐻, (14) where 𝐸 𝑝 is the step level encoder .For each candidate–condition pair (𝜏 𝑖 , 𝜔 𝑙 ), the initial latent con-sequence state is 
+
+h𝑖,𝑙, 0 = 𝑊 𝑟 ¯r𝑡 + 𝑊 𝑐 c𝑖 + 𝑊 𝜔 𝜔 𝑙 + b0, (15) where 𝑊 𝑟 ∈ R𝑑 ℎ ×𝐷 , 𝑊 𝑐 ∈ R𝑑 ℎ ×𝑑 𝑐 , 𝑊 𝜔 ∈ R𝑑 ℎ ×𝑑 𝜔 , and b0 ∈ R𝑑 ℎ are learnable parameters. We then propagate the latent consequence state over the evalua-tion horizon according to 
+
+h𝑖,𝑙,ℎ = 𝑇 𝜂 (h𝑖,𝑙,ℎ −1, z𝑖,ℎ , ¯r𝑡 ), ℎ = 1, . . . , 𝐻, (16) with ˜h𝑖,𝑙,ℎ = 𝜙  𝑊 ℎ h𝑖,𝑙,ℎ −1 + 𝑊 𝑝 z𝑖,ℎ + 𝑊 𝑠 ¯r𝑡 + bℎ
+
+ , (17) 
+
+g𝑖,𝑙,ℎ = 𝜎  𝑈 ℎ h𝑖,𝑙,ℎ −1 + 𝑈 𝑝 z𝑖,ℎ + 𝑈 𝑠 ¯r𝑡 + b𝑔 
+
+ , (18) 
+
+h𝑖,𝑙,ℎ = g𝑖,𝑙,ℎ ⊙ ˜h𝑖,𝑙,ℎ + ( 1 − g𝑖,𝑙,ℎ ) ⊙ h𝑖,𝑙,ℎ −1, (19) where 𝜙 (·) is the GELU nonlinearity, 𝜎 (·) is the sigmoid function, and ⊙ denotes element-wise multiplication. At each step, we decode an instantaneous outcome 
+
+𝑟 𝑖,𝑙,ℎ = 𝑔 𝑟 (h𝑖,𝑙,ℎ ) ∈ R, (20) and from the final state we decode a terminal outcome 
+
+𝑟 term  
+
+> 𝑖,𝑙
+
+= 𝑔 𝑇 (h𝑖,𝑙,𝐻 ) ∈ R. (21) The long-horizon outcome sample under condition 𝜔 𝑙 is defined as ˆ𝑦 𝑖,𝑙 =
+
+> 𝐻
+
+∑︁ 
+
+> ℎ=1
+
+𝛾 ℎ−1𝑟 𝑖,𝑙,ℎ + 𝛾 𝐻 𝑟 term  
+
+> 𝑖,𝑙
+
+. (22) For a fixed candidate 𝜏 𝑖 , the set 
+
+ ˆ𝑦 𝑖,𝑙  
+
+> 𝐿 𝑙 =1
+
+(23) provides a finite-sample representation of its long-horizon outcome distribution. 
+
+## 4.4 Distributional Outcome Estimation 
+
+We first pool each branch-specific latent consequence trajectory over time, ¯h𝑖,𝑙 = 1
+
+𝐻 
+
+> 𝐻
+
+∑︁ 
+
+> ℎ=1
+
+h𝑖,𝑙,ℎ ∈ R𝑑 ℎ , (24) and then pool across branches, ˜h𝑖 = 1
+
+𝐿 
+
+> 𝐿
+
+∑︁ 
+
+> 𝑙 =1
+
+¯h𝑖,𝑙 ∈ R𝑑 ℎ . (25) Based on ˜h𝑖 , the distribution head outputs 𝑀 ordered quantiles, 
+
+q𝑖 =
+
+h
+
+𝑞 (1) 
+
+> 𝑖
+
+, 𝑞 (2) 
+
+> 𝑖
+
+, . . . , 𝑞 (𝑀 )
+
+> 𝑖
+
+i⊤
+
+∈ R𝑀 , (26) where 𝑞 (𝑚 ) 
+
+> 𝑖
+
+corresponds to quantile level 𝛼 𝑚 and 0 < 𝛼 1 < 𝛼 2 < · · · < 𝛼 𝑀 < 1. (27) To enforce monotonicity, we use 
+
+𝑞 (1) 
+
+> 𝑖
+
+= 𝑎 𝑖 , 𝑎 𝑖 = ℎ0 ( ˜h𝑖 ), (28) 
+
+𝑞 (𝑚 ) 
+
+> 𝑖
+
+= 𝑞 (𝑚 −1) 
+
+> 𝑖
+
++ softplus 
+
+
+
+ℎ𝑚 ( ˜h𝑖 )
+
+
+
+, 𝑚 = 2, . . . , 𝑀, (29) which guarantees 
+
+𝑞 (1) 
+
+> 𝑖
+
+≤ 𝑞 (2) 
+
+> 𝑖
+
+≤ · · · ≤ 𝑞 (𝑀 ) 
+
+> 𝑖
+
+. (30) We define the mean estimate of the long-horizon outcome distribu-tion as ˆ𝜇 𝑖 = 1
+
+𝑀 
+
+> 𝑀
+
+∑︁ 
+
+> 𝑚 =1
+
+𝑞 (𝑚 ) 
+
+> 𝑖
+
+. (31) 
+
+## 4.5 Risk-Sensitive Ranking with CVaR 
+
+A ranking rule based only on ˆ 𝜇 𝑖 is insensitive to lower-tail failures. To account for tail risk, we use the lower-tail Conditional Value-at-Risk (CVaR). Let 
+
+𝑀 𝛼 = ⌈𝛼𝑀 ⌉, (32) where 𝛼 ∈ ( 0, 1) is the lower-tail probability level. The discrete lower-tail CVaR estimate of candidate 𝜏 𝑖 is 
+
+CVaR ↓ 
+
+> 𝛼
+
+(𝑌 𝑖 ) = 1
+
+𝑀 𝛼 𝑀 𝛼 ∑︁ 
+
+> 𝑚 =1
+
+𝑞 (𝑚 ) 
+
+> 𝑖
+
+. (33) We further define the lower-tail shortfall ˆΔ𝑖 = ˆ𝜇 𝑖 − CVaR ↓ 
+
+> 𝛼
+
+(𝑌 𝑖 ). (34) RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil Multi-View       
+
+> ……
+> Candidate Trajectory Generation Mean Pooling Future-Condition Generator
+> KCandidate Trajectories Ego States Scene Tokens
+> Proposal Generator Perception Encoder
+> Future-Condition Modeling
+> LFuture-Condition Codes
+> …
+> Summarized Scene Token
+> Candidate-Conditioned Long-Horizon Consequence Propagation Candidate Trajectory Level Encoder Step-Level Encoder Latent Consequence State Initialization …
+> KCandidate-Level Embeddings
+> ………………
+> K × H Per-Step Trajectory-State Embddings
+> …
+
+Risk-Sensitive Ranking With CVaR       
+
+> Final Risk-Sensitive Ranking Score Evaluation Cross-Condition Instability Lower-Tail CVaR Mean Estimate
+> Long-Horizon Outcome Sample
+> Instantaneous Outcome Terminal Outcome Latent Consequence State Propagation
+> …
+> Distributional Outcome Estimation
+> Candidate-Level Distribution Summary
+> Distribution Head Branch Pooling Time Pooling
+> Initial Latent Consequence State hi,l,0
+> Final Latent Consequence State hi,l,h
+> qi
+> y
+> ʌi,l
+> Final Trajectory
+> Ego
+
+Figure 2: Overview of the RiSE-Drive pipeline. Multi-view observations are encoded, and the proposal generator produces 𝐾 
+
+ego-trajectory candidates. A future-condition generator predicts 𝐿 branch-specific condition codes that parameterize plausible downstream evolutions. For each candidate–condition pair, RiSE-Drive initializes a latent consequence state, propagates it along the trajectory, and decodes one branch-level long-horizon outcome sample. The resulting branchwise consequence traces are pooled over time and across branches and mapped to ordered outcome quantiles by a distribution head. The final ranking score combines the mean estimate, lower-tail CVaR, and cross-condition instability, thereby favoring candidates that remain reliable under plausible future deviations rather than merely optimal under a single nominal forecast. 
+
+To measure cross-condition instability, we compute the branch-wise standard deviation ¯𝑦 𝑖 = 1
+
+𝐿 
+
+𝐿 ∑︁ 
+
+𝑙 =1
+
+ˆ𝑦 𝑖,𝑙 , (35) ˆ𝜎 𝑖 =
+
+vut 1
+
+𝐿 
+
+𝐿 ∑︁ 
+
+𝑙 =1
+
+  ˆ𝑦 𝑖,𝑙 − ¯𝑦 𝑖 
+
+2. (36) The final risk-sensitive ranking score is defined as ˆ𝐽 𝑖 = ˆ𝜇 𝑖 − 𝜆 tail ˆΔ𝑖 − 𝜆 var ˆ𝜎 𝑖 , (37) where 𝜆 tail ≥ 0 and 𝜆 var ≥ 0 are trade-off coefficients. Candidates with larger ˆ 𝐽 𝑖 are preferred. 
+
+## 4.6 Training Objectives 
+
+For each candidate–condition pair (𝜏 𝑖 , 𝜔 𝑙 ), we assume a supervision signal 
+
+𝑦 ★
+
+𝑖,𝑙 ∈ R, 𝑖 = 1, . . . , 𝐾, 𝑙 = 1, . . . , 𝐿, (38) which represents the target long-horizon outcome under the corre-sponding future-condition branch. We first supervise branch-level long-horizon outcome prediction using the Huber loss 
+
+Lbranch = 1
+
+𝐾𝐿 
+
+𝐾 ∑︁ 
+
+𝑖 =1
+
+𝐿 ∑︁ 
+
+𝑙 =1
+
+ℓHuber ( ˆ𝑦 𝑖,𝑙 , 𝑦 ★
+
+𝑖,𝑙 ). (39) We then supervise the predicted quantiles using the pinball loss 
+
+𝜌 𝛼 (𝑢 ) = 𝑢 (𝛼 − 1[𝑢 < 0]) , (40) 
+
+Lquant = 1
+
+𝐾𝑀𝐿 
+
+𝐾 ∑︁ 
+
+𝑖 =1
+
+𝑀 ∑︁ 
+
+𝑚 =1
+
+𝐿 ∑︁ 
+
+𝑙 =1
+
+𝜌 𝛼 𝑚 
+
+
+
+𝑦 ★
+
+𝑖,𝑙 − 𝑞 (𝑚 )
+
+𝑖 
+
+
+
+. (41) We further compute the empirical target statistics 
+
+𝜇 ★
+
+𝑖 = 1
+
+𝐿 
+
+𝐿 ∑︁ 
+
+𝑙 =1
+
+𝑦 ★
+
+𝑖,𝑙 , (42) 
+
+𝜎 ★
+
+𝑖 =
+
+vut 1
+
+𝐿 
+
+𝐿 ∑︁ 
+
+𝑙 =1
+
+
+
+𝑦 ★
+
+𝑖,𝑙 − 𝜇 ★
+
+𝑖 
+
+2
+
+, (43) and the empirical lower-tail CVaR CVaR ★↓
+
+𝛼 (𝑌 𝑖 ). (44) The corresponding target ranking score is 
+
+𝐽 ★
+
+𝑖 = 𝜇 ★
+
+𝑖 − 𝜆 tail 
+
+
+
+𝜇 ★
+
+𝑖 − CVaR ★↓
+
+𝛼 (𝑌 𝑖 )
+
+
+
+− 𝜆 var 𝜎 ★
+
+𝑖 . (45) We optimize candidate ordering with a pairwise ranking loss 
+
+Lrank =
+
+𝐾 ∑︁ 
+
+𝑖 =1
+
+𝐾 ∑︁ 
+
+𝑗 =1
+
+𝑗 ≠𝑖 
+
+max 
+
+
+
+0, 𝛿 − sign (𝐽 ★
+
+𝑖 − 𝐽 ★
+
+𝑗 )( ˆ𝐽 𝑖 − ˆ𝐽 𝑗 )
+
+
+
+, (46) where 𝛿 > 0 is a margin hyperparameter. The final objective is 
+
+L = 𝜆 𝑏 Lbranch + 𝜆 𝑞 Lquant + 𝜆 𝑟 Lrank , (47) where 𝜆 𝑏 , 𝜆 𝑞 , and 𝜆 𝑟 are nonnegative loss weights. 
+
+## 5 Experiment 
+
+We build on the DrivoR camera-only pipeline and keep its percep-tion backbone and proposal generator unchanged. Unless other-wise stated, we use four surround-view RGB cameras, a DINOv2 ViT-S backbone [35] with 16 camera-aware register tokens per cam-era, 4-layer transformer decoders with hidden dimension 256, and LoRA [12] of rank 32 following [1]. For RiSE-Drive, we set 𝐾 = 64, 
+
+𝐿 = 4, 𝑀 = 10, 𝑑 𝜔 = 𝑑 𝑐 = 𝑑 𝑝 = 𝑑 ℎ = 256, 𝛼 = 0.2, 𝛾 = 0.99, MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil Zhao et al., Yu Zhao, Hongyi Duan, Ming Yin, Hongyuan Zhang, Fan Yang, Hongzhi Wang, and Xiubo Liang 
+
+Method Input Backbone Venue NC ↑ DAC ↑ EP ↑ TTC ↑ Conf. ↑ PDMS ↑
+
+Human - - - 100 100 87.5 100 99.9 94.8 DrivingGPT [5] C VQ-VAE/GPT ICCV 2025 98.9 90.7 79.7 94.9 95.6 82.4 VADv2 [4] C ResNet-34 arXiv 2024 97.9 91.7 77.6 92.9 100 83.0 UniAD [13] C ResNet-34 CVPR 2023 97.8 91.9 78.8 92.9 100 83.4 LTF [6] C ResNet-34 TPAMI 2022 97.4 92.8 79.0 92.4 100 83.8 TransFuser [6] C & L ResNet-34 TPAMI 2022 97.7 92.8 79.2 92.8 100 84.0 PARA-Drive [47] C ResNet-34 CVPR 2024 97.9 92.4 79.3 93.0 99.8 84.0 DriveX-S [37] C InternImage-Tiny ICCV 2025 97.5 94.0 79.7 93.0 100 84.5 LAW [21] C ResNet-34 ICLR 2025 96.4 95.4 81.7 88.7 99.9 84.6 World4Drive [54] C ResNet-34 ICCV 2025 97.4 94.3 79.9 92.8 100 85.1 DRAMA [51] C & L ResNet-34 arXiv 2024 98.0 93.1 80.1 94.8 100 85.5 GoalFlow [49] C & L ResNet-34 CVPR 2025 98.3 93.8 79.8 94.3 100 85.7 Hydra-MDP [25] C & L ResNet-34 arXiv 2024 98.3 96.0 78.7 94.6 100 86.5 Hydra-MDP++ [20] C & L ResNet-34 arXiv 2024 97.6 96.0 80.4 93.1 100 86.6 ARTEMIS [10] C & L ResNet-34 arXiv 2025 98.3 95.1 81.4 94.3 100 87.0 DiffusionDrive [28] C & L ResNet-34 CVPR 2025 98.2 96.2 82.2 94.7 100 88.1 WoTE [23] C & L ResNet-34 ICCV 2025 98.5 96.8 81.9 94.9 99.9 88.3 DIVER [39] C & L ResNet-34 arXiv 2025 98.5 96.5 82.6 94.9 100 88.3 MindDrive [40] C & L ResNet-34 arXiv 2025 98.4 97.0 82.8 95.1 99.9 88.9 MeanFuser [44] C ResNet-34 arXiv 2026 98.6 97.0 82.8 95.0 100 89.0 AutoVLA [56] C Qwen2.5-VL-3B NeurIPS 2025 98.4 95.6 81.9 98.0 99.9 89.1 DriveSuprim [50] C ResNet-34 arXiv 2025 97.8 97.3 86.7 93.6 100 89.9 DriveVLA-W0 [22] C Emu3-8B arXiv 2025 98.7 99.1 83.3 95.3 99.3 90.2 ReCogDrive [24] C InternVL3-2B ICLR 2026 97.9 97.3 87.3 94.9 100 90.8 iPad [11] C ResNet-34 arXiv 2025 98.6 98.3 88.0 94.9 100 91.7 Centaur [38] C V2-99 arXiv 2025 99.5 98.9 85.9 98.0 100 92.6 DrivoR [18] C ViT-S CVPR 2026 98.9 98.3 89.1 96.2 100 93.1 
+
+RiSE-Drive (Ours) C ViT-S - 99.5 98.5 88.7 98.4 100 94.2 
+
+Table 1: NAVSIM-v1 evaluation results on the Navtest split. C denotes camera-only input and L denotes LiDAR. 
+
+Stage 1 Stage 2 Method Backbone NC DAC DDC TLC EP TTC LK HC EC NC DAC DDC TLC EP TTC LK HC EC EPDMS LTF [6] ResNet-34 96.2 79.5 99.1 99.5 84.1 95.1 94.2 97.5 79.1 77.7 70.2 84.2 98.0 85.1 75.6 45.4 95.7 75.9 23.1 DiffusionDrive ∗ [28] ResNet-34 96.0 79.7 97.4 99.5 81.3 93.1 90.8 96.8 73.8 82.1 72.2 88.5 98.7 85.1 78.8 49.2 89.3 71.2 24.2 GuideFlow [32] ResNet-34 96.6 80.5 96.3 99.3 82.3 94.9 91.5 97.7 67.8 87.3 76.7 88.8 99.2 84.3 85.1 49.7 93.1 44.5 27.1 RAP-DINO [9] ViT-H 97.1 94.4 98.8 99.8 83.9 96.9 94.7 96.4 66.2 83.2 83.9 87.4 98.0 86.9 80.4 52.3 95.2 52.4 39.6 DriveSuprim [50] V2-99 98.9 95.1 99.2 99.6 76.1 99.1 94.7 97.6 54.2 87.9 88.8 89.6 98.8 80.3 86.0 53.5 97.1 56.1 42.1 GTRS-Dense [27] V2-99 98.9 96.2 99.4 99.3 72.9 98.9 95.1 96.9 39.1 91.2 89.4 94.4 98.8 69.5 90.0 54.3 94.0 48.7 45.0 DiffVLA [14] Vicuna-v1.5 95.7 99.2 100 100 85.9 96.4 97.1 95.0 84.2 81.2 88.8 94.6 99.0 86.0 76.4 59.8 98.6 80.4 45.0 GTRS-Aug [27] V2-99 98.9 95.1 99.1 99.6 76.2 99.1 94.9 97.6 54.2 88.1 88.8 89.3 98.9 98.9 85.9 53.7 96.8 56.9 45.4 ZTRS [26] V2-99 98.9 97.6 100 100 66.7 98.9 96.2 96.7 44.0 91.1 90.4 95.8 99.0 63.6 89.8 60.4 97.6 66.1 48.1 DrivoR [18] ViT-S 98.8 95.1 98.9 100 72.6 98.7 94.0 97.6 73.3 90.2 88.4 91.9 98.6 70.0 88.0 50.1 98.5 76.2 48.3 
+
+RiSE-Drive (Ours) ViT-S 99.0 96.8 99.3 100 72.8 99.0 94.8 97.7 73.5 91.5 89.8 94.6 98.8 68.7 91.3 54.9 98.4 76.7 51.3 
+
+Table 2: NAVSIM-v2 navhard-two-stage results. ∗ denotes results reproduced with the official code repository or official checkpoint. 
+
+𝜆 tail = 0.5, 𝜆 var = 0.1, 𝛿 = 0.1, and 𝜆 𝑏 = 𝜆 𝑞 = 𝜆 𝑟 = 1.0. The model is trained with AdamW at learning rate 2 × 10 −4 using cosine decay on 4 RTX 4090 GPUs. 
+
+## 5.1 Benchmarks 
+
+NAVSIM-v1. We conduct our main evaluation on NAVSIM-v1 [8], a large-scale end-to-end planning benchmark instantiated on Open-Scene [34], which redistributes annotated driving data from nu-Plan [17]. Unlike pure trajectory-matching evaluation, NAVSIM-v1 executes the predicted trajectory in a short non-reactive rollout and scores the resulting behavior, directly assessing safety, driv-ability, smoothness, and route progress. We report the Predictive Driver Model Score (PDMS) together with its main sub-metrics: 
+
+No at-fault Collision (NC) , Drivable Area Compliance (DAC) ,
+
+Time-to-Collision (TTC) , Comfort (Comf.) , and Ego Progress (EP) ; EP is normalized by a safe upper bound estimated by PDM-Closed [7]. 
+
+NavSafe Split. Beyond the standard navtest split, we also evalu-ate on navsafe , a diagnostic benchmark proposed by Centaur [38]. It is built by mining difficult cases from navtest , aligning them with NHTSA pre-crash categories [33], and manually verifying the RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil (B) (C) (D) (A)      
+
+> Ego Vehicles Pedestrain Walkways Crosswalks Vehicles' Future Trajectory Human History Trajectory Human Future Trajectory Planned Trajectory
+
+Figure 3: Qualitative results of RiSE-Drive on representative NavSafe safety-critical scenarios. From left to right, columns (a)–(d) correspond to UNPL ( unprotected left turn ), EXR ( exit ramp ), YLD ( yielding ), and RDBT ( roundabout ). Each column shows two temporal snapshots of one representative case. Magenta denotes the RiSE-Drive plan, green the human future trajectory, orange dashed the ego history, and blue the future trajectories of surrounding vehicles. Across all four cases, RiSE-Drive produces smooth, route-consistent, and interaction-aware behaviors while remaining close to safe human driving in conflict-prone regions. 
+
+Method RC HD-Score E M H X Avg. E M H X Avg. VAD [15] 51.3 31.1 25.3 26.5 31.4 36.3 9.5 8.0 11.5 13.4 LTF [6] 67.8 35.1 26.2 40.5 38.9 58.9 18.0 9.8 25.9 23.7 UniAD [13] 78.4 60.5 33.6 17.8 45.9 64.9 45.8 20.6 6.6 32.7 DrivoR [18] 80.9 50.5 33.8 47.1 49.8 73.3 34.6 18.8 32.5 35.7 
+
+Ours 76.5 53.3 34.1 46.3 50.1 74.6 37.2 22.7 39.2 39.5      
+
+> E: Easy, M: Medium, H: Hard, X: Extreme.
+
+Table 3: Photorealistic closed-loop evaluation on HUGSIM. 
+
+selected clips, thereby emphasizing rare safety-critical scenarios such as roundabouts, unprotected left turns, ramps, yellow-light decisions, lane-less areas, rare traffic signs, adverse weather, over-taking, and yielding. Compared with aggregate navtest scores, 
+
+navsafe offers a more sensitive probe of long-tail robustness. 
+
+NAVSIM-v2. We further evaluate on NAVSIM-v2 [3], which ex-tends NAVSIM-v1 from short-horizon non-reactive scoring to a pseudo-simulation setting. Starting from real logged observations, it synthesizes future sensor views around plausible ego states via 
+
+NAVSIM-v1 NAVSIM-v2 NavHard Configuration PDMS ↑ NC ↑ EPDMS ↑ TTC ↑
+
+B-I: DrivoR 93.1 98.9 48.3 88.0 B-II: DrivoR w/o SD 91.9 98.4 45.6 84.6 + FCG 92.6 98.7 46.8 86.5 + CTE 92.9 98.8 47.5 87.3 + SLE + LCP 93.5 99.1 49.2 89.6 + DOE 93.9 99.3 50.6 90.5 + RSR 94.2 99.5 51.3 91.3 
+
+Table 4: Component-wise ablation of the proposed evalua-tor. Starting from the reduced baseline B-II, each row adds one RiSE-Drive component to the configuration immediately above. 
+
+neural rendering, exposing planners to perturbed observations that MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil Zhao et al., Yu Zhao, Hongyi Duan, Ming Yin, Hongyuan Zhang, Fan Yang, Hongzhi Wang, and Xiubo Liang                     
+
+> Configuration Optim Params (M) Total Params (M) PDMS ↑EPDMS ↑HD-Score Avg. ↑
+> DrivoR 18.8 41.8 93.1 48.3 35.7 B-II 17.2 39.9 91.9 45.6 33.8 RiSE-Drive 18.9 42.3 94.2 51.3 39.5
+
+Table 5: Parameter-efficiency of RiSE-Drive relative to DrivoR and the reduced baseline. 
+
+mimic off-distribution rollouts. Its main metric, Extended Predic-tive Driver Model Score (EPDMS) , augments NC , DAC , TTC ,and EP with Driving Direction Compliance (DDC) , Traffic Light Compliance (TLC) , Lane Keeping (LK) , History Com-fort (HC) , and Extended Comfort (EC) . On the real-only navtest 
+
+setting, following prior work, we report the Stage-I score EPDMS 1.
+
+NavHard-Two-Stage Split. We also report results on navhard-two-stage, the official hard split of NAVSIM-v2 [3]. This split targets interaction-heavy and recovery-demanding cases with a two-stage protocol: in Stage I , the planner is evaluated on the real observation and produces a 4-second endpoint; in Stage II , it is re-evaluated on synthetic branches sampled around plausible Stage-I futures, and the resulting outcomes are aggregated by proximity to the Stage-I endpoint to form the final EPDMS . It is therefore more discriminative than real-only evaluation for measuring robustness under state perturbations. 
+
+HUGSIM. To complement the NAVSIM family, we additionally evaluate on HUGSIM [55], a photo-realistic closed-loop benchmark built from reconstructed real-world driving scenes. HUGSIM lifts multi-view RGB observations into interactive 3D environments via Gaussian-splatting-based scene reconstruction and supports iter-ative policy execution, so the planner’s actions affect subsequent observations. The benchmark contains 70+ reconstructed scenes and 400+ scenarios derived from KITTI-360 [29], Waymo [41], nuScenes [2], and PandaSet [48], and is divided into easy , medium ,
+
+hard , and extreme difficulty levels. We report both Road Comple-tion (RC) and the HUGSIM Driving Score (HD-Score) , where HD-Score summarizes no-collision, drivable-area compliance, TTC, comfort, and global route completion. Compared with NAVSIM-style evaluation, HUGSIM more directly measures long-horizon stability, recovery ability, and robustness to compounding closed-loop errors. 
+
+## 5.2 Comparison with State-of-the-Art 
+
+Tables 1–3 compare RiSE-Drive with recent end-to-end planners on NAVSIM-v1 [8], NAVSIM-v2 navhard split [3], and HUGSIM [55]. The compared methods span lightweight CNN backbones, stronger vision encoders such as InternImage-Tiny [45], V2-99 [19], and DINOv2 ViT-S [35], as well as larger VLM/VLA backbones such as Emu3-8B [46] and InternVL3-2B [57]. RiSE-Drive uses the same backbone and proposal generator as DrivoR [18]; the comparison against DrivoR therefore isolates the effect of long-horizon, distri-butional, and risk-sensitive candidate evaluation. 
+
+NAVSIM-v1. Table 1 reports results on the navtest split. RiSE-Drive achieves the best PDMS of 94.2, improving over DrivoR by 1.1 points. Under the matched ViT-S setup, it raises NC from 98.9 to 99.5 and TTC from 96.2 to 98.4 while maintaining perfect comfort; EP decreases slightly from 89.1 to 88.7, indicating a safer and slightly more conservative selection policy. 
+
+NAVSIM-v2 navhard-two-stage . Table 2 shows that RiSE-Drive achieves the best EPDMS of 51.3, outperforming DrivoR by 3.0 points and the strongest previous result in the table by 3.2 points. The gain is concentrated on Stage-II safety terms, including NC (90.2 →91.5), DDC (91.9 →94.6), and TTC (88.0 →91.3), while the modest EP reduction (70.0 →68.7) again reflects more cautious deci-sions under perturbation. 
+
+HUGSIM.. Table 3 evaluates fully closed-loop transfer on HUGSIM. RiSE-Drive achieves the best average RC and HD-Score of 50.1 and 39.5, exceeding DrivoR by 0.3 and 3.8 points, respectively. The gain is largest on the hard and extreme subsets, where HD-Score rises from 18.8 to 22.7 and from 32.5 to 39.2, indicating stronger long-horizon robustness under compounding errors. Overall, the three benchmarks consistently show that, once a strong proposal set is available, improving candidate evaluation yields larger gains than backbone scaling alone. 
+
+## 5.3 Ablation Study 
+
+Unless otherwise stated, all ablations keep the DrivoR encoder and proposal generator fixed, so the results isolate the contribution of the proposed evaluator. We study three aspects: component-wise contribution, parameter overhead, and sensitivity to the future-branch and quantile design. We denote the original DrivoR by 
+
+B-I , and a reduced baseline that replaces its scoring decoder with a lightweight direct score head by B-II . Starting from B-II, we progressively add FCG (Future-Condition Generator), CTE (candi-date trajectory-level encoder), SLE (step-level encoder), LCP (long-horizon consequence propagation), DOE (distributional outcome estimation), and RSR (risk-sensitive ranking). 
+
+Component-wise ablation. Table 4 shows steady gains as the eval-uator is built up from the reduced baseline. Future conditioning and trajectory encoding recover much of the gap introduced by simpli-fying the original scorer, while explicit long-horizon consequence propagation yields the clearest benefit on the harder NAVSIM-v2 setting. The final improvements from DOE and RSR show that distri-butional prediction and risk-sensitive ranking are complementary rather than interchangeable. 
+
+Parameter overhead. Table 5 shows that RiSE-Drive improves all three aggregate benchmarks with only a marginal increase in parameter count over DrivoR. The gain is therefore structural, not a consequence of brute-force model scaling. 
+
+## 5.4 Visualization 
+
+We further visualize RiSE-Drive on four representative safety-critical cases from NavSafe [38]: UNPL (unprotected left turn ), EXR (exit ramp ), YLD (yielding ), and RDBT (roundabout ). As shown in Fig. 3, the four columns from left to right correspond to (A) UNPL, (B) EXR, (C) YLD, and (D) RDBT. Across these interaction-heavy long-tail scenarios, RiSE-Drive remains smooth, route-consistent, and conservative in conflict regions. In UNPL and RDBT, it commits only after sufficient clearance to surrounding traffic; in EXR, it follows the ramp geometry stably; in YLD, it resolves right-of-way RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil 
+
+cautiously before resuming progress. In all four cases, the planned trajectory stays close to the human future trajectory while preserv-ing adequate safety margins, qualitatively supporting the gains on safety-critical scenarios. 
+
+## 6 Conclusion 
+
+We presented RiSE-Drive, a risk-sensitive evaluator for candidate-based end-to-end autonomous driving. The central premise of this work is that, once a planner already provides a strong set of feasible trajectory proposals, the remaining bottleneck is no longer only candidate coverage, but how those candidates are judged under long-horizon uncertainty. Existing selectors largely compress candi-date quality into deterministic point scores or heuristic sub-scores, which can obscure delayed failures and hidden lower-tail risk. RiSE-Drive addresses this limitation by modeling candidate quality as a distribution over future-condition-dependent long-horizon out-comes. Concretely, it predicts a compact set of future-condition branches, performs candidate-conditioned latent consequence prop-agation, estimates ordered outcome quantiles, and ranks trajectories with a risk-sensitive criterion that combines the mean, lower-tail CVaR, and cross-condition instability. This formulation makes candidate selection explicitly sensitive to tail failures rather than only nominal performance. As a result, RiSE-Drive prefers trajectories that remain reliable not only on average, but also under plausible downstream deviations and interaction-heavy rollouts. Across NAVSIM-v1, NAVSIM-v2, and HUGSIM, as well as qualitative analysis on safety-critical NavSafe scenar-ios, RiSE-Drive consistently improves robustness under a matched DrivoR setup, with especially clear gains on hard, perturbation-heavy, and closed-loop evaluations. These results suggest that ro-bust end-to-end driving depends not only on stronger perception backbones or larger models, but also on principled long-horizon candidate evaluation. We hope this perspective encourages future work on tighter integration between proposal generation, conse-quence modeling, and risk-sensitive decision making. 
+
+## References 
+
+[1] Merve Rabia Barın, Görkay Aydemir, and Fatma Güney. 2024. Robust Bird’s Eye View Segmentation by Adapting DINOv2. In ECCV Workshops .[2] Holger Caesar, Varun Bankiti, Alex H Lang, Sourabh Vora, Venice Erin Liong, Qiang Xu, Anush Krishnan, Yu Pan, Giancarlo Baldan, and Oscar Beijbom. 2020. nuscenes: A multimodal dataset for autonomous driving. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition . 11621–11631. [3] Wei Cao, Marcel Hallgarten, Tianyu Li, Daniel Dauner, Xunjiang Gu, Cao-jun Wang, Yakov Miron, Marco Aiello, Hongyang Li, Igor Gilitschenski, Boris Ivanovic, Marco Pavone, Andreas Geiger, and Kashyap Chitta. 2025. Pseudo-Simulation for Autonomous Driving. In Proceedings of The 9th Conference on Robot Learning (Proceedings of Machine Learning Research, Vol. 305) . 4709–4722. https://proceedings.mlr.press/v305/cao25a.html [4] Shaoyu Chen, Bo Jiang, Hao Gao, Bencheng Liao, Qing Xu, Qian Zhang, Chang Huang, Wenyu Liu, and Xinggang Wang. 2024. VADv2: End-to-End Vectorized Autonomous Driving via Probabilistic Planning. arXiv:2402.13243 [cs.CV] [5] Yuntao Chen, Yuqi Wang, and Zhaoxiang Zhang. 2025. DrivingGPT: Unifying Driving World Modeling and Planning with Multi-modal Autoregressive Trans-formers. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) . 26890–26900. [6] Kashyap Chitta, Aditya Prakash, Bernhard Jaeger, Zehao Yu, Katrin Renz, and Andreas Geiger. 2023. TransFuser: Imitation With Transformer-Based Sensor Fusion for Autonomous Driving. IEEE Transactions on Pattern Analysis and Machine Intelligence 45, 11 (2023), 12878–12895. [7] Daniel Dauner, Marcel Hallgarten, Andreas Geiger, and Kashyap Chitta. 2023. Parting with Misconceptions about Learning-based Vehicle Motion Planning. In Proceedings of The 7th Conference on Robot Learning (Proceedings of Machine Learning Research, Vol. 229) , Jie Tan, Marc Toussaint, and Kourosh Darvish (Eds.). PMLR, 1268–1281. [8] Daniel Dauner, Marcel Hallgarten, Tianyu Li, Xinshuo Weng, Zhiyu Huang, Zetong Yang, Hongyang Li, Igor Gilitschenski, Boris Ivanovic, Marco Pavone, Andreas Geiger, and Kashyap Chitta. 2024. NAVSIM: data-driven non-reactive autonomous vehicle simulation and benchmarking. In Proceedings of the 38th International Conference on Neural Information Processing Systems (Vancouver, BC, Canada) (NIPS ’24) . Curran Associates Inc., Red Hook, NY, USA, Article 902, 14 pages. [9] Lan Feng, Yang Gao, Eloi Zablocki, Quanyi Li, Wuyang Li, Sichao Liu, Matthieu Cord, and Alexandre Alahi. 2026. RAP: 3D Rasterization Augmented End-to-End Planning. arXiv:2510.04333 [cs.CV] [10] Renju Feng, Ning Xi, Duanfeng Chu, Rukang Wang, Zejian Deng, Anzheng Wang, Liping Lu, Jinxiang Wang, and Yanjun Huang. 2025. ARTEMIS: Autoregressive End-to-End Trajectory Planning with Mixture of Experts for Autonomous Driv-ing. arXiv:2504.19580 [cs.RO] [11] Ke Guo, Haochen Liu, Xiaojun Wu, Jia Pan, and Chen Lv. 2025. iPad: Iterative Proposal-centric End-to-End Autonomous Driving. arXiv:2505.15111 [cs.CV] [12] Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen. 2022. LoRA: Low-Rank Adaptation of Large Language Models. In International Conference on Learning Representations .[13] Yihan Hu, Jiazhi Yang, Li Chen, Keyu Li, Chonghao Sima, Xizhou Zhu, Siqi Chai, Senyao Du, Tianwei Lin, Wenhai Wang, Lewei Lu, Xiaosong Jia, Qiang Liu, Jifeng Dai, Yu Qiao, and Hongyang Li. 2023. Planning-oriented Autonomous Driving. In 2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) .17853–17862. [14] Anqing Jiang, Yu Gao, Zhigang Sun, Yiru Wang, Jijun Wang, Jinghao Chai, Qian Cao, Yuweng Heng, Hao Jiang, Yunda Dong, Zongzheng Zhang, Xianda Guo, Hao Sun, and Hao Zhao. 2025. DiffVLA: Vision-Language Guided Diffusion Planning for Autonomous Driving. arXiv:2505.19381 [cs.AI] https://arxiv.org/abs/2505. 19381 [15] Bo Jiang, Shaoyu Chen, Qing Xu, Bencheng Liao, Jiajie Chen, Helong Zhou, Qian Zhang, Wenyu Liu, Chang Huang, and Xinggang Wang. 2023. VAD: Vectorized Scene Representation for Efficient Autonomous Driving. arXiv:2303.12077 [cs.RO] [16] Xuefeng Jiang, Yuan Ma, Pengxiang Li, Leimeng Xu, Xin Wen, Kun Zhan, Zhongpu Xia, Peng Jia, Xianpeng Lang, and Sheng Sun. 2025. TransDif-fuser: Diverse Trajectory Generation with Decorrelated Multi-modal Represen-tation for End-to-end Autonomous Driving. arXiv:2505.09315 [cs.RO] https: //arxiv.org/abs/2505.09315 [17] Napat Karnchanachari, Dimitris Geromichalos, Kok Seang Tan, Nanxiang Li, Christopher Eriksen, Shakiba Yaghoubi, Noushin Mehdipour, Gianmarco Bernasconi, Whye Kit Fong, Yiluan Guo, and Holger Caesar. 2024. Towards Learning-Based Planning: The nuPlan Benchmark for Real-World Autonomous Driving. In 2024 IEEE International Conference on Robotics and Automation (ICRA) .629–636. [18] Ellington Kirby, Alexandre Boulch, Yihong Xu, Yuan Yin, Gilles Puy, Éloi Zablocki, Andrei Bursuc, Spyros Gidaris, Renaud Marlet, Florent Bartoccioni, Anh-Quan Cao, Nermin Samet, Tuan-Hung Vu, and Matthieu Cord. 2026. Driving on Registers. In CVPR .[19] Youngwan Lee, Joong-won Hwang, Sangrok Lee, Yuseok Bae, and Jongyoul Park. 2019. An energy and GPU-computation efficient backbone network for real-time object detection. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition workshops . 752–760. [20] Kailin Li, Zhenxin Li, Shiyi Lan, Yuan Xie, Zhizhong Zhang, Jiayi Liu, Zuxuan Wu, Zhiding Yu, and Jose M. Alvarez. 2025. Hydra-MDP++: Advancing End-to-End Driving via Expert-Guided Hydra-Distillation. arXiv:2503.12820 [cs.CV] [21] Yingyan Li, Lue Fan, Jiawei He, Yuqi Wang, Yuntao Chen, Zhaoxiang Zhang, and Tieniu Tan. 2025. Enhancing End-to-End Autonomous Driving with Latent World Model. arXiv:2406.08481 [cs.CV] [22] Yingyan Li, Shuyao Shang, Weisong Liu, Bing Zhan, Haochen Wang, Yuqi Wang, Yuntao Chen, Xiaoman Wang, Yasong An, Chufeng Tang, Lu Hou, Lue Fan, and Zhaoxiang Zhang. 2025. DriveVLA-W0: World Models Amplify Data Scaling Law in Autonomous Driving. arXiv:2510.12796 [cs.CV] [23] Yingyan Li, Yuqi Wang, Yang Liu, Jiawei He, Lue Fan, and Zhaoxiang Zhang. 2025. End-to-End Driving with Online Trajectory Evaluation via BEV World Model. arXiv:2504.01941 [cs.CV] [24] Yongkang Li, Kaixin Xiong, Xiangyu Guo, Fang Li, Sixu Yan, Gangwei Xu, Lijun Zhou, Long Chen, Haiyang Sun, Bing Wang, Kun Ma, Guang Chen, Hangjun Ye, Wenyu Liu, and Xinggang Wang. 2026. ReCogDrive: A Reinforced Cognitive Framework for End-to-End Autonomous Driving. In International Conference on Learning Representation (ICLR) .[25] Zhenxin Li, Kailin Li, Shihao Wang, Shiyi Lan, Zhiding Yu, Yishen Ji, Zhiqi Li, Ziyue Zhu, Jan Kautz, Zuxuan Wu, Yu-Gang Jiang, and Jose M. Alvarez. 2024. Hydra-MDP: End-to-end Multimodal Planning with Multi-target Hydra-Distillation. arXiv:2406.06978 [cs.CV] [26] Zhenxin Li, Wenhao Yao, Zi Wang, Xinglong Sun, Jingde Chen, Nadine Chang, Maying Shen, Jingyu Song, Zuxuan Wu, Shiyi Lan, and Jose M. Alvarez. 2025. ZTRS: Zero-Imitation End-to-end Autonomous Driving with Trajectory Scoring. MM ’26, November 10–14, 2026, Rio de Janeiro, Brazil Zhao et al., Yu Zhao, Hongyi Duan, Ming Yin, Hongyuan Zhang, Fan Yang, Hongzhi Wang, and Xiubo Liang 
+
+arXiv:2510.24108 [cs.RO] [27] Zhenxin Li, Wenhao Yao, Zi Wang, Xinglong Sun, Joshua Chen, Nadine Chang, Maying Shen, Zuxuan Wu, Shiyi Lan, and José M. Álvarez. 2025. Generalized Trajectory Scoring for End-to-end Multimodal Planning. ArXiv abs/2506.06664 (2025). [28] Bencheng Liao, Shaoyu Chen, Haoran Yin, Bo Jiang, Cheng Wang, Sixu Yan, Xinbang Zhang, Xiangyu Li, Ying Zhang, Qian Zhang, and Xinggang Wang. 2025. DiffusionDrive: Truncated Diffusion Model for End-to-End Autonomous Driving. In CVPR . 12037–12047. [29] Yiyi Liao, Jun Xie, and Andreas Geiger. 2022. Kitti-360: A novel dataset and benchmarks for urban scene understanding in 2d and 3d. IEEE Transactions on Pattern Analysis and Machine Intelligence 45, 3 (2022), 3292–3310. [30] Jiangfan Liu, Zexuan Cui, Tianyuan Zhang, Zonglei Jing, Zonghao Ying, Yaoyuan Zhang, Jiakai Wang, Xiaoqi Jiang, Aishan Liu, and Xianglong Liu. 2024. SafeGen: Goal-Conditioned Video Diffusion of Safety-Critical Scenarios for VLM-Based Autonomous Driving. arXiv preprint arXiv:2404.08471 (2024). [31] Jiangfan Liu, Yongkang Guo, Fangzhi Zhong, Tianyuan Zhang, Zonglei Jing, Siyuan Liang, Jiakai Wang, Mingchuan Zhang, Aishan Liu, and Xianglong Liu. 2026. Adversarial generation and collaborative evolution of safety-critical scenar-ios for autonomous vehicles. In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 40. 38926–38934. [32] Lin Liu, Caiyan Jia, Guanyi Yu, Ziying Song, Junqiao Li, Feiyang Jia, Peiliang Wu, Xiaoshuai Hao, and Yandan Luo. 2025. GuideFlow: Constraint-Guided Flow Matching for Planning in End-to-End Autonomous Driving. ArXiv abs/2511.18729 (2025). [33] Wassim G. Najm, John D. Smith, and Mikio Yanagisawa. 2007. Pre-Crash Scenario Typology for Crash Avoidance Research . Technical Report DOT HS 810 767. National Highway Traffic Safety Administration. [34] OpenDriveLab. 2023. OpenScene: Autonomous Grand Challenge Toolkits. https: //github.com/OpenDriveLab/OpenScene. [35] Maxime Oquab, Timothée Darcet, Theo Moutakanni, Huy V. Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez, Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, Russell Howes, Po-Yao Huang, Hu Xu, Vasu Sharma, Shang-Wen Li, Wojciech Galuba, Mike Rabbat, Mido Assran, Nicolas Ballas, Gabriel Synnaeve, Ishan Misra, Herve Jegou, Julien Mairal, Patrick Labatut, Armand Joulin, and Piotr Bojanowski. 2024. DINOv2: Learning Robust Visual Features without Supervision. 
+
+TMLR (2024). [36] R.Tyrrell Rockafellar and Stanislav Uryasev. 2002. Conditional value-at-risk for general loss distributions. Journal of Banking & Finance 26, 7 (2002), 1443–1471. [37] Chen Shi, Shaoshuai Shi, Kehua Sheng, Bo Zhang, and Li Jiang. 2025. DriveX: Omni Scene Modeling for Learning Generalizable World Knowledge in Au-tonomous Driving. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) . 28599–28609. [38] Chonghao Sima, Kashyap Chitta, Zhiding Yu, Shiyi Lan, Ping Luo, Andreas Geiger, Hongyang Li, and Jose M. Alvarez. 2025. Centaur: Robust End-to-End Autonomous Driving with Test-Time Training. arXiv:2503.11650 [cs.RO] [39] Ziying Song, Lin Liu, Hongyu Pan, Bencheng Liao, Mingzhe Guo, Lei Yang, Yongchang Zhang, Shaoqing Xu, Caiyan Jia, and Yadan Luo. 2025. DIVER: Reinforced Diffusion Breaks Imitation Bottlenecks in End-to-End Autonomous Driving. arXiv:2507.04049 [cs.CV] [40] Bin Sun, Yaoguang Cao, Yan Wang, Rui Wang, Jiachen Shang, Xiejie Feng, Jiayi Lu, Jia Shi, Shichun Yang, Xiaoyu Yan, and Ziying Song. 2025. MindDrive: An All-in-One Framework Bridging World Models and Vision-Language Model for End-to-End Autonomous Driving. arXiv:2512.04441 [cs.CV] [41] Pei Sun, Henrik Kretzschmar, Xerxes Dotiwalla, Aurelien Chouard, Vijaysai Patnaik, Paul Tsui, James Guo, Yin Zhou, Yuning Chai, Benjamin Caine, et al. 2020. Scalability in perception for autonomous driving: Waymo open dataset. In 
+
+Proceedings of the IEEE/CVF conference on computer vision and pattern recognition .2446–2454. [42] Wenchao Sun, Xuewu Lin, Yining Shi, Chuang Zhang, Haoran Wu, and Sifa Zheng. 2024. SparseDrive: End-to-End Autonomous Driving via Sparse Scene Representation. arXiv:2405.19620 [cs.CV] [43] Junming Wang, Xingyu Zhang, Zebin Xing, Songen Gu, Xiaoyang Guo, Yang Hu, Ziying Song, Qian Zhang, Xiaoxiao Long, and Wei Yin. 2025. ComDrive: Comfort-Oriented End-to-End Autonomous Driving. arXiv:2410.05051 [cs.CV] [44] Junli Wang, Yinan Zheng, Xueyi Liu, Zebin Xing, Pengfei Li, Guang Li, Kun Ma, Guang Chen, Hangjun Ye, Zhongpu Xia, Long Chen, and Qichao Zhang. 2026. MeanFuser: Fast One-Step Multi-Modal Trajectory Generation and Adaptive Reconstruction via MeanFlow for End-to-End Autonomous Driving. arXiv:2602.20060 [cs.CV] https://arxiv.org/abs/2602.20060 [45] Wenhai Wang, Jifeng Dai, Zhe Chen, Zhenhang Huang, Zhiqi Li, Xizhou Zhu, Xiaowei Hu, Tong Lu, Lewei Lu, Hongsheng Li, et al. 2023. Internimage: Ex-ploring large-scale vision foundation models with deformable convolutions. In 
+
+Proceedings of the IEEE/CVF conference on computer vision and pattern recognition .14408–14419. [46] Xinlong Wang, Xiaosong Zhang, Zhengxiong Luo, Quan Sun, Yufeng Cui, Jin-sheng Wang, Fan Zhang, Yueze Wang, Zhen Li, Qiying Yu, et al. 2024. Emu3: Next-token prediction is all you need. arXiv preprint arXiv:2409.18869 (2024). [47] Xinshuo Weng, Boris Ivanovic, Yan Wang, Yue Wang, and Marco Pavone. 2024. PARA-Drive: Parallelized Architecture for Real-Time Autonomous Driving. In 
+
+2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) .15449–15458. [48] Pengchuan Xiao, Zhenlei Shao, Steven Hao, Zishuo Zhang, Xiaolin Chai, Judy Jiao, Zesong Li, Jian Wu, Kai Sun, Kun Jiang, et al. 2021. Pandaset: Advanced sensor suite dataset for autonomous driving. In 2021 IEEE international intelligent transportation systems conference (ITSC) . IEEE, 3095–3101. [49] Zebin Xing, Xingyu Zhang, Yang Hu, Bo Jiang, Tong He, Qian Zhang, Xiaoxiao Long, and Wei Yin. 2025. GoalFlow: Goal-Driven Flow Matching for Multimodal Trajectories Generation in End-to-End Autonomous Driving. 2025 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) (2025), 1602–1611. [50] Wenhao Yao, Zhenxin Li, Shiyi Lan, Zi Wang, Xinglong Sun, Jose M. Alvarez, and Zuxuan Wu. 2025. DriveSuprim: Towards Precise Trajectory Selection for End-to-End Planning. arXiv:2506.06659 [cs.RO] [51] Chengran Yuan, Zhanqi Zhang, Jiawei Sun, Shuo Sun, Zefan Huang, Christina Dao Wen Lee, Dongen Li, Yuhang Han, Anthony Wong, Keng Peng Tee, and Marcelo H. Ang Jr. 2024. DRAMA: An Efficient End-to-end Motion Planner for Autonomous Driving with Mamba. arXiv:2408.03601 [cs.RO] [52] Yu Zhao, Jiangyu Pan, Tao Hu, Ming Yin, Fan Yang, Jiangfan Liu, and Xiubo Liang. 2026. NSF-HRPT: Neural Semantic Field meets Hierarchical Risk Perception Tree for Safety-Critical Scenario Assessment. arXiv:2608.04776 [cs.AI] https: //arxiv.org/abs/2608.04776 [53] Wenzhao Zheng, Ruiqi Song, Xianda Guo, Chenming Zhang, and Long Chen. 2024. GenAD: Generative End-to-End Autonomous Driving. arXiv:2402.11502 [cs.CV] [54] Yupeng Zheng, Pengxuan Yang, Zebin Xing, Qichao Zhang, Yuhang Zheng, Yin-feng Gao, Pengfei Li, Teng Zhang, Zhongpu Xia, Peng Jia, and Dongbin Zhao. 2025. World4Drive: End-to-End Autonomous Driving via Intention-aware Physi-cal Latent World Model. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) .[55] Hongyu Zhou, Longzhong Lin, Jiabao Wang, Yichong Lu, Dongfeng Bai, Bingbing Liu, Yue Wang, Andreas Geiger, and Yiyi Liao. 2025. Hugsim: A real-time, photo-realistic and closed-loop simulator for autonomous driving. IEEE Transactions on Pattern Analysis and Machine Intelligence (2025). [56] Zewei Zhou, Tianhui Cai, Seth Z. Zhao, Yun Zhang, Zhiyu Huang, Bolei Zhou, and Jiaqi Ma. 2025. AutoVLA: A Vision-Language-Action Model for End-to-End Autonomous Driving with Adaptive Reasoning and Reinforcement Fine-Tuning. In The Thirty-ninth Annual Conference on Neural Information Processing Systems .[57] Jinguo Zhu, Weiyun Wang, Zhe Chen, Zhaoyang Liu, Shenglong Ye, Lixin Gu, Hao Tian, Yuchen Duan, Weijie Su, Jie Shao, et al. 2025. Internvl3: Exploring advanced training and test-time recipes for open-source multimodal models. 
+
+arXiv preprint arXiv:2504.10479 (2025). RiSE-Drive: Risk-Sensitive Long-Horizon Candidate Evaluation for End-to-End Autonomous Driving Supplementary Material 
+
+## A Supplementary Material A.1 HUGSIM Results 
+
+Table 3 corrects the HUGSIM Easy RC for RiSE-Drive, which was misprinted as 79.5 in the conference version. 
+
+## A.2 Future-Condition Branch Construction 
+
+RiSE-Drive uses 𝐿 = 4 reference conditions to construct branch targets (Section 4.6). We pair two motion measurements from the same training-log window. Longitudinal pressure is the negative of the lead vehicle’s longitudinal acceleration. Lateral approach is the lateral velocity of a same-direction adjacent vehicle, signed positive toward the ego corridor. We first bisect the windows by the empirical rank of longitudinal pressure, then bisect each half by the within-group rank of lateral approach. The four conditions in Table A.1 use low and high levels relative to the training logs, with a separate lateral threshold in each longitudinal group. For each condition, we choose the observed pair closest to the group’s componentwise median, measuring distance after scaling both quantities by their training-set interquartile ranges. 
+
+Table A.1. Four joint traffic conditions. 
+
+Branch 𝑙 Condition Longitudinal pressure Lateral approach 1 C0 Open passage Low Low 2 C1 Longitudinal constraint High Low 3 C2 Lateral approach Low High 4 C3 Combined constraint High High 
+
+Each representative sets the lead vehicle’s target longitudinal accel-eration and the adjacent vehicle’s target lateral velocity. Starting from a shared initial state, the benchmark applies these targets smoothly under its road and dynamics constraints. An axis is active only when the relevant vehicle and a feasible motion are available. Every candidate 𝜏 𝑖 is evaluated under the same four conditions. Benchmark rollout and scoring produce one target 𝑦 ★ 
+
+> 𝑖,𝑙
+
+per candidate and branch. The targets supervise the corresponding predictions ˆ 𝑦 𝑖,𝑙 
+
+and form an equally weighted empirical outcome distribution for each candidate. At inference, the learned branch code 𝜔 𝑙 = 𝑃 (𝑙 ) 
+
+> ctx
+
+(¯r𝑡 )
+
+is computed from the current scene (Section 4.2).

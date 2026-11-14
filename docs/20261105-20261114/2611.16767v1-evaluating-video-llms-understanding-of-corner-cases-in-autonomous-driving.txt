@@ -1,0 +1,2581 @@
+arXiv:2611.16767v1  [cs.CV]  12 Nov 2026
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+1
+Evaluating Video LLMs’ Understanding of
+Corner Cases in Autonomous Driving
+Gabriel Manalu
+gabrieldavin23@kaist.ac.kr
+Minh Son Hoang
+sonhm2910@kaist.ac.kr
+Hyeontaek Hwang
+hwanght@kaist.ac.kr
+Jaesung Lee
+ljs6017@kaist.ac.kr
+Hyojin Choi
+hyojinchoi@kaist.ac.kr
+Tran Tuan Phong
+phongtt263@kaist.ac.kr
+Seon Kwon Kim
+lukaskim@kaist.ac.kr
+Saad Wazir
+saad.wazir@kaist.ac.kr
+Daeyoung Kim
+kimd@kaist.ac.kr
+Korea Advanced Institute of Science
+and Technology
+Daejeon, Korea
+Abstract
+Natural language explanations promised by modern Video Large Language Models
+(Video LLMs) offer autonomous driving systems a path toward detailed scene description
+and interpretable decision making on the road. While recent benchmarks have begun as-
+sessing these models on driving scenes, they mainly target routine traffic conditions and
+general comprehension tasks based on existing driving datasets and therefore fail to eval-
+uate model performance on the rarest and most safety-critical driving events, also known
+as "corner cases". To provide a comprehensive evaluation of Video LLMs on precisely
+these scenarios, we introduce DashBench, a benchmark testing 25 Video LLMs on 1,709
+carefully curated driving videos spanning not only collision-related corner cases but also
+rare non-collision ones. Through extensive prompts and open-ended question answering,
+we expose a critical capability gap: all evaluated models perform substantially below the
+threshold required for safety-critical driving applications, frequently misjudging or miss-
+ing dangerous events on the road ahead and hallucinating non-existent agents or actions
+in their explanations. We believe DashBench, combining an extensive dataset with a
+rigorous evaluation toolkit and a detailed diagnosis of current model limitations, drives
+progress toward safer, more explainable autonomous driving systems. The code and data
+will be shared at: cornercase-dashbench.github.io
+© 2026. The copyright of this document resides with its authors.
+It may be distributed unchanged freely in print or electronic forms.
+
+
+2
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Figure 1: Overview of DashBench. Our dataset spans 88 fine-grained categories to cover
+diverse corner case scenarios. Sample keyframes of corner case scenarios as well as their
+categories and annotations are shown.
+1
+Introduction
+Autonomous driving systems (ADS) face a fundamental transparency barrier: the learned
+models that process continuous dashcam video streams and translate perception into plan-
+ning decisions [8] generate no real-time account of their reasoning, yet real-time natural-
+language explanations of individual maneuvers are increasingly recognised as an operational
+necessity: they support passenger awareness, enable operator oversight, and are a decisive
+factor in how drivers calibrate their reliance on the system [13, 61]. Video Large Language
+Models (Video LLMs), multimodal models capable of reasoning over video inputs and gen-
+erating grounded language descriptions have emerged as the leading candidate to close this
+interpretability gap in autonomous driving (AD). Video LLMs have been adapted for driving-
+specific scene comprehension, safety-critical event understanding, and language-grounded
+planning [9, 22]; leading commercial ADS have begun incorporating them for real-time nar-
+ration [26, 51, 52]. Whether Video LLMs can fulfil this promise under the most demanding
+road conditions which are rare, safety-critical events far outside routine traffic which are re-
+ferred to as corner cases [2, 4], is a question made especially urgent by a possible failure
+mode of Video LLMs. These models do not merely underperform on hard scenes, they can
+hallucinate and systematically omit important details from their descriptions [27], producing
+active misinformation precisely where accurate perception matters most [42].
+Although there have been several works probing Video LLMs’ scene understanding in
+corner cases for AD, they present several distinguishable limitations: (1) Insufficient cov-
+erage of corner case diversity. Existing benchmarks in this domain [7, 53, 59] restrict
+themselves either to collision-related events [59] or to object-level corner case detection
+[7], leaving scenario-level non-collision hazards largely untested [4]. (2) Limitations of
+experimental design and evaluation metrics. DVBench [59], the benchmark most closely
+related to ours, relies solely on a multiple-choice question (MCQ) format, narrowing eval-
+uation to option-picking and providing limited evidence of the model’s genuine perception
+and explanatory reasoning [25]; subsequent work has highlighted the need for nuanced au-
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+3
+tomatic judges to evaluate free-text responses in AD scenarios [53]. (3) Lack of evaluation
+of driving-specialized Video LLMs on corner case scenarios. Existing benchmarks that do
+evaluate models on driving corner cases assess general-purpose models exclusively and do
+not include driving-specialist Video LLMs [22, 32] that are explicitly designed and fine-
+tuned for driving video understanding. Whether such driving-specialized models close the
+corner-case reasoning gap over general-purpose Video LLMs remains an unanswered and
+practically important question, especially for guiding the development of road-ready Video
+LLMs.
+We present DashBench, the first benchmark to not only systematically stress-test Video
+LLMs on corner case scenarios on the road under a multi-prompt evaluation protocol but
+also investigate the challenges presented by our task through anomaly-localized experiments
+and hallucination mitigation efforts in order to gain deeper insights. Our contributions are:
+1. We curate, annotate, and process a dataset of 1,709 dashcam-video clips spanning
+88 categories explicitly balanced across collision-related and non-collision hazardous
+events. As shown in Figure 1, our dataset covers a broad array of scenario-level events.
+2. We evaluate 25 Video LLMs including SOTA closed-source models, open-source
+models, and driving-specialist Video LLMs fine-tuned on AD datasets, and find a con-
+sistent capability gap: even the highest-scoring model reaches only 46.52% accuracy,
+well below any threshold that safety-critical deployment would demand. Notably,
+model design such as reasoning and driving-specialist fine-tuning yields no clear, con-
+sistent advantage over general-purpose models on corner-case scenarios.
+3. We document systematic failure modes through qualitative analysis of model outputs
+which are corner-case blindness (the model produces a fluent, confident description
+that entirely ignores the hazard) and road agent/action hallucination (non-existent
+vehicles, objects, or actions of other agents are fabricated). As shown in Figures 3,
+4, and 5, these failures are not isolated errors but structural patterns that recur across
+model families.
+4. We demonstrate through extensive experiments that neither varying prompt formula-
+tions nor providing temporally localized corner case windows (isolating the frames
+where the hazard occurs) substantially improves corner-case reasoning, with perfor-
+mance gains remaining well below what safety-critical driving applications require.
+Additionally, applying existing hallucination mitigation techniques yields no consis-
+tent gains on safety-critical scenarios. Together, these findings suggest that closing the
+corner-case gap requires fundamentally new approaches.
+2
+Related Works
+2.1
+Open-Ended QA with Video LLMs
+Closed-set, multiple-choice video-QA formats [33] are susceptible to inflating apparent
+model capability by rewarding answer-option pattern matching [11], motivating a shift to
+open-ended, free-text evaluation. Video-MME [16] evaluates Video LLMs across diverse
+domains and task types and shows that state-of-the-art models fall substantially below
+human-level performance, while TemporalBench [5] specifically targets fine-grained tem-
+poral understanding and finds similarly large gaps. Beyond format, evaluation is sensitive to
+
+
+4
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Figure 2: DashBench construction pipeline. MM-AU and RoadSocial videos pass through
+source-specific filtering and annotation steps before a category-balanced merge, quality
+check, and AI-assisted ground truth annotation produce the final 1,709-clip benchmark.
+prompt design: the same question phrased differently substantially affects output quality and
+can reverse rankings between models [15]. Reliable capability assessment of Video LLMs
+therefore demands multiple prompt formulations across free-text, multi-frame conditions.
+2.2
+Benchmarking Video LLMs for Corner Cases in AD
+Early benchmarks for driving video understanding evaluate Video LLMs exclusively on rou-
+tine traffic conditions [34], without systematic coverage of safety-critical events. This gap
+was formalized by [7], establishing CODA-LM as the first benchmark to probe VLMs on
+corner cases, though limited to static, object-level anomalies. DVBench [59] evaluated 14
+Video LLMs on 10K crash and near-crash MCQs, finding that no model exceeded 40% accu-
+racy, yet the closed-set format could not provide deeper insights on whether failures stemmed
+from perceptual blindness, reasoning errors, or output formatting. CrashSight [18] broadens
+this further to roadside-camera footage with phase-aware reasoning tasks. Despite these
+advances, all existing corner-case benchmarks remain narrow, covering either object-level
+anomalies or crash-only events, and none systematically characterize the types of perceptual
+errors that drive underperformance. No benchmark to date provides diverse scenario-level
+coverage with open-ended, multi-prompt free-text scoring.
+3
+DashBench
+We present DashBench, a benchmark of 1,709 ego-view dashcam video clips designed to
+evaluate Video LLMs on scenario-level corner cases in autonomous driving, spanning 88
+corner case categories drawn from two complementary sources: MM-AU [14] and RoadSo-
+cial [39], with a deliberate balance between collision and non-collision scenarios. Unless
+otherwise stated, 16 frames are uniformly sampled per clip as a standardized multi-frame
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+5
+evaluation protocol; benchmark construction is described thoroughly in this section, and the
+experimental setup is presented in Section 4.
+3.1
+Motivation
+Driving corner cases are broadly defined as rare and unexpected situations that deviate from
+normal traffic behavior, challenging the reliability of autonomous perception systems [2, 3,
+4]. Following the scenario-level corner case taxonomy in [3], DashBench targets scenario-
+level corner-cases which are well-suited for Video LLM evaluation since recognition of these
+events requires temporal reasoning over a video sequence. Within this level, the taxonomy
+separates anomalous, novel, and risky scenarios primarily by whether they carry collision po-
+tential. Building on this, our distinct dataset design splits clips by collision outcome (which
+is whether physical impact occurred). Collision clips capture scenarios in which the hazard
+resulted in actual impact; non-collision clips span the remaining range, from averted dangers
+and near-misses to unusual but safe road events.
+We build DashBench’s primary video corpus from MM-AU, the most fine-grained pub-
+licly available ego-view dashcam accident benchmark with 57 annotated categories and
+keyframe annotations. However, dashcam footage is predominantly collected for collision-
+related accident documentation [6] and datasets curated from such footage therefore system-
+atically over-represent collision events. Out of MM-AU’s 57 categories, 46 describe direct
+collision events, yielding 9,142 collision samples against only 626 non-collision samples
+which is a ratio of approximately 14.6:1 and a collision share of 93.6% of all annotated
+clips. Underrepresented non-collision categories include vehicle loss of control, traffic rule
+violations without impact, and various road surface and environmental hazards, even though
+these are scenarios which are safety-critical as well. Therefore, a benchmark constructed
+solely from MM-AU would cover almost exclusively scenarios in which collision potential
+resulted in actual impact, leaving other real-world safety-critical events that do not end in
+collision absent from evaluation.
+Therefore, to achieve broad scenario-level coverage, we augment the samples we will
+select from MM-AU with non-collision corner case clips from RoadSocial, a large-scale
+social-media road event dataset spanning varied geographies, camera perspectives, and road
+event types. This dataset captures a wide spectrum of non-collision events absent from typi-
+cal accident-focused datasets, and its video-level descriptive tags provide a principled basis
+for mapping clips to standardized corner case categories. Though we do not claim exhaustive
+coverage of all possible corner cases as no finite collection of videos can enumerate all pos-
+sible real-world road hazards [4], we believe that our constructed dataset provides the most
+wide-ranging and balanced ego-view collection yet assembled for scenario-level corner case
+evaluation, spanning 88 different categories.
+3.2
+Dataset Composition
+As established in our motivation, non-collision corner cases are severely underrepresented in
+existing ego-view dashcam datasets; to address this gap and achieve balanced scenario-level
+coverage, DashBench is composed of two sources. From MM-AU, we first retain all 626
+non-collision clips spanning 11 categories (including vehicle loss of control and component
+failures); although MM-AU already provides ego-view footage and keyframe annotations,
+each clip still undergoes manual inspection to confirm that the corner case is visually identi-
+fiable and correctly categorized, and to refine keyframe boundaries where needed. To extend
+
+
+6
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+coverage beyond these 11 categories, we additionally draw on RoadSocial, comprising of
+13.2K social-media road event videos across different camera viewpoints, each associated
+with descriptive tags out of a vocabulary of 21,325 video-level tags. Filtering and prepar-
+ing these clips required three steps: an LLM-assisted pipeline mapping video-level tags to
+candidate corner case categories to identify relevant clips, a check to ensure clips exhibit
+ego-view dashcam perspective, and manual verification that a corner case is visually present,
+with annotators additionally labeling corner case keyframes (frame at the start of the corner
+case, the frame at which it is most observable, and the frame marking its end). This selection
+and annotation process was carried out by five annotators over four months, and the com-
+plete protocol is described in Figure 2. Through this pipeline, RoadSocial yields 314 clips
+covering 31 new corner case categories.
+For the collision-side subset, we sample from MM-AU’s 9,142 collision clips across
+all 46 collision categories, targeting a category-balanced selection matching the size of the
+constructed non-collision subset. MM-AU provides keyframe annotations for the corner
+cases in all clips, but as previously mentioned, we manually refine keyframe boundaries
+where needed (cases where the keyframe does not exactly show the start, end, or the most
+observable frame of the corner case event).
+To ensure that all clips are evaluable under the 16-frame uniform sampling protocol,
+we apply two quality criteria across all candidate clips from both sources. First, we ensure
+that the corner case must be self-contained (not requiring additional context outside of the
+images, e.g. sound/narration). Second, the corner case must be unambiguously identifiable
+from the 16 uniformly sampled frames. The final DashBench benchmark comprises 1,709
+clips across 88 corner case categories. The average length for all clips in our benchmark
+is 7.70s while the average length of the corner case window for all clips is 3.47s. The full
+category list along with sample counts are provided in Table 5 in the Appendix.
+3.3
+AI-Assisted Ground Truth Annotation
+Q: What is dangerous in this sequence of  frames?
+    
+      Qwen3-VL response: The scene appears to be 
+a normal road situation. The road is wet, 
+indicating recent or ongoing rain, but there are no 
+signs of unusual or dangerous events.
+o3 assists in writing initial ground truth
+    Final Ground Truth: A red truck veers into       
+the planted median and smashes into roadside 
+trees, sending large branches crashing onto the  
+roadway.
+ Text-only
+DeepSeekV3-as-a-judge
+Yes
+No
+16 frames
+3 keyframes 
++
+category:
+truck hits 
+trees
+…
+Figure 3:
+Illustration of how we obtain a
+model’s response and ground truth description
+and pass them to DeepSeekV3-as-a-judge.
+Writing detailed scene descriptions for
+thousands of clips from the ground up is
+labour-intensive; we therefore leverage a
+strong thinking VLM, OpenAI’s o3 model
+which can reason with images in its chain of
+thought [36], to assist us in writing ground
+truth annotations. In each sample’s prompt,
+we provide three keyframes (video start
+frame, corner case occurrence frame, and
+video end frame) and pass the corner case
+category as a cue to guide o3’s annotation.
+Three independent annotators refine each
+generated model caption to a consensus fi-
+nal label, ensuring reliable ground-truth quality. The detailed prompt and annotation process
+can be found in Appendix B and C, respectively.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+7
+4
+Experiments
+4.1
+Experimental Setups
+DashBench is an open-ended, free-text response benchmark. While early video-QA datasets
+often relied on fixed multiple-choice formats, recent studies highlight that these multiple-
+choice tasks allow models to exploit shortcuts, revealing little about genuine multimodal
+reasoning or visual grounding [25, 29]. As a result, recent benchmark efforts have shifted
+toward open-ended evaluation to properly stress-test Video LLMs’ understanding of time-
+sensitive and knowledge-intensive visual events [12, 45]. Figure 3 shows the concise pipeline
+of experiments in our dataset, from how we obtain both a model’s response and a ground truth
+description to then subsequently pass them to DeepSeekV3-as-a-judge for evaluation.
+4.1.1
+Prompts
+For each sample, we query the Video LLM with five prompts:
+(Q1) What is unusual in this sequence of frames?
+(Q2) What is dangerous in this sequence of frames?
+(Q3) Describe this sequence of frames in detail.
+(Q4) Asks the model to return a single JSON object with two fields:
+(a) (Q4TF) – true if there is an unusual/dangerous event and false if it is a normal
+road situation
+(b) (Q4R) – free-text reasoning that justifies the answer in (Q4TF)
+(Q5) First gives a definition of a corner case scenario along with some examples. Then,
+asks the model to identify if there is any corner case and to describe it.
+Q1–Q2 are designed as explicit questions to force the model to search for anomalies,
+using both unusual and dangerous to cover diverse wording that can be used to describe
+corner cases. Q3 takes a different approach by asking for a general scene description with no
+explicit mention of danger, anomalies, or corner cases. We consider this a critical test since
+a Video LLM that truly understands the unfolding scene should identify the evident corner
+case naturally, without any textual hint to guide it. Q4 serves as an integrated detection-
+and-explanation prompt where we jointly check two aspects: (i) Q4TF, the binary question
+format is designed to check whether the model might be sensitive to the wording in the
+prompt, and (ii) in Q4R we ask the Video LLM to give its reasoning as to what factors in
+the images display a routine traffic scene or corner case on the road. This "reasoning" test
+examines the Video LLM’s visual grounding capability and whether it guesses in Q4TF due
+to the prompt’s nature. Since the format of Q4 requires the model to return JSON outputs, we
+could not provide Q4 results on several models since they cannot do this consistently. Lastly,
+Q5 introduces a definition-guided setting: we provide the model with a description of what a
+corner case is as well as some examples, then direct it to identify and describe any such event
+in the clip. Video-QA benchmarks generally avoid including in-context examples directly in
+the prompt [29, 34, 44], as video inputs already consume a large context budget and make
+adding examples computationally expensive. Q5 therefore stays within this convention by
+
+
+8
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+providing contextual framing through a short textual definition and examples, without adding
+concrete video instances to the prompt. We also use a system prompt to encourage the
+model to answer concisely as a road assistant. Detailed prompt templates are provided in
+Appendix B
+4.1.2
+Models
+We perform a comprehensive evaluation of 25 Video LLMs:
+2 SOTA closed-
+source
+models,
+GPT-5
+[37]
+and
+Gemini-3-Flash
+[41],
+16
+general-purpose
+open-source
+models
+including
+Qwen3-VL
+[47]
+(8B,
+32B,
+and
+235B
+variants),
+InternVL3.5 [49] (8B, 38B, and 241B variants), Ovis2.5 [30], KeyeVL [55],
+MiniCPM4.5
+[57],
+GLM-4.1V-Thinking
+[21],
+LLaVA-Next-Video
+[62],
+Tarsier2 [58], VITA-1.5 [17], IXC-2.5 [60], InternVideo2.5 [50] and
+LLaVA-OV-1.5 [1], as well as a group of 7 Video LLMs, which we will refer to as
+specialists, that have been fine-tuned on different established AD datasets. These include
+Dolphins [32], fine-tuned on the BDD-X dataset [24], DriveMM [22] which was fine-
+tuned on 6 separate AD datasets to promote versatility in handling different AD tasks, two
+domain-adapted versions of MiniInternVL2 [19] fine-tuned on the DriveLM dataset [46]
+and the BDD dataset [56] respectively, DriveLMM-o1 [23] which incorporates step-by-
+step chain-of-thought reasoning adapted to driving scene understanding, CrashChat [28]
+fine-tuned for multitask traffic crash video analysis, and LlaVA-OV-RS, a 7B model
+fine-tuned on the training split of the RoadSocial dataset [39]. See Appendix A for details
+on model access and deployment.
+4.1.3
+Evaluation
+To reliably evaluate the alignment between Video LLM responses and ground truth annota-
+tions, we employ the LLM-as-judge evaluation protocol [63]. This has become the standard
+practice for open-ended benchmarks, with recent work employing GPT variants [7, 34],
+DeepSeekV3 [43], and Llama3.1(70B) [31] as evaluators. In our setup, the LLM-as-
+judge assesses Q1–Q3 and Q4R using a structured binary judgment prompt that asks whether
+each model response captures the same corner case as the ground truth in terms of its cause,
+the agents responsible, and event timing. This criterion counts only responses receiving a Yes
+verdict toward the accuracy score, ensuring a metric that reflects semantic alignment, while
+Q4TF is reported separately as an independent binary detection score. We validate LLM-as-
+judge selection by randomly sampling 100 responses of several representative Video LLMs
+and comparing each candidate judge’s verdicts on those responses to actual human judg-
+ments using Cohen’s kappa (κ) [10] as the inter-rater agreement measure. As shown in
+Table 2, DeepSeekV3 achieves the highest agreement with human judgments (κ = 0.96)
+among all candidates tested, including Llama3.1(70B) [35] and a multi-LLM ensemble
+based on [48] (the details for this ensemble setup are explained in Appendix D), so we select
+DeepSeekV3 as our LLM-as-judge. As an open-source model from a different family than
+the evaluated Video LLMs, DeepSeekV3 additionally supports reproducible evaluation and
+avoids circular self-evaluation bias [38]. Furthermore, to verify that our evaluation scheme
+is not sensitive to stochastic variation, we run the DeepSeekV3-as-a-judge evaluation five
+times on a representative set of model responses; the mean accuracy and standard deviation
+across all prompts and models confirm consistent evaluation (std < 1% in all cases). The
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+9
+Model
+Q1
+Q2
+Q3
+Q4R
+Q5
+Min
+Agree
+Max
+Agree
+Avg
+Agree
+Q4TF
+Closed-source
+GPT-5
+19.95 36.92 31.19 46.52 39.15
+19.95
+46.52
+34.75
+97.83
+Gemini-3-Flash
+32.36 35.28 29.84 39.58 34.99
+29.84
+39.58
+34.41
+94.85
+Open-source
+Qwen3-VL (235B)
+18.72 20.19 16.79 25.92 21.71
+16.79
+25.92
+20.67
+72.03
+Qwen3-VL (8B)
+18.90 15.51 14.45 22.00 21.53
+14.45
+22.00
+18.48
+74.96
+Qwen3-VL (32B)
+17.20 18.90 12.87 18.78 18.31
+12.87
+18.90
+17.21
+71.04
+Ovis2.5 (9B)
+19.68 15.41
+7.77
+18.72 20.55
+7.77
+20.55
+16.43
+64.47
+InternVL3.5 (241B)
+19.31 12.81 11.47 19.13 17.61
+11.47
+19.31
+16.07
+76.36
+InternVL3.5 (38B)
+12.64 13.22
+8.66
+16.44 12.93
+8.66
+16.44
+12.78
+77.65
+Tarsier2 (7B)
+13.28 13.11 11.70
+–
+12.35
+11.70
+13.28
+12.61
+–
+MiniCPM4.5 (8B)
+13.34 11.18
+6.38
+17.27 13.53
+6.38
+17.27
+12.34
+87.53
+KeyeVL (8B)
+12.40 11.01
+5.03
+13.13 15.69
+5.03
+15.69
+11.45
+80.09
+InternVL3.5 (8B)
+4.27
+7.67
+6.55
+12.17 12.52
+4.27
+12.52
+8.64
+78.17
+InternVideo2.5 (8B)
+4.86
+9.71
+4.15
+9.95
+10.12
+4.15
+10.12
+7.76
+54.00
+IXC-2.5 (7B)
+6.26
+9.89
+4.92
+9.07
+8.54
+4.92
+9.89
+7.74
+54.44
+GLM-4.1V-Thinking (9B)
+7.85
+5.50
+2.05
+6.32
+9.91
+2.05
+9.91
+6.33
+35.34
+VITA-1.5 (8B)
+7.31
+3.63
+3.16
+6.03
+7.08
+3.16
+7.31
+5.44
+61.32
+LLaVA-OV-1.5 (8B)
+3.28
+3.10
+1.46
+7.14
+6.90
+1.46
+7.14
+4.38
+54.13
+LLaVA-Next-Video (7B)
+1.11
+3.16
+0.18
+2.00
+1.40
+0.18
+3.16
+1.57
+67.12
+Specialists
+LlaVA-OV-RS (7B)
+6.09
+14.86 11.59
+–
+7.49
+6.09
+14.86
+10.01
+–
+CrashChat (7B)
+6.79
+8.84
+4.27
+–
+3.74
+3.74
+8.84
+5.91
+–
+DriveLMM-o1 (8B)
+3.92
+2.28
+1.11
+–
+3.74
+1.11
+3.92
+2.76
+–
+DriveMM (8B)
+1.70
+1.76
+0.06
+–
+2.17
+0.06
+2.17
+1.42
+–
+MiniInternVL2-BDD (4B)
+2.28
+0.64
+0.00
+–
+1.46
+0.00
+2.28
+1.10
+–
+MiniInternVL2-DLM (4B)
+0.82
+0.35
+0.12
+–
+2.17
+0.12
+2.17
+0.87
+–
+Dolphins (7B)
+0.12
+1.05
+0.00
+–
+0.12
+0.00
+1.05
+0.32
+–
+Table 1: Video LLMs’ accuracy (%) on all corner-case driving scenarios in DashBench.
+"Minimum/Maximum/Average Agreement" are computed over Q1, Q2, Q3, Q4R, and Q5,
+and models are ordered based on Average Agreement in their own family. Q4TF is reported
+separately because it simply measures event detection rather than grounded explanation.
+Bold numbers mark the best value in each Q1–Q5 column within a model family; underlined
+numbers mark the second-best. - denotes cases where models could not consistently respond
+to Q4 in a structured format.
+complete judge prompt is shown in Appendix B, while the details for the judging experi-
+ments including multi-run stability results are saved in Table 7 in the Appendix.
+4.2
+Results
+Table 1 reports the accuracy of all evaluated Video LLMs on the full dataset across all five
+prompts. No model surpasses 50% on any individual prompt, and none exceeds 35% on
+average, highlighting the fundamental difficulty of open-ended corner-case understanding.
+Furthermore, our extensive experiments reveal distinct patterns in how architectural choices
+and prompt design affect model capabilities. The results demonstrate clear differences based
+on model type, training approach, and prompt structure, with ADS deployment implications.
+
+
+10
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Judge
+GPT-5
+κ
+Gemini-3
+-Flash κ
+Qwen3-VL
+(8B)κ
+InternVL3.5
+(8B) κ
+Ovis2.5
+(9B) κ
+Avg
+κ
+DeepSeekV3
+0.98
+0.93
+0.93
+0.95
+1.00
+0.96
+Llama3.1(70B)
+0.90
+0.92
+0.76
+0.81
+0.85
+0.85
+Multi-LLM [48]
+0.63
+0.57
+0.44
+0.52
+0.54
+0.54
+Table 2: Cohen’s κ agreement between different judge setups and evaluated Video LLM
+responses.
+Corner-Case Understanding Remains Challenging Across All Model Types and Scale.
+Among all models, GPT-5 achieves the highest Q4R accuracy at a lacking 46.52% and an
+average agreement of 34.75%, while Gemini-3-Flash follows closely at 34.41% aver-
+age. Though these numbers remain far below any practical safety threshold, the lead over the
+strongest open-source model Qwen3-VL (235B, 20.67% avg), still exceeds 14% in average
+agreement (34.75% vs. 20.67%), suggesting that our task remains challenging even as open-
+source general multimodal capabilities continue to improve. Notably, scaling model size
+within the same model family yields only modest and inconsistent gains. While scaling to
+extremely large open-source models (235B+) does improve performance, the gains remain
+surprisingly modest. For example, Qwen3-VL (235B) achieves only a ∼2% higher average
+agreement than its 8B counterpart (20.67% vs. 18.48%). Similarly, scaling InternVL3.5
+from 8B to 241B improves average agreement by only ∼7.43% (8.64% vs. 16.07%). These
+results suggest that simply increasing model scale alone is insufficient for robust understand-
+ing of rare and safety-critical driving corner cases.
+Neither Reasoning nor Driving Specialization Solves Corner-Case Understanding.
+Additionally, neither extended chain-of-thought reasoning nor domain-specific driving
+specialization appears sufficient for robust corner-case understanding. Reasoning-oriented
+models such as Ovis2.5, KeyeVL, and GLM-4.1V-Thinking show no clear advan-
+tage over similarly sized open-source Video LLMs, as Ovis2.5 reaches 16.43% average,
+behind the non-reasoning Qwen3-VL at 18.48%, while GLM-4.1V-Thinking scores
+only 6.33% despite its thinking mode. In particular, specialist driving Video LLMs achieve
+at most 10.01% average agreement despite being explicitly fine-tuned on AD datasets
+and for AD tasks, with several models collapsing to near-random performance.
+This
+suggests that current specialist training strategies may encourage shortcut learning tied to
+benchmark-specific patterns rather than genuine understanding of complex driving events.
+Video LLMs Depend Heavily on Linguistic Cueing Rather Than Robust Visual Under-
+standing.
+Variations in our prompts’ wording reveal that model performance can be highly
+sensitive to semantic framing: the same scene queried under different linguistic formulations
+shows score swings of up to 26% within a single model (e.g., 19.95% on Q1 to 46.52% on
+Q4R for GPT-5), a critical consideration for prompt design when deploying Video LLMs in
+driving scenarios. Additionally, through Q4R and Q4TF, we reveal the importance of free-
+text reasoning: are Video LLMs’ grounded explanations on successfully detecting a corner
+case valid? All evaluated models suffer a sharp drop in performance when asked to explain
+their decisions. On average, accuracy falls by 55 percentage points between Q4TF and Q4R.
+This insight calls for the integration of additional modules that verify visual evidence be-
+fore explaining. Most critically, Q3, which asks for a detailed temporal description of the
+video without explicitly cuing the model to look for corner cases, ranks as the lowest-scoring
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+11
+The scene appears to be consecutive 
+dashcam images captured on a multi-lane 
+highway at night while approaching an 
+interchange or exit split. The dashcam vehicle 
+is centered in a wide highway with several 
+open lanes ahead. Traﬃc ahead in the right 
+lanes appears slower than the ego lane. 
+Multiple vehicles are stopped on the right 
+shoulder/rightmost lane with ﬂashing blue 
+lights, creating a partial lane closure and 
+causing traﬃc to slow and change lanes. 
+This unusual lighting and stopped vehicles 
+in/near the lane present a hazardous, 
+non‑standard situation. 
+The sequence shows a nighttime highway 
+driving scenario captured from a dashcam. 
+The ego vehicle is traveling in the leftmost 
+through lane while approaching 
+increasingly dense traﬃc on the right lanes. 
+No sudden hazards, swerving, or 
+emergency maneuvers are visible. 
+…
+A large dump truck abruptly cuts across lanes in front of the camera car with 
+little clearance, creating a hazardous merging situation.
+GPT-5
+Figure 4: Illustration of a corner case window in a clip. The red brackets mark the anno-
+tated corner-case window in the clip. We show GPT-5’s responses to different parts of the
+clip; GPT-5 is able to explain the scenario well outside of the corner case window. However,
+despite using 16 frames and concentrating the visual input on the critical event (a truck per-
+forming hazardous lane merging ahead), GPT-5 fails to identify the dangerous maneuver.
+prompt across almost all evaluated models, regardless of model family or scale. Therefore,
+the consistent drop on Q3, which removes any implicit guidance on searching for corner
+cases in the scene, exposes that performance can be driven by what models are told to look
+for, not by what they can independently perceive.
+Video LLMs Fail Both by Missing Hazards and Hallucinating Them.
+Detailed quali-
+tative analysis on our benchmark reveals the important issue on not only that Video LLMs
+fail but also ”how they fail”. Across many evaluated instances, Video LLMs simply strug-
+gle to identify the corner case in the scene (Figure 4, 5, Appendix G.1). Beyond failures in
+visual grounding, we observe that Video LLMs have a tendency to hallucinate nonexistent
+road agents, which are especially important in vision-language-action frameworks where
+imagined hazards will directly influence an ADS’ road maneuvers. Especially in Q1 and
+Q2 results, these models might invent scenarios instead of claiming the absence of anything
+unusual or dangerous or even uncertainty (Figure 5, Appendix G.2). Though the resulting
+limited performance for all corner cases are most commonly related to failing to identify the
+corner case and hallucinating non-existent road agents (Appendix G.1 and G.2 respectively),
+observation of collision event examples specifically show that Video LLMs additionally hal-
+lucinate imaginary actions of road agents (Appendix G.4) and fail to identify the actual
+collision, instead describing them as near-misses (Appendix G.3).
+4.2.1
+Corner Case Window Experiments
+In our main evaluation, 16 frames are sampled uniformly across each dashcam clip. As
+illustrated in Figure 4 (top), corner-case events occupy only a fraction of the clip on average,
+meaning the frame budget is shared between the hazardous segment and surrounding routine
+
+
+12
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Model
+Q1
+Q2
+Q3
+Q4R
+Q5
+Avg
+Agree
+Q4TF
+Closed-source
+GPT-5
+20.90
+36.09
+29.28
+47.39
+38.40
+34.41
+96.96
++ CCW
+19.68−1.22
+42.41+6.32
+34.51+5.23
+51.40+4.01
+43.01+4.61
+38.20+3.79
+97.81+0.85
+Gemini-3-Flash
+32.56
+34.99
+28.43
+37.96
+34.39
+33.67
+92.34
++ CCW
+34.63+2.07
+39.37+4.38
+30.13+1.70
+45.44+7.48
+40.34+5.95
+37.98+4.31
+94.29+1.95
+Open-source
+Qwen3-VL (8B)
+17.98
+14.95
+13.97
+20.90
+21.02
+17.76
+70.84
++ CCW
+13.61−4.37
+18.35+3.40
+15.19+1.22
+22.11+1.21
+23.57+2.55
+18.57+0.81
+73.39+2.55
+Ovis2.5 (9B)
+18.57
+13.62
+7.01
+18.10
+21.37
+15.73
+60.59
++ CCW
+20.79+2.22
+17.30+3.68
+7.74+0.73
+19.66+1.56
+23.08+1.71
+17.71+1.98
+64.99+4.40
+InternVL3.5 (8B)
+3.65
+8.02
+6.68
+10.57
+12.15
+8.21
+74.48
++ CCW
+4.74+1.09
+9.11+1.09
+7.65+0.97
+14.22+3.65
+15.19+3.04
+10.18+1.97
+85.05+10.57
+Table 3: Accuracy (%) of selected models on the CCW subset. Each model’s full-video
+run (16 frames sampled across the full clip) is compared against its CCW run (16 frames
+sampled from the corner case window only). Subscripts show the change in score: green =
+improvement, red = regression.
+footage. The corner-case window (CCW) experiment tests whether this is a limiting factor:
+rather than sampling from the full clip, we restrict the 16 frames to the annotated start-to-
+end span of the corner case only, keeping everything else such as prompts, models, and
+evaluation, identical. We apply this experiment to the 823 out of 1,709 samples (48.2%)
+in which the anomalous window covers less than half of the total clip duration. These are
+where the localization argument is strongest and uniformly sampling throughout the video is
+most likely to fail to sufficiently cover the anomalous segment within the frame budget.
+As reported in Table 3 as well as expanded results in Appendix Table 9, restricting to
+the corner-case window improves average agreement, confirming that temporal localization
+is broadly beneficial. The magnitude of improvement seems to scale with model capability:
+closed-source models gain +3.79 pp (GPT-5) and +4.31 pp (Gemini-3-Flash), while
+open-source models improve by only +0.81 to +1.98 pp, suggesting that stronger models
+are better positioned to exploit the concentrated event signal. Notably, in Q1, both GPT-5
+(−1.22 pp) and Qwen3-VL (−4.37 pp) regress on the narrow window. Q1 asks what is
+unusual about the scene, a judgment that inherently requires comparative context from the
+surrounding normal driving footage; excluding that context by narrowing to the event win-
+dow alone removes the reference frames against which the anomaly is assessed. Taken to-
+gether, these results suggest that while temporal event localization meaningfully reduces the
+visual noise that hinders corner-case understanding, the ceiling for open-source models still
+remains limited by capability rather than by sampling strategy alone.
+4.2.2
+Hallucination Mitigation On the Road
+Due to the difficulty of acquiring sufficient annotated corner-case examples and curating a
+class-balanced training set across 88 scenario categories, fine-tuning Video LLMs for corner-
+case robustness remains practically expensive. We therefore investigate recent training-free
+methods for multimodal LLMs that require no additional data or model updates, and whose
+implementations are publicly available. Specifically, we focus on training-free decoding,
+which mitigate hallucinations at inference time by contrasting the model’s normal predic-
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+13
+VDGD
+SECOND
+TriCD
++ VDGD: The corner case in this video is the truck's 
+unexpected and sudden lane change from the right 
+lane to the left lane without prior indication.
+Baseline: The vehicle is traveling straight on a 
+multi-lane road with moderate traﬃc. The road is 
+relatively clear, and vehicles are moving at a steady 
+pace.
++ VDGD: The road ahead is icy.
+Baseline: The white car is driving on a snowy road 
+and loses control, swerving to the right and almost 
+hitting the camera vehicle. 
++ SECOND: A truck is driving down a snowy road and 
+then crashes into the side of the road.
+Baseline: The truck is driving on the side of the road 
+and then turns onto the road.
++ TriCD: The unusual aspect in this sequence of 
+frames is the sudden fall of a cyclist who was riding a 
+bicycle. The cyclist loses balance and falls oﬀ the 
+bike, landing on the ground.
+Baseline: The unusual aspect in this sequence of 
+frames is the presence of a person riding a bicycle on 
+the road, which is not a common sight in urban areas.
+❌
+✅
++ SECOND: The car is driving on a wet road, which 
+can make the car more diﬃcult to control.
+Baseline: The dangerous aspect in this sequence of 
+frames is the car driving on the wrong side of the 
+road.
+❌
+✅
++ TriCD: A car is driving on a highway and 
+approaches an intersection. The car hits a 
+pedestrian, causing the pedestrian to be thrown into 
+the air.
+Baseline: A car is driving on a highway and then 
+crashes into a barrier. The car is seen ﬂipping over 
+and crashing into the barrier.
+❌
+✅
+❌
+✅
+❌
+✅
+✅
+❌
+(A)
+(B)
+(C)
+(D)
+(E)
+()
+Figure 5: Samples of "flip" cases as a result of hallucination mitigation methods applied
+to the baseline model, InternVL3.5 8B. ✓denotes a response that correctly identifies
+the corner case, while ✗denotes a response that fails to do so, either missing the hazard
+entirely or substituting a hallucinated description. The top row (A–C) shows recovery cases,
+whereas the bottom row (D–F) shows regression cases.
+tions with degraded or perturbed visual references, thereby amplifying visually grounded
+tokens and suppressing language-driven priors.
+VDGD [20] grounds generation using a detailed visual description and KL-based de-
+coding.
+SECOND [40] uses multi-scale object-relevant patches and coarse-to-fine con-
+trastive decoding. TRiCD [54] targets video hallucinations through temporal perturbations
+and saliency-guided visual enhancement. As reported in Table 4, none of the three meth-
+ods yields substantial improvement. TRiCD achieves the largest gain (+1.16 pp, reaching
+9.80% avg), with positive deltas across all five question types, suggesting that its video-
+native contrastive signal is best aligned with the multi-frame temporal structure of corner-
+case events. While SECOND provides a marginal improvement (+0.36 pp avg), VDGD
+hurts performance (−1.41 pp avg), suggesting that description-grounded decoding does not
+transfer well to dynamic, multi-frame driving inputs. Qualitative examples in Figure 5 show
+several flip cases where these decoding methods can either improve or degrade the quality
+of scene descriptions. Implementation details are in Appendix E.
+Though these methods have shown strong results on object-level hallucination with
+multiple-choice verification, corner-case driving evaluation is inherently harder, targeting
+temporally concentrated events and based on open-ended generation, a setting in which
+Video-LLMs are known to exhibit substantially high hallucination rates [42].Taken together,
+these results on InternVL3.5 indicate that existing training-free hallucination mitigation
+methods provide, at best, marginal and inconsistent benefits on safety-critical corner cases.
+
+
+14
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Model
+Q1
+Q2
+Q3
+Q4R
+Q5
+Avg Agr.
+Q4TF
+InternVL3.5 (8B)
+4.27
+7.67
+6.55
+12.17
+12.52
+8.64
+78.17
++ VDGD [20]
+4.10−0.17
+5.32−2.35
+6.96+0.41
+9.13−3.04
+10.65−1.87
+7.23−1.41
+58.46−19.71
++ SECOND [40]
+4.04−0.23
+7.55−0.12
+7.14+0.59
+13.40+1.23
+12.87+0.35
+9.00+0.36
+81.33+3.16
++ TRiCD [54]
+5.03+0.76
+8.72+1.05
+7.20+0.65
+13.34+1.17
+14.69+2.17
+9.80+1.16
+75.13−3.04
+Table 4: Accuracy (%) of training-free decoding methods applied to InternVL3.5 (8B)
+on the full DashBench. Subscripts show the change in score: green = improvement, red =
+regression.
+5
+Discussion and Conclusion
+Our results reveal that the latest Video LLMs, regardless of open vs. proprietary status,
+model scale, reasoning capability, or fine-tuning on established driving datasets, fall criti-
+cally short when tasked with understanding corner cases. No evaluated model surpasses 50%
+on any individual prompt, and none exceeds 35% on average: GPT-5, the highest performer,
+reaches only 46.52% on Q4R and 34.75% average agreement. Open-source models are fur-
+ther behind still, with the strongest open-source result (Qwen3-VL 235B, 20.67% average)
+lagging the closed-source best by over 14 percentage points. When considering model train-
+ing recipes neither extended chain-of-thought reasoning nor domain-specific driving special-
+ization on existing datasets narrows this gap, as specialist models fine-tuned on AD datasets
+achieve at most 10.01% average agreement, with several performing near chance. More crit-
+ically, all Video LLMs frequently hallucinate nonexistent road agents, fabricate imaginary
+actions, or misclassify collisions as near-misses in addition to simply missing the evident
+corner case on the road. These failure modes direct safety risks when Video LLMs are em-
+bedded as explainability or planning components in an ADS.
+Our benchmark design and additional experiments conducted further expose the depth of
+the problem. Prompt formulation is far from a trivial design choice when deploying Video
+LLMs for road scene analysis, as the expectation that models can robustly describe scenes
+without being cued to look for anomalies does not hold. We also explored whether narrowing
+the temporal context to the anomalous event itself could help: isolating the corner-case win-
+dow does benefit stronger models by several percentage points (+3.79 pp for GPT-5), but
+the gains for open-source models are negligible (+0.81–1.98 pp), ruling out insufficient vi-
+sual context as the primary obstacle. We further attempt to address these failures by applying
+three recent hallucination mitigation methods,with the best approach gaining only +1.16 pp
+on average. Together, these findings indicate that closing the corner-case gap requires fun-
+damentally new approaches: future Video LLM assistants and planners should demonstrate
+robust visual grounding and must be exposed to diverse scenarios during training. Addition-
+ally, motivated by the scarcity of rare non-collision corner cases in naturalistic footage, we
+believe that the development of driving-domain world models that can synthesize diverse,
+controllable safety-critical scenarios is a promising direction for future dataset construction.
+DashBench provides the most comprehensive ego-view corner-case evaluation of Video
+LLMs to date: 1,709 dashcam clips across 88 fine-grained categories, balanced across colli-
+sion and non-collision events, with open-ended free-text QA evaluated by a reliable, SOTA
+LLM-as-a-judge. Together with a detailed characterization of systematic failure modes and
+a suite of diagnostic experiments, we offer both a rigorous stress test and a practical guide
+for the limitations that must be overcome. We believe DashBench serves as a foundational
+resource for advancing Video LLMs toward the perceptual robustness and safety-critical re-
+liability that trustworthy autonomous driving demands.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+15
+Acknowledgements
+This work was supported by the National Research Foundation of Korea(NRF) grant funded
+by the Korea government(MSIT)(RS-2025-00573160), and the “Advanced GPU Utilization
+Support Program” funded by the Government of the Republic of Korea (Ministry of Science
+and ICT).
+References
+[1] Xiang An, Yin Xie, Kaicheng Yang, Wenkang Zhang, Xiuwei Zhao, Zheng Cheng,
+Yirui Wang, Songcen Xu, Changrui Chen, Chunsheng Wu, Huajie Tan, Chunyuan Li,
+Jing Yang, Jie Yu, Xiyao Wang, Bin Qin, Yumeng Wang, Zizhen Yan, Ziyong Feng, Zi-
+wei Liu, Bo Li, and Jiankang Deng. Llava-onevision-1.5: Fully open framework for de-
+mocratized multimodal training. CoRR, abs/2509.23661, 2025. doi: 10.48550/ARXIV.
+2509.23661. URL https://doi.org/10.48550/arXiv.2509.23661.
+[2] Daniel Bogdoll, Jasmin Breitenstein, Florian Heidecker, Maarten Bieshaar, Bernhard
+Sick, Tim Fingscheidt, and J. Marius Zöllner. Description of corner cases in automated
+driving: Goals and challenges. In IEEE/CVF International Conference on Computer
+Vision Workshops, ICCVW 2021, Montreal, QC, Canada, October 11-17, 2021, pages
+1023–1028. IEEE, 2021.
+doi: 10.1109/ICCVW54120.2021.00119.
+URL https:
+//doi.org/10.1109/ICCVW54120.2021.00119.
+[3] Jasmin Breitenstein, Jan-Aike Termöhlen, Daniel Lipinski, and Tim Fingscheidt. Sys-
+tematization of corner cases for visual perception in automated driving. In IEEE In-
+telligent Vehicles Symposium, IV 2020, Las Vegas, NV, USA, October 19 - November
+13, 2020, pages 1257–1264. IEEE, 2020. doi: 10.1109/IV47402.2020.9304789. URL
+https://doi.org/10.1109/IV47402.2020.9304789.
+[4] Jasmin Breitenstein, Jan-Aike Termöhlen, Daniel Lipinski, and Tim Fingscheidt. Cor-
+ner cases for visual perception in automated driving: Some guidance on detection ap-
+proaches. CoRR, abs/2102.05897, 2021. URL https://arxiv.org/abs/2102.
+05897.
+[5] Mu Cai, Reuben Tan, Jianrui Zhang, Bocheng Zou, Kai Zhang, Feng Yao, Fangrui
+Zhu, Jing Gu, Yiwu Zhong, Yuzhang Shang, Yao Dou, Jaden Park, Jianfeng Gao,
+Yong Jae Lee, and Jianwei Yang. Temporalbench: Benchmarking fine-grained tempo-
+ral understanding for multimodal video models. CoRR, abs/2410.10818, 2024. doi:
+10.48550/ARXIV.2410.10818.
+URL https://doi.org/10.48550/arXiv.
+2410.10818.
+[6] Fu-Hsiang Chan, Yu-Ting Chen, Yu Xiang, and Min Sun.
+Anticipating acci-
+dents in dashcam videos.
+In Shang-Hong Lai, Vincent Lepetit, Ko Nishino,
+and Yoichi Sato, editors, Computer Vision - ACCV 2016 - 13th Asian Confer-
+ence on Computer Vision, Taipei, Taiwan, November 20-24, 2016, Revised Selected
+Papers, Part IV, Lecture Notes in Computer Science, pages 136–153. Springer,
+2016. doi: 10.1007/978-3-319-54190-7\_9. URL https://doi.org/10.1007/
+978-3-319-54190-7_9.
+
+
+16
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+[7] Kai Chen, Yanze Li, Wenhua Zhang, Yanxin Liu, Pengxiang Li, Ruiyuan Gao, Lan-
+qing Hong, Meng Tian, Xinhai Zhao, Zhenguo Li, Dit-Yan Yeung, Huchuan Lu, and
+Xu Jia. Automated evaluation of large vision-language models on self-driving cor-
+ner cases.
+In IEEE/CVF Winter Conference on Applications of Computer Vision,
+WACV 2025, Tucson, AZ, USA, February 26 - March 6, 2025, pages 7817–7826.
+IEEE, 2025. doi: 10.1109/WACV61041.2025.00759. URL https://doi.org/
+10.1109/WACV61041.2025.00759.
+[8] Li Chen, Penghao Wu, Kashyap Chitta, Bernhard Jaeger, Andreas Geiger, and
+Hongyang Li. End-to-end autonomous driving: Challenges and frontiers. IEEE Trans.
+Pattern Anal. Mach. Intell., 46(12):10164–10183, 2024. doi: 10.1109/TPAMI.2024.
+3435937. URL https://doi.org/10.1109/TPAMI.2024.3435937.
+[9] Siran Chen, Yuxiao Luo, Yue Ma, Yu Qiao, and Yali Wang. H-MBA: hierarchical
+mamba adaptation for multi-modal video understanding in autonomous driving. In
+Toby Walsh, Julie Shah, and Zico Kolter, editors, Thirty-Ninth AAAI Conference on
+Artificial Intelligence, Thirty-Seventh Conference on Innovative Applications of Arti-
+ficial Intelligence, Fifteenth Symposium on Educational Advances in Artificial Intel-
+ligence, AAAI 2025, Philadelphia, PA, USA, February 25 - March 4, 2025, pages
+2212–2220. AAAI Press, 2025. doi: 10.1609/AAAI.V39I2.32220. URL https:
+//doi.org/10.1609/aaai.v39i2.32220.
+[10] Jacob Cohen. A coefficient of agreement for nominal scales. Educational and psycho-
+logical measurement, 20(1):37–46, 1960.
+[11] Daniel Cores, Michael Dorkenwald, Manuel Mucientes, Cees G. M. Snoek, and
+Yuki M. Asano.
+Tvbench:
+Redesigning video-language evaluation.
+CoRR,
+abs/2410.07752, 2024. doi: 10.48550/ARXIV.2410.07752. URL https://doi.
+org/10.48550/arXiv.2410.07752.
+[12] Shangzhe Di and Weidi Xie. Grounded question-answering in long egocentric videos.
+In IEEE/CVF Conference on Computer Vision and Pattern Recognition, CVPR 2024,
+Seattle, WA, USA, June 16-22, 2024, pages 12934–12943. IEEE, 2024. doi: 10.1109/
+CVPR52733.2024.01229.
+URL https://doi.org/10.1109/CVPR52733.
+2024.01229.
+[13] Jiqian Dong, Sikai Chen, Mohammad Miralinaghi, Tiantian Chen, Pei Li, and Samuel
+Labi. Why did the ai make that decision? towards an explainable artificial intelligence
+(xai) for autonomous driving systems. Transportation research part C: emerging tech-
+nologies, 156:104358, 2023.
+[14] Jianwu Fang, Lei-Lei Li, Junfei Zhou, Junbin Xiao, Hongkai Yu, Chen Lv, Jianru Xue,
+and Tat-Seng Chua. Abductive ego-view accident video understanding for safe driv-
+ing perception. In IEEE/CVF Conference on Computer Vision and Pattern Recogni-
+tion, CVPR 2024, Seattle, WA, USA, June 16-22, 2024, pages 22030–22040. IEEE,
+2024.
+doi: 10.1109/CVPR52733.2024.02080.
+URL https://doi.org/10.
+1109/CVPR52733.2024.02080.
+[15] Haiwen Feng, Long Lian, Lisa Dunlap, Jiahao Shu, Xudong Wang, Renhao Wang,
+Trevor Darrell, Alane Suhr, and Angjoo Kanazawa. Visually prompted benchmarks are
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+17
+surprisingly fragile. CoRR, abs/2512.17875, 2025. doi: 10.48550/ARXIV.2512.17875.
+URL https://doi.org/10.48550/arXiv.2512.17875.
+[16] Chaoyou Fu, Yuhan Dai, Yongdong Luo, Lei Li, Shuhuai Ren, Renrui Zhang,
+Zihan Wang, Chenyu Zhou, Yunhang Shen, Mengdan Zhang, Peixian Chen,
+Yanwei Li, Shaohui Lin, Sirui Zhao, Ke Li, Tong Xu, Xiawu Zheng, Enhong
+Chen, Caifeng Shan, Ran He, and Xing Sun.
+Video-mme: The first-ever com-
+prehensive evaluation benchmark of multi-modal llms in video analysis.
+In
+IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+CVPR
+2025, Nashville, TN, USA, June 11-15, 2025, pages 24108–24118. Computer
+Vision Foundation / IEEE, 2025.
+doi: 10.1109/CVPR52734.2025.02245.
+URL
+https://openaccess.thecvf.com/content/CVPR2025/html/
+Fu_Video-MME_The_First-Ever_Comprehensive_Evaluation_
+Benchmark_of_Multi-modal_LLMs_in_CVPR_2025_paper.html.
+[17] Chaoyou Fu, Haojia Lin, Xiong Wang, Yifan Zhang, Yunhang Shen, Xiaoyu Liu,
+Haoyu Cao, Zuwei Long, Heting Gao, Ke Li, Long Ma, Xiawu Zheng, Rongrong Ji,
+Xing Sun, Caifeng Shan, and Ran He. VITA-1.5: towards gpt-4o level real-time vision
+and speech interaction. CoRR, abs/2501.01957, 2025. doi: 10.48550/ARXIV.2501.
+01957. URL https://doi.org/10.48550/arXiv.2501.01957.
+[18] Rui Gan, Junyi Ma, Pei Li, Xingyou Yang, Kai Chen, Sikai Chen, and Bin Ran. Crash-
+sight: A phase-aware, infrastructure-centric video benchmark for traffic crash scene
+understanding and reasoning. CoRR, abs/2604.08457, 2026. doi: 10.48550/ARXIV.
+2604.08457. URL https://doi.org/10.48550/arXiv.2604.08457.
+[19] Zhangwei Gao, Zhe Chen, Erfei Cui, Yiming Ren, Weiyun Wang, Jinguo Zhu, Hao
+Tian, Shenglong Ye, Junjun He, Xizhou Zhu, Lewei Lu, Tong Lu, Yu Qiao, Jifeng
+Dai, and Wenhai Wang. Mini-internvl: A flexible-transfer pocket multimodal model
+with 5% parameters and 90% performance.
+CoRR, abs/2410.16261, 2024.
+doi:
+10.48550/ARXIV.2410.16261.
+URL https://doi.org/10.48550/arXiv.
+2410.16261.
+[20] Sreyan Ghosh, Chandra Kiran Reddy Evuru, Sonal Kumar, Utkarsh Tyagi, Oriol Nieto,
+Zeyu Jin, and Dinesh Manocha. Visual description grounding reduces hallucinations
+and boosts reasoning in lvlms. In The Thirteenth International Conference on Learning
+Representations, ICLR 2025, Singapore, April 24-28, 2025. OpenReview.net, 2025.
+URL https://openreview.net/forum?id=3PRvlT8b1R.
+[21] Wenyi Hong, Wenmeng Yu, Xiaotao Gu, Guo Wang, Guobing Gan, Haomiao Tang,
+Jiale Cheng, Ji Qi, Junhui Ji, Lihang Pan, Shuaiqi Duan, Weihan Wang, Yan Wang,
+Yean Cheng, Zehai He, Zhe Su, Zhen Yang, Ziyang Pan, Aohan Zeng, Baoxu Wang,
+Boyan Shi, Changyu Pang, Chenhui Zhang, Da Yin, Fan Yang, Guoqing Chen, Ji-
+azheng Xu, Jiali Chen, Jing Chen, Jinhao Chen, Jinghao Lin, Jinjiang Wang, Junjie
+Chen, Leqi Lei, Letian Gong, Leyi Pan, Mingzhi Zhang, Qinkai Zheng, Sheng Yang,
+Shi Zhong, Shiyu Huang, Shuyuan Zhao, Siyan Xue, Shangqin Tu, Shengbiao Meng,
+Tianshu Zhang, Tianwei Luo, Tianxiang Hao, Wenkai Li, Wei Jia, Xin Lyu, Xuancheng
+Huang, Yanling Wang, Yadong Xue, Yanfeng Wang, Yifan An, Yifan Du, Yiming Shi,
+Yiheng Huang, Yilin Niu, Yuan Wang, Yuanchang Yue, Yuchen Li, Yutao Zhang, Yux-
+uan Zhang, Zhanxiao Du, Zhenyu Hou, Zhao Xue, Zhengxiao Du, Zihan Wang, Peng
+
+
+18
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Zhang, Debing Liu, Bin Xu, Juanzi Li, Minlie Huang, Yuxiao Dong, and Jie Tang.
+Glm-4.1v-thinking: Towards versatile multimodal reasoning with scalable reinforce-
+ment learning. CoRR, abs/2507.01006, 2025. doi: 10.48550/ARXIV.2507.01006. URL
+https://doi.org/10.48550/arXiv.2507.01006.
+[22] Zhijian Huang, Chengjian Feng, Feng Yan, Baihui Xiao, Zequn Jie, Yujie Zhong,
+Xiaodan Liang, and Lin Ma. Drivemm: All-in-one large multimodal model for au-
+tonomous driving. CoRR, abs/2412.07689, 2024. doi: 10.48550/ARXIV.2412.07689.
+URL https://doi.org/10.48550/arXiv.2412.07689.
+[23] Ayesha Ishaq, Jean Lahoud, Ketan More, Omkar Thawakar, Ritesh Thawkar, Dinura
+Dissanayake, Noor Ahsan, Yuhao Li, Fahad Shahbaz Khan, Hisham Cholakkal, Ivan
+Laptev, Rao Muhammad Anwer, and Salman H. Khan.
+Drivelmm-o1: A step-by-
+step reasoning dataset and large multimodal model for driving scenario understand-
+ing. In IEEE/RSJ International Conference on Intelligent Robots and Systems, IROS
+2025, Hangzhou, China, October 19-25, 2025, pages 20501–20508. IEEE, 2025.
+doi: 10.1109/IROS60139.2025.11247360. URL https://doi.org/10.1109/
+IROS60139.2025.11247360.
+[24] Jinkyu Kim, Anna Rohrbach, Trevor Darrell, John F. Canny, and Zeynep Akata. Tex-
+tual explanations for self-driving vehicles. In Vittorio Ferrari, Martial Hebert, Cris-
+tian Sminchisescu, and Yair Weiss, editors, Computer Vision - ECCV 2018 - 15th
+European Conference, Munich, Germany, September 8-14, 2018, Proceedings, Part
+II, volume 11206 of Lecture Notes in Computer Science, pages 577–593. Springer,
+2018.
+doi:
+10.1007/978-3-030-01216-8\_35.
+URL https://doi.org/10.
+1007/978-3-030-01216-8_35.
+[25] Dohwan Ko, Ji Soo Lee, Miso Choi, Jaewon Chu, Jihwan Park, and Hyunwoo J.
+Kim.
+Open-vocabulary video question answering: A new benchmark for evaluat-
+ing the generalizability of video question answering models.
+In IEEE/CVF Inter-
+national Conference on Computer Vision, ICCV 2023, Paris, France, October 1-6,
+2023, pages 3078–3089. IEEE, 2023. doi: 10.1109/ICCV51070.2023.00288. URL
+https://doi.org/10.1109/ICCV51070.2023.00288.
+[26] Kodiak. Llms take the wheel. Kodiak Blog, 2024. https://kodiak.ai/news/llms-take-
+the-wheel.
+[27] Chaoyu Li, Eun Woo Im, and Pooyan Fazli.
+Vidhalluc:
+Evaluating tempo-
+ral hallucinations in multimodal large language models for video understand-
+ing.
+In IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+CVPR 2025, Nashville, TN, USA, June 11-15, 2025, pages 13723–13733. Com-
+puter Vision Foundation / IEEE, 2025.
+doi:
+10.1109/CVPR52734.2025.01281.
+URL
+https://openaccess.thecvf.com/content/CVPR2025/
+html/Li_VidHalluc_Evaluating_Temporal_Hallucinations_in_
+Multimodal_Large_Language_Models_for_CVPR_2025_paper.html.
+[28] Kaidi Liang, Ke Li, Xianbiao Hu, and Ruwen Qin. Crashchat: A multimodal large
+language model for multitask traffic crash video analysis.
+CoRR, abs/2512.18878,
+2025. doi: 10.48550/ARXIV.2512.18878. URL https://doi.org/10.48550/
+arXiv.2512.18878.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+19
+[29] Ye Liu, Zongyang Ma, Zhongang Qi, Yang Wu, Ying Shan, and Chang Wen Chen.
+E.T. bench:
+Towards open-ended event-level video-language understanding.
+In
+Amir Globersons, Lester Mackey, Danielle Belgrave, Angela Fan, Ulrich Paquet,
+Jakub M. Tomczak, and Cheng Zhang, editors, Advances in Neural Information
+Processing Systems 38: Annual Conference on Neural Information Processing Systems
+2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 - 15, 2024, 2024.
+URL
+http://papers.nips.cc/paper_files/paper/2024/hash/
+38ace89a980ead30c6be2b46afc1a5bd-Abstract-Datasets_and_
+Benchmarks_Track.html.
+[30] Shiyin Lu, Yang Li, Yu Xia, Yuwei Hu, Shanshan Zhao, Yanqing Ma, Zhichao Wei,
+Yinglun Li, Lunhao Duan, Jianshan Zhao, Yuxuan Han, Haijun Li, Wanying Chen,
+Junke Tang, Chengkun Hou, Zhixing Du, Tianli Zhou, Wenjie Zhang, Huping Ding,
+Jiahe Li, Wen Li, Gui Hu, Yiliang Gu, Siran Yang, Jiamang Wang, Hailong Sun, Yibo
+Wang, Hui Sun, Jinlong Huang, Yuping He, Shengze Shi, Weihong Zhang, Guodong
+Zheng, Junpeng Jiang, Sensen Gao, Yi-Feng Wu, Sijia Chen, Yuhui Chen, Qing-Guo
+Chen, Zhao Xu, Weihua Luo, and Kaifu Zhang.
+Ovis2.5 technical report.
+CoRR,
+abs/2508.11737, 2025. doi: 10.48550/ARXIV.2508.11737. URL https://doi.
+org/10.48550/arXiv.2508.11737.
+[31] Xinxi Lyu, Yizhong Wang, Hannaneh Hajishirzi, and Pradeep Dasigi.
+HREF: hu-
+man response-guided evaluation of instruction following in language models. CoRR,
+abs/2412.15524, 2024. doi: 10.48550/ARXIV.2412.15524. URL https://doi.
+org/10.48550/arXiv.2412.15524.
+[32] Yingzi Ma, Yulong Cao, Jiachen Sun, Marco Pavone, and Chaowei Xiao.
+Dol-
+phins: Multimodal language model for driving. In Ales Leonardis, Elisa Ricci, Ste-
+fan Roth, Olga Russakovsky, Torsten Sattler, and Gül Varol, editors, Computer Vi-
+sion - ECCV 2024 - 18th European Conference, Milan, Italy, September 29-October
+4, 2024, Proceedings, Part XLV, volume 15103 of Lecture Notes in Computer Sci-
+ence, pages 403–420. Springer, 2024. doi: 10.1007/978-3-031-72995-9\_23. URL
+https://doi.org/10.1007/978-3-031-72995-9_23.
+[33] Karttikeya Mangalam, Raiymbek Akshulakov, and Jitendra Malik.
+Egoschema:
+A diagnostic benchmark for very long-form video language understanding.
+In
+Alice Oh,
+Tristan Naumann,
+Amir Globerson,
+Kate Saenko,
+Moritz Hardt,
+and Sergey Levine, editors, Advances in Neural Information Processing Sys-
+tems 36:
+Annual Conference on Neural Information Processing Systems 2023,
+NeurIPS 2023,
+New Orleans,
+LA, USA, December 10 - 16,
+2023,
+2023.
+URL
+http://papers.nips.cc/paper_files/paper/2023/hash/
+90ce332aff156b910b002ce4e6880dec-Abstract-Datasets_and_
+Benchmarks.html.
+[34] Ana-Maria Marcu, Long Chen, Jan Hünermann, Alice Karnsund, Benoît Hanotte, Pra-
+jwal Chidananda, Saurabh Nair, Vijay Badrinarayanan, Alex Kendall, Jamie Shot-
+ton, Elahe Arani, and Oleg Sinavski.
+Lingoqa: Visual question answering for au-
+tonomous driving. In Ales Leonardis, Elisa Ricci, Stefan Roth, Olga Russakovsky,
+Torsten Sattler, and Gül Varol, editors, Computer Vision - ECCV 2024 - 18th European
+Conference, Milan, Italy, September 29-October 4, 2024, Proceedings, Part LXXVII,
+volume 15135 of Lecture Notes in Computer Science, pages 252–269. Springer,
+
+
+20
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+2024.
+doi:
+10.1007/978-3-031-72980-5\_15.
+URL https://doi.org/10.
+1007/978-3-031-72980-5_15.
+[35] AIa Meta. Introducing llama 3.1: Our most capable models to date. Meta AI Blog, 12,
+2024.
+[36] OpenAI.
+Introducing OpenAI o3 and o4-mini, 2025.
+URL https://openai.
+com/index/introducing-o3-and-o4-mini/. https://openai.com/
+index/introducing-o3-and-o4-mini/.
+[37] OpenAI.
+Openai GPT-5 system card.
+CoRR, abs/2601.03267, 2026.
+doi:
+10.48550/ARXIV.2601.03267.
+URL https://doi.org/10.48550/arXiv.
+2601.03267.
+[38] Arjun Panickssery,
+Samuel R. Bowman,
+and Shi Feng.
+LLM evaluators
+recognize and favor their own generations.
+In Amir Globersons,
+Lester
+Mackey, Danielle Belgrave, Angela Fan, Ulrich Paquet, Jakub M. Tomczak,
+and Cheng Zhang,
+editors,
+Advances in Neural Information Processing Sys-
+tems 38:
+Annual Conference on Neural Information Processing Systems 2024,
+NeurIPS 2024,
+Vancouver,
+BC, Canada,
+December 10 - 15,
+2024,
+2024.
+URL
+http://papers.nips.cc/paper_files/paper/2024/hash/
+7f1f0218e45f5414c79c0679633e47bc-Abstract-Conference.html.
+[39] Chirag Parikh, Deepti Rawat, Rakshitha R. T, Tathagata Ghosh, and Ravi Ki-
+ran Sarvadevabhatla.
+Roadsocial:
+A diverse videoqa dataset and benchmark
+for road event understanding from social video narratives.
+In IEEE/CVF Con-
+ference on Computer Vision and Pattern Recognition, CVPR 2025, Nashville,
+TN, USA, June 11-15, 2025, pages 19002–19011. Computer Vision Founda-
+tion / IEEE, 2025.
+doi:
+10.1109/CVPR52734.2025.01770.
+URL https:
+//openaccess.thecvf.com/content/CVPR2025/html/Parikh_
+RoadSocial_A_Diverse_VideoQA_Dataset_and_Benchmark_for_
+Road_Event_CVPR_2025_paper.html.
+[40] Woohyeon Park, Woojin Kim, Jaeik Kim, and Jaeyoung Do. SECOND: mitigating per-
+ceptual hallucination in vision-language models via selective and contrastive decoding.
+In Aarti Singh, Maryam Fazel, Daniel Hsu, Simon Lacoste-Julien, Felix Berkenkamp,
+Tegan Maharaj, Kiri Wagstaff, and Jerry Zhu, editors, Forty-second International Con-
+ference on Machine Learning, ICML 2025, Vancouver, BC, Canada, July 13-19, 2025,
+Proceedings of Machine Learning Research. PMLR / OpenReview.net, 2025. URL
+https://proceedings.mlr.press/v267/park25c.html.
+[41] Sundar Pichai,
+Demis Hassabis,
+and Koray Kavukcuoglu.
+A new era of
+intelligence with gemini 3.
+Google. URL: https://blog. google/products-and-
+platforms/products/gemini/gemini, 3, 2025.
+[42] Ruchit Rawal, Reza Shirkavand, Heng Huang, Gowthami Somepalli, and Tom Gold-
+stein. ARGUS: hallucination and omission evaluation in video-llms. In IEEE/CVF In-
+ternational Conference on Computer Vision, ICCV 2025, Honolulu, HI, USA, October
+19-25, 2025, pages 20280–20290. IEEE, 2025. doi: 10.1109/ICCV51701.2025.01886.
+URL https://doi.org/10.1109/ICCV51701.2025.01886.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+21
+[43] Luca Rolshoven, Vishvaksenan Rasiah, Srinanda Brügger Bose, Sarah Hostettler, Lara
+Burkhalter, Matthias Stürmer, and Joel Niklaus. Unlocking legal knowledge: A multi-
+lingual dataset for judicial summarization in switzerland. In Christos Christodoulopou-
+los, Tanmoy Chakraborty, Carolyn Rose, and Violet Peng, editors, Findings of the Asso-
+ciation for Computational Linguistics: EMNLP 2025, Suzhou, China, November 4-9,
+2025, pages 15382–15411. Association for Computational Linguistics, 2025. URL
+https://aclanthology.org/2025.findings-emnlp.832/.
+[44] Mohammadreza Salehi, Jae Sung Park, Aditya Kusupati, Ranjay Krishna, Yejin Choi,
+Hanna Hajishirzi, and Ali Farhadi. Actionatlas: A videoqa benchmark for domain-
+specialized action recognition. In Amir Globersons, Lester Mackey, Danielle Belgrave,
+Angela Fan, Ulrich Paquet, Jakub M. Tomczak, and Cheng Zhang, editors, Advances in
+Neural Information Processing Systems 38: Annual Conference on Neural Information
+Processing Systems 2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 - 15,
+2024, 2024. URL http://papers.nips.cc/paper_files/paper/2024/
+hash/f8643596721dbac71d67f89497323efe-Abstract-Datasets_
+and_Benchmarks_Track.html.
+[45] Shaden Shaar, Bradon Thymes, Sirawut Chaixanien, Claire Cardie, and Bharath Hari-
+haran. Movierecapsqa: A multimodal open-ended video question-answering bench-
+mark.
+CoRR, abs/2601.02536, 2026.
+doi: 10.48550/ARXIV.2601.02536.
+URL
+https://doi.org/10.48550/arXiv.2601.02536.
+[46] Chonghao Sima, Katrin Renz, Kashyap Chitta, Li Chen, Hanxue Zhang, Chengen
+Xie, Jens Beißwenger, Ping Luo, Andreas Geiger, and Hongyang Li.
+Drivelm:
+Driving with graph visual question answering. In Ales Leonardis, Elisa Ricci, Ste-
+fan Roth, Olga Russakovsky, Torsten Sattler, and Gül Varol, editors, Computer Vi-
+sion - ECCV 2024 - 18th European Conference, Milan, Italy, September 29-October
+4, 2024, Proceedings, Part LII, volume 15110 of Lecture Notes in Computer Sci-
+ence, pages 256–274. Springer, 2024. doi: 10.1007/978-3-031-72943-0\_15. URL
+https://doi.org/10.1007/978-3-031-72943-0_15.
+[47] Qwen Team.
+Qwen3-vl technical report.
+CoRR, abs/2511.21631, 2025.
+doi:
+10.48550/ARXIV.2511.21631.
+URL https://doi.org/10.48550/arXiv.
+2511.21631.
+[48] Pat Verga, Sebastian Hofstätter, Sophia Althammer, Yixuan Su, Aleksandra Piktus,
+Arkady Arkhangorodsky, Minjie Xu, Naomi White, and Patrick Lewis.
+Replacing
+judges with juries: Evaluating LLM generations with a panel of diverse models. CoRR,
+abs/2404.18796, 2024. doi: 10.48550/ARXIV.2404.18796. URL https://doi.
+org/10.48550/arXiv.2404.18796.
+[49] Weiyun Wang, Zhangwei Gao, Lixin Gu, Hengjun Pu, Long Cui, Xingguang Wei,
+Zhaoyang Liu, Linglin Jing, Shenglong Ye, Jie Shao, Zhaokai Wang, Zhe Chen,
+Hongjie Zhang, Ganlin Yang, Haomin Wang, Qi Wei, Jinhui Yin, Wenhao Li, Erfei
+Cui, Guanzhou Chen, Zichen Ding, Changyao Tian, Zhenyu Wu, JingJing Xie, Ze-
+hao Li, Bowen Yang, Yuchen Duan, Xuehui Wang, Zhi Hou, Haoran Hao, Tianyi
+Zhang, Songze Li, Xiangyu Zhao, Haodong Duan, Nianchen Deng, Bin Fu, Yinan
+He, Yi Wang, Conghui He, Botian Shi, Junjun He, Yingtong Xiong, Han Lv, Lijun
+Wu, Wenqi Shao, Kaipeng Zhang, Huipeng Deng, Biqing Qi, Jiaye Ge, Qipeng Guo,
+
+
+22
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Wenwei Zhang, Songyang Zhang, Maosong Cao, Junyao Lin, Kexian Tang, Jianfei
+Gao, Haian Huang, Yuzhe Gu, Chengqi Lyu, Huanze Tang, Rui Wang, Haijun Lv,
+Wanli Ouyang, Limin Wang, Min Dou, Xizhou Zhu, Tong Lu, Dahua Lin, Jifeng
+Dai, Weijie Su, Bowen Zhou, Kai Chen, Yu Qiao, Wenhai Wang, and Gen Luo. In-
+ternvl3.5: Advancing open-source multimodal models in versatility, reasoning, and
+efficiency. CoRR, abs/2508.18265, 2025. doi: 10.48550/ARXIV.2508.18265. URL
+https://doi.org/10.48550/arXiv.2508.18265.
+[50] Yi Wang, Xinhao Li, Ziang Yan, Yinan He, Jiashuo Yu, Xiangyu Zeng, Chenting Wang,
+Changlian Ma, Haian Huang, Jianfei Gao, Min Dou, Kai Chen, Wenhai Wang, Yu Qiao,
+Yali Wang, and Limin Wang. Internvideo2.5: Empowering video mllms with long and
+rich context modeling. CoRR, abs/2501.12386, 2025. doi: 10.48550/ARXIV.2501.
+12386. URL https://doi.org/10.48550/arXiv.2501.12386.
+[51] Waymo.
+Introducing
+waymo’s
+research
+on
+an
+end-to-end
+multimodal
+model
+for
+autonomous
+driving
+(emma).
+Waymo
+Blog,
+October
+2024.
+https://waymo.com/blog/2024/10/introducing-emma/.
+[52] Wayve. Lingo-2: Driving with natural language. Wayve Press / Thinking Blog, 2024.
+https://wayve.ai/thinking/lingo-2-driving-with-language/.
+[53] Shaoyuan Xie, Lingdong Kong, Yuhao Dong, Chonghao Sima, Wenwei Zhang, Qi Al-
+fred Chen, Ziwei Liu, and Liang Pan. Are vlms ready for autonomous driving? an em-
+pirical study from the reliability, data, and metric perspectives. CoRR, abs/2501.04003,
+2025. doi: 10.48550/ARXIV.2501.04003. URL https://doi.org/10.48550/
+arXiv.2501.04003.
+[54] Wenbin Xing, Quanxing Zha, Lizheng Zu, Mengran Li, Ming Li, and Junchi Yan.
+Learning to decode against compositional hallucination in video multimodal large lan-
+guage models. CoRR, abs/2602.00559, 2026. doi: 10.48550/ARXIV.2602.00559. URL
+https://doi.org/10.48550/arXiv.2602.00559.
+[55] Biao Yang, Bin Wen, Boyang Ding, Changyi Liu, Chenglong Chu, Chengru Song,
+Chongling Rao, Chuan Yi, Da Li, Dunju Zang, Fan Yang, Guorui Zhou, Guowang
+Zhang, Han Shen, Hao Peng, Haojie Ding, Hao Wang, Haonan Fan, Hengrui Ju,
+Jiaming Huang, Jiangxia Cao, Jiankang Chen, Jingyun Hua, Kaibing Chen, Kaiyu
+Jiang, Kaiyu Tang, Kun Gai, Muhao Wei, Qiang Wang, Ruitao Wang, Sen Na, Sheng-
+nan Zhang, Siyang Mao, Sui Huang, Tianke Zhang, Tingting Gao, Wei Chen, Wei
+Yuan, Xiangyu Wu, Xiao Hu, Xingyu Lu, Yifan Zhang, Yiping Yang, Yulong Chen,
+Zeyi Lu, Zhenhua Wu, Zhixin Ling, Zhuoran Yang, Ziming Li, Di Xu, Haixuan
+Gao, Hang Li, Jing Wang, Lejian Ren, Qigen Hu, Qianqian Wang, Shiyao Wang,
+Xinchen Luo, Yan Li, Yuhang Hu, and Zixing Zhang.
+Kwai keye-vl 1.5 techni-
+cal report. CoRR, abs/2509.01563, 2025. doi: 10.48550/ARXIV.2509.01563. URL
+https://doi.org/10.48550/arXiv.2509.01563.
+[56] Fisher Yu, Haofeng Chen, Xin Wang, Wenqi Xian, Yingying Chen, Fangchen
+Liu,
+Vashisht Madhavan,
+and Trevor Darrell.
+BDD100K: A diverse driv-
+ing dataset for heterogeneous multitask learning.
+In 2020 IEEE/CVF Con-
+ference
+on
+Computer
+Vision
+and
+Pattern
+Recognition,
+CVPR
+2020,
+Seat-
+tle,
+WA,
+USA,
+June
+13-19,
+2020,
+pages
+2633–2642.
+Computer
+Vision
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+23
+Foundation / IEEE, 2020.
+doi:
+10.1109/CVPR42600.2020.00271.
+URL
+https://openaccess.thecvf.com/content_CVPR_2020/html/
+Yu_BDD100K_A_Diverse_Driving_Dataset_for_Heterogeneous_
+Multitask_Learning_CVPR_2020_paper.html.
+[57] Tianyu Yu, Zefan Wang, Chongyi Wang, Fuwei Huang, Wenshuo Ma, Zhihui He,
+Tianchi Cai, Weize Chen, Yuxiang Huang, Yuanqian Zhao, Bokai Xu, Junbo Cui,
+Yingjing Xu, Liqing Ruan, Luoyuan Zhang, Hanyu Liu, Jingkun Tang, Hongyuan Liu,
+Qining Guo, Wenhao Hu, Bingxiang He, Jie Zhou, Jie Cai, Ji Qi, Zonghao Guo, Chi
+Chen, Guoyang Zeng, Yuxuan Li, Ganqu Cui, Ning Ding, Xu Han, Yuan Yao, Zhiyuan
+Liu, and Maosong Sun. Minicpm-v 4.5: Cooking efficient mllms via architecture, data,
+and training recipe. CoRR, abs/2509.18154, 2025. doi: 10.48550/ARXIV.2509.18154.
+URL https://doi.org/10.48550/arXiv.2509.18154.
+[58] Liping Yuan, Jiawei Wang, Haomiao Sun, Yuchen Zhang, and Yuan Lin. Tarsier2:
+Advancing large vision-language models from detailed video description to compre-
+hensive video understanding. CoRR, abs/2501.07888, 2025. doi: 10.48550/ARXIV.
+2501.07888. URL https://doi.org/10.48550/arXiv.2501.07888.
+[59] Tong Zeng, Longfeng Wu, Liang Shi, Dawei Zhou, and Feng Guo. Are vision llms
+road-ready?
+A comprehensive benchmark for safety-critical driving video under-
+standing. CoRR, abs/2504.14526, 2025. doi: 10.48550/ARXIV.2504.14526. URL
+https://doi.org/10.48550/arXiv.2504.14526.
+[60] Pan Zhang, Xiaoyi Dong, Yuhang Zang, Yuhang Cao, Rui Qian, Lin Chen, Qipeng
+Guo, Haodong Duan, Bin Wang, Linke Ouyang, Songyang Zhang, Wenwei Zhang,
+Yining Li, Yang Gao, Peng Sun, Xinyue Zhang, Wei Li, Jingwen Li, Wenhai Wang,
+Hang Yan, Conghui He, Xingcheng Zhang, Kai Chen, Jifeng Dai, Yu Qiao, Dahua Lin,
+and Jiaqi Wang. Internlm-xcomposer-2.5: A versatile large vision language model
+supporting long-contextual input and output.
+CoRR, abs/2407.03320, 2024.
+doi:
+10.48550/ARXIV.2407.03320.
+URL https://doi.org/10.48550/arXiv.
+2407.03320.
+[61] Tingru Zhang, Weitao Li, Weixing Huang, and Liang Ma. Critical roles of explainabil-
+ity in shaping perception, trust, and acceptance of autonomous vehicles. International
+Journal of Industrial Ergonomics, 100:103568, 2024.
+[62] Yuanhan Zhang, Jinming Wu, Wei Li, Bo Li, Zejun Ma, Ziwei Liu, and Chunyuan Li.
+Llava-video: Video instruction tuning with synthetic data. Trans. Mach. Learn. Res.,
+2025, 2025. URL https://openreview.net/forum?id=EElFGvt39K.
+[63] Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu,
+Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric P. Xing, Hao Zhang,
+Joseph E. Gonzalez, and Ion Stoica.
+Judging llm-as-a-judge with mt-bench and
+chatbot arena.
+In Alice Oh, Tristan Naumann, Amir Globerson, Kate Saenko,
+Moritz Hardt, and Sergey Levine, editors, Advances in Neural Information Pro-
+cessing Systems 36: Annual Conference on Neural Information Processing Systems
+2023, NeurIPS 2023, New Orleans, LA, USA, December 10 - 16, 2023, 2023.
+URL
+http://papers.nips.cc/paper_files/paper/2023/hash/
+91f18a1287b398d378ef22505bf41832-Abstract-Datasets_and_
+Benchmarks.html.
+
+
+24
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Supplementary Material: Evaluating Video
+LLMs’ Understanding of Corner Cases in
+Autonomous Driving
+A
+Models and Access Details
+In this section, we provide the implementation and deployment details for all evaluated Video
+LLMs used in DashBench.
+A.1
+Closed-source Video LLMs
+We evaluate 2 closed-source Video LLMs through their official APIs.
+A.1.1
+GPT-5
+We access GPT-5 via the OpenAI API at platform.openai.com with the following
+settings:
+• Reasoning effort: medium (default)
+• Model: gpt-5-2025-08-07
+A.1.2
+Gemini-3-Flash
+We access Gemini-3-Flash via OpenRouter at https://openrouter.ai/
+google/gemini-3-flash-preview with the following settings:
+• Thinking mode: high (default)
+• Model: Gemini-3-Flash
+A.2
+Open-source and Specialist Video LLMs
+We evaluate 23 open-source Video LLMs deployed locally using vLLM (when sup-
+ported) or HuggingFace Transformers. For all models, we use these default parameters:
+max_new_tokens = 512, do_sample = False, temperature = 0.0. Exact details
+related to hardware inference are detailed in the following section.
+A.3
+o3 for AI-Assisted Ground Truth Annotation
+We evaluate o3 via the OpenAI API at platform.openai.com with the following set-
+tings:
+• reasoning_effort: medium (default thinking mode setting)
+• Model: o3-2025-04-16
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+25
+A.4
+Hardware Configuration
+Experiments for 2 230B+ models (Qwen3-VL 235B, InternVL3.5 241B) and the model
+as well as methods involved with hallucination mitigation were conducted using the follow-
+ing hardware configuration:
+• GPU: 4 x Nvidia B200
+• CPU: Dual-socket Intel Xeon 6960P — 144 cores / 288 threads
+• RAM: 2 TB
+• CUDA: 13.0
+Experiments for all 7 specialist models were conducted using the following hardware
+configurations:
+• GPU: 1 x Nvidia 5090
+• CPU: AMD Ryzen 9 9900X (12 cores / 24 threads)
+• RAM: 113 GB
+• CUDA: 12.8
+The remaining experiments for all other models are run with the following hardware
+configuration:
+• GPU: 4 x Pro 6000
+• CPU: Dual-socket AMD EPYC 9654 — 112 cores / 224 threads
+• RAM: 462 GB
+• CUDA: 12.8
+B
+Prompts
+In this section, we provide details for the prompts used for different components of our
+benchmark. The ground truth annotation prompt (Figure 6) was used with o3 to assist in
+the process of creating descriptive annotations for each scenario. The evaluation prompts
+(Figure 8), detailed in the main paper, were passed to the Video LLMs to test their responses
+across a range of question types, along with a system prompt (Figure 9). Finally, the judge
+prompt (Figure 7) was used to instruct DeepSeekV3 to compare model outputs against the
+ground truth and determine alignment.
+
+
+26
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Ground truth annotation prompt
+Look at these 3 frames from a dashcam video.
+Describe in one sentence what unusual or dangerous
+event is visible.
+The unusual or dangerous event
+happening in this scene is:
+{description}.
+Figure 6: The prompt passed to o3 for assisting in ground truth annotation. {description} is
+the corner case category.
+Judge Prompt
+Your task is to decide whether the model-generated
+description captures the same core unusual or
+dangerous road event as the ground truth.Focus
+specifically on whether the model matches the
+core cause, effect, and timing of the danger.
+Descriptions should agree on what unusual thing
+happened, when it happened, and why it was dangerous.
+If the model omits the suddenness of the action, a
+major agent involved, or misrepresents who caused the
+danger, mark it as a mismatch.
+You may ignore small differences in phrasing or
+object types, but do not accept answers that are
+vague, incomplete, or shift the core focus of the
+event.
+First analyze, then report the final answer in either
+of Yes or No followed by the detailed explanation.
+Examples:
+Yes (if the model captures the same unusual or
+dangerous event
+--detailed explanation--
+No (if it misses or distorts the key causual or
+temporal element)
+--detailed explanation--
+Model response:
+{model_response}
+Ground truth:
+{ground_truth}
+Figure 7:
+The prompt passed to DeepSeekV3 for judging.
+{model_response} and
+{ground_truth} contains the evaluated Video LLM’s response for a specific scenario and
+the manually created ground truth annotation for the same scenario in the given order.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+27
+Detailed prompts for DashBench
+(Q1)
+What is unusual in this sequence of frames?
+(Q2)
+What is dangerous in this sequence of frames?
+(Q3)
+Describe this sequence of frames in detail.
+(Q4)
+You are an expert in analyzing dash-cam footage
+and should determine if the sequence of frames
+depicts an unusual or dangerous event on the road,
+or if it is a normal road situation.
+What unusual
+or dangerous event is happening in this scene?
+Provide your answer in the following JSON format:
+{
+"reasoning":
+"Brief explanation of why you
+think this is an unusual or dangerous event or if
+it is a normal situation.",
+"unusual_or_dangerous_event_detected":
+true/false
+}
+(Q5)
+A corner case is an unexpected or unusual driving
+situation that deviates from normal traffic
+behavior, often rare and potentially hazardous.
+Corner cases may appear as visual anomalies,
+environmental shifts, unexpected objects, unusual
+object arrangements, or rare dynamic events.
+Examples include a pedestrian suddenly running
+onto the road from behind an occlusion, a car
+running a red light, or dropped cargo on the
+street.
+Here is a sequence of frames from a dashcam
+video.
+Identify if there is a corner case in
+this dashcam video, and describe the corner case
+you identified.
+Figure 8: The extensive prompts passed to test the Video LLMs in our benchmark.
+System prompt
+You are a helpful driving-scene assistant.
+Please be
+brief and concise in your description.
+Answer within
+250 words.
+Figure 9: The system prompt passed to the Video LLM along with the evaluation prompts.
+
+
+28
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Collision Categories (46 types, 890 samples)
+Non-Collision Categories (42 types, 819 samples)
+car hits a curb (32)
+car has failure of components (22)
+car hits car (30)
+car is out of control (105)
+car hits cyclist (32)
+cyclist falls down (6)
+car hits motorbike (30)
+ego-car has failure of components (1)
+car hits pedestrian (31)
+ego-car is out of control (81)
+car hits telegraphpoles (22)
+ego-car is overtaken by a car (105)
+car hits trees (23)
+ego-car is overtaken by a truck (29)
+car scratches truck (28)
+motorbike falls down (45)
+cyclist hits cyclist (2)
+pedestrian falls down (3)
+ego-car hits a car (28)
+truck has failure of components (42)
+ego-car hits a crossing car (29)
+truck is out of control (66)
+ego-car hits a crossing cyclist (18)
+dangerous lane change/merging (44)
+ego-car hits a crossing motorbike (31)
+car drives against traffic flow (36)
+ego-car hits a crossing pedestrian (29)
+car runs a red light without collision (31)
+ego-car hits a crossing truck (25)
+pedestrian hazard (23)
+ego-car hits a curb (29)
+dangerous overtaking (17)
+ego-car hits a cyclist (11)
+motorbike drives against traffic flow (16)
+ego-car hits a motorbike (29)
+improper stopping on the road (15)
+ego-car hits a pedestrian (7)
+animal hazard (12)
+ego-car hits a truck (27)
+near-miss (11)
+ego-car hits telegraphpoles (9)
+parking/roadside stopping hazard (11)
+ego-car hits trees (22)
+slippery road conditions due to water on the road (10)
+motorbike hits a curb (2)
+large object dropped from vehicle (9)
+motorbike hits motorbike (22)
+vehicle collapses onto road (9)
+motorbike hits pedestrian (3)
+bus drives against traffic flow (8)
+motorbike scratches car (24)
+truck drives against traffic flow (7)
+motorbike scratches truck (1)
+improper turning (6)
+truck hits a curb (29)
+dangerous car reversing (5)
+truck hits car (28)
+motorbike runs a red light without collision (5)
+truck hits cyclist (3)
+slippery road conditions due to snow (5)
+truck hits motorbike (31)
+vehicle goes off-road (5)
+truck hits pedestrian (4)
+road obstruction & blockage (4)
+truck hits telegraphpoles (4)
+cyclist violating traffic rules (3)
+truck hits trees (2)
+emergency vehicle interaction (3)
+truck hits truck (30)
+flooded road segment (3)
+car hits large roadblocks (31)
+limited visibility from structure/object (3)
+car hits other road facilities (31)
+road surface hazard (3)
+car hits small roadblocks/road pothholes (15)
+burning object hazard (2)
+ego-car hits large roadblocks (30)
+crime/safety threats on the road (2)
+ego-car hits other road facilities (12)
+structure collapses onto road (2)
+ego-car hits small roadblocks/road pothholes (27)
+tree collapses onto road (2)
+motorbike hits large roadblocks (2)
+truck runs a red light without collision (2)
+motorbike hits other road facilities (1)
+truck hits large roadblocks (30)
+truck hits other road facilities (2)
+truck hits small roadblocks/road pothholes (2)
+Table 5: Categorization of corner cases in DashBench (1,709 total samples, 88 categories).
+Collision categories are on the left (46 types, 890 samples) and non-collision categories on
+the right (42 types, 819 samples). Underlined categories are sourced from the RoadSocial
+dataset.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+29
+Collision Categories (46 types, 890 samples)
+Non-Collision Categories (42 types, 819 samples)
+car hits a curb
+32.50% car has failure of components
+20.00%
+car hits car
+9.33% car is out of control
+31.05%
+car hits cyclist
+31.25% cyclist falls down
+23.33%
+car hits motorbike
+28.00% ego-car has failure of components
+0.00%
+car hits pedestrian
+21.29% ego-car is out of control
+22.47%
+car hits telegraphpoles
+26.36% ego-car is overtaken by a car
+11.24%
+car hits trees
+18.26% ego-car is overtaken by a truck
+9.66%
+car scratches truck
+6.43% motorbike falls down
+29.33%
+cyclist hits cyclist
+20.00% pedestrian falls down
+46.67%
+ego-car hits a car
+5.71% truck has failure of components
+21.43%
+ego-car hits a crossing car
+11.03% truck is out of control
+39.09%
+ego-car hits a crossing cyclist
+16.67% dangerous lane change/merging
+16.36%
+ego-car hits a crossing motorbike
+11.61% car drives against traffic flow
+1.67%
+ego-car hits a crossing pedestrian
+22.07% car runs a red light without collision
+18.71%
+ego-car hits a crossing truck
+9.60% pedestrian hazard
+29.57%
+ego-car hits a curb
+3.45% dangerous overtaking
+0.00%
+ego-car hits a cyclist
+1.82% motorbike drives against traffic flow
+2.50%
+ego-car hits a motorbike
+3.45% improper stopping on the road
+8.00%
+ego-car hits a pedestrian
+11.43% animal hazard
+63.33%
+ego-car hits a truck
+6.67% near-miss
+7.27%
+ego-car hits telegraphpoles
+4.44% parking/roadside stopping hazard
+7.27%
+ego-car hits trees
+24.55% slippery road conditions due to water on road 26.00%
+motorbike hits a curb
+0.00% large object dropped from vehicle
+20.00%
+motorbike hits motorbike
+10.00% vehicle collapses onto road
+37.78%
+motorbike hits pedestrian
+0.00% bus drives against traffic flow
+5.00%
+motorbike scratches car
+8.33% truck drives against traffic flow
+2.86%
+motorbike scratches truck
+0.00% improper turning
+23.33%
+truck hits a curb
+30.34% dangerous car reversing
+0.00%
+truck hits car
+13.57% motorbike runs a red light without collision
+20.00%
+truck hits cyclist
+6.67% slippery road conditions due to snow
+8.00%
+truck hits motorbike
+15.48% vehicle goes off-road
+56.00%
+truck hits pedestrian
+5.00% road obstruction & blockage
+30.00%
+truck hits telegraphpoles
+10.00% cyclist violating traffic rules
+0.00%
+truck hits trees
+0.00% emergency vehicle interaction
+33.33%
+truck hits truck
+9.33% flooded road segment
+86.67%
+car hits large roadblocks
+32.90% limited visibility from structure/object
+6.67%
+car hits other road facilities
+28.39% road surface hazard
+6.67%
+car hits small roadblocks/road pothholes
+8.00% burning object hazard
+50.00%
+ego-car hits large roadblocks
+9.33% crime/safety threats on the road
+40.00%
+ego-car hits other road facilities
+10.00% structure collapses onto road
+0.00%
+ego-car hits small roadblocks/road pothholes
+6.67% tree collapses onto road
+70.00%
+motorbike hits large roadblocks
+0.00% truck runs a red light without collision
+10.00%
+motorbike hits other road facilities
+0.00%
+truck hits large roadblocks
+24.67%
+truck hits other road facilities
+50.00%
+truck hits small roadblocks/road pothholes
+30.00%
+Table 6: Category-wise accuracy (%) of Qwen3-VL 8B on the DashBench corner-case cate-
+gories. Accuracy is computed by pooling the Q1–Q5 results within each category. Collision
+categories are shown on the left (46 types, 890 samples), while non-collision categories are
+shown on the right (42 types, 819 samples). Underlined categories are sourced from the
+RoadSocial dataset.
+
+
+30
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Figure 10: Illustration of our complete pipeline for o3-assisted scene annotation as well as
+manual annotation review and validation for reliable ground truth descriptions.
+C
+Ground Truth Annotation
+C.1
+Assisted Scene Annotation with o3
+Since writing detailed scene descriptions for hundreds of clips is labour-intensive, we lever-
+age OpenAI’s o3 model to generate detailed scene-level annotations. The process for gen-
+erating initial ground truth annotations using o3’s assistance for real corner case scenarios
+involve these steps:
+Keyframe extraction For each clip, we extract three critical keyframes representing the
+progression of the anomalous event. These frames correspond to: (1) the start of the video,
+(2) the corner case occurrence frame (when the scene reaches its most critical point), and
+(3) end of the video. This temporal breakdown allows the model to observe the evolution of
+each incident, though with a limited context.
+Contextual prompting Along with the keyframes, we provide the corner-case category
+label as a concise answer to the model. This helps the model ground its scene-level annota-
+tion based on the given category answer, encouraging it to focus on relevant visual semantics
+and avoid generic captions.
+Scene description generation Using these inputs, the o3 model generates descriptive
+captions as prompted. The detailed prompt can be seen in Figure 6. These captions capture
+both object-level details and event-level dynamics.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+31
+C.2
+Manual Annotation Review and Validation
+However, even with passed keyframes and the descriptive hint from the corner case category
+for creating the ground truth annotation, o3 might fail to create a descriptive annotation
+based on what actually happened in the scene since its context is limited and it might misin-
+terpret key details. To ensure accuracy and reliability of automatically generated annotations,
+we implement a multi-phase validation pipeline involving human annotators. This process
+verifies that all labels and descriptions reflect the visual evidence, align with intended se-
+mantics, and maintain consistency across the dataset.
+Validation pipeline As shown in Figure 10, our annotation refinement pipeline follows
+a systematic approach:
+1. Initial manual review All scene descriptions generated by o3 are first reviewed by a
+human annotator. The annotator checks for factual errors, hallucinations, inconsisten-
+cies, or ambiguities in the captions, by comparing them with the full list of frames for
+the specific sample. With the full context, minor phrasing issues or missing details
+are corrected at this stage to enhance clarity and precision.
+2. Evaluator panel verification After initial manual revision, a panel of three evaluators
+examines the refined annotations and also compares with the full list of frames for the
+specific sample. Each evaluator independently assesses whether the caption accurately
+and adequately describes the visual content and evolving corner case situation in the
+specific scenario.
+3. Unanimous agreement check We adopt a strict unanimity principle for final ground-
+truth acceptance. The revised ground truth annotation is approved only if all three
+evaluators independently agree on its validity. This high consensus bar ensures ro-
+bustness and minimizes individual bias or interpretation errors.
+4. Conflict resolution If full agreement is not reached, the sample is flagged as "in con-
+flict." These cases are brought back to the initial human annotator for additional human
+revision and will pass through the evaluator panel again.
+5. Final ground truth consolidation Once consensus is achieved through unanimous
+agreement, the validated ground truth annotation is finalized. These annotations form
+the basis of the benchmark’s evaluation targets, ensuring trustworthiness and repro-
+ducibility for future research. An example corner case scenario with the initial o3-
+generated initial annotation and the revised, final ground-truth annotation is shown in
+Figure 11.
+D
+LLM-as-a-Judge Evaluation
+Reliable benchmarking needs an automatic judge whose decisions mirror human judgments.
+Following existing works using the LLM-as-judge setup, we try out several candidate LLM-
+as-judges for our work, namely DeepSeekV3, Llama3.1(70B), and also a setup using
+multiple LLM-as-judges as an ensemble [48], named PoLL. Specifically, PoLL uses three
+relatively cost-efficient LLM-as-judges: Command-R, Claude 3 Haiku, and GPT-3.5
+Turbo. This ensemble setup is designed to reduce intra-model bias as PoLL aggregates
+panel votes via max voting: the panel labels a response as correct if at least one judge deems
+
+
+32
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Figure 11: An example corner case scenario where o3’s initial scene annotation is inaccurate
+and misses key details. Through our pipeline, we ensure that all samples in our dataset go
+through extensive manual revision where necessary to ensure annotation quality.
+it correct. For each candidate judge, we randomly sample 100 clips and run evaluation
+on five different models as shown in Table 2, obtain the judge’s decision, and compare it
+against human evaluation of whether the Video LLM’s response is aligned with the ground
+truth. To ensure the human reference is itself reliable, we follow a modified consensus-based
+validation pipeline:
+1. Candidate Judge Generates Initial Judgment. For each sample and Video LLM
+output, the candidate judge independently labels the response as correct or incor-
+rect, based solely on the Video LLM’s response and the ground-truth annotation. The
+prompt used is shown in Figure 7.
+2. Evaluator Panel Alignment Check A panel of three human evaluators reviews each
+sample, considering the same textual output from the Video LLM and the ground truth.
+Each evaluator independently decides whether the Video LLM’s answer is aligned
+with the ground truth.
+3. Unanimous Agreement Check We require full consensus, meaning that all three eval-
+uators must agree among themselves on the correct/incorrect label for whether or not
+the model response is aligned with the ground truth annotation. In all other cases, those
+samples are discussed among all three evaluators to reach a final decision. Only then
+do we compare this unanimous human consensus with the candidate judge’s label.
+4. Final Agreement and Selection. Cohen’s κ is computed between each candidate
+judge and the unanimous human consensus. As shown in Table 2, DeepSeekV3
+achieves the highest agreement (κ = 0.96), confirming it closely mirrors human judge-
+ment and can serve as a dependable LLM-as-judge for our benchmark.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+33
+D.1
+Judge Access Details
+For each LLM-as-judge mentioned, we access the model via OpenRouter at https://
+openrouter.ai/ and run judging with the judge prompt shown in Figure 7 with temper-
+ature = 0.0.
+D.2
+Judge Variance Across Runs
+Model
+Q1
+Q2
+Q3
+Q4R
+Q5
+Avg
+Agree
+Closed-source
+GPT-5
+20.32±0.27
+36.75±0.33
+30.91±0.30
+46.53±0.30
+39.82±0.67
+34.86±0.24
+Gemini-3-Flash
+31.50±0.61
+34.82±0.44
+29.03±0.52
+39.16±0.55
+34.38±0.39
+33.78±0.39
+Open-source
+Qwen3-VL (8B)
+18.77±0.23
+14.92±0.38
+13.98±0.46
+22.12±0.21
+21.52±0.15
+18.26±0.19
+Ovis2.5 (9B)
+18.66±0.59
+14.57±0.57
+7.99±0.22
+17.72±0.60
+19.71±0.70
+15.64±0.39
+InternVL3.5 (8B)
+4.29±0.15
+9.49±0.39
+8.39±0.32
+16.13±0.24
+15.92±0.31
+10.84±0.23
+Table 7: Judge variance across five independent judging runs. Mean accuracy (%) ±
+sample standard deviation (std) over five runs on identical inputs are reported. All std ≤0.70
+%, and model rankings are stable across every individual run.
+To measure evaluation stability, we repeat the DeepSeekV3-as-a-judge evaluation
+pipeline across five independent runs on identical inputs. Table 7 reports the mean accuracy
+(%) and sample standard deviation across all five runs, broken down by question type
+(Q1–Q5) and model.
+Variance is consistently low across all evaluated models and question types, with stan-
+dard deviations never exceeding 0.70%. Across the five runs, model rankings remain entirely
+stable: closed-source models (GPT-5 and Gemini-3-Flash) consistently outperform all
+open-source counterparts, and the relative ordering within each group is preserved in every
+individual run. These results confirm that DeepSeekV3 produces deterministic and repro-
+ducible judgments at the scale of our benchmark, and that reported accuracy figures are not
+byproducts of stochastic sampling during inference.
+E
+Hallucination Mitigation Method Implementation
+All methods are implemented on top of InternVL3.5 (8B) as the backbone, with
+16 uniformly sampled frames resized to 448 × 448 via BICUBIC interpolation and nor-
+malized with ImageNet mean and standard deviation.
+Inference uses greedy decoding
+(do_sample=False) across all methods, and all prompts are paired with the system
+prompt shared in Figure 9. Common settings are summarized in Table 8.
+E.1
+Baseline
+The baseline runs standard InternVL3.5 (8B) inference with no auxiliary branches or
+additional passes. The 16 frames are composed into a multi-image query in the format
+Frame-1:
+<image> ...Frame-16:
+<image> and fed through a single greedy
+forward pass.
+
+
+34
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+Setting
+Value
+Backbone model
+OpenGVLab/InternVL3_5-8B
+Conversation template
+internvl2_5
+Input frames per video
+16
+Frame resolution
+448×448 (BICUBIC)
+Image normalization
+ImageNet mean / std
+Data type
+float16
+Decoding strategy
+Greedy (do_sample=False)
+GPU parallelism
+4 (CUDA 0–3, 1:1 shard-to-GPU)
+Prompt types evaluated
+Q1, Q2, Q3, Q4, Q5
+Table 8: Common inference settings shared across all hallucination mitigation methods.
+• max_new_tokens: 512
+• Contrastive branch: none
+• Additional passes: none
+E.2
+VDGD (Visual Description-Grounded Decoding)
+VDGD [20] uses description-prefixing, operating in two sequential passes over the same 16
+frames. The first pass generates a free-text visual description of the clip, and the second pass
+prepends that description as explicit textual context before the actual question, guiding the
+model to ground its answer in the described visual content rather than relying on language
+priors. No contrastive branch is required.
+• max_new_tokens (pass 2, answer): 512
+• desc_max_new_tokens (pass 1, description): 512
+• Pass 1 prompt: "Describe this sequence of frames in detail."
+• Pass 2 prompt format: "The video is described as:
+{description}
+\nNow answer the following question.\n{original_question}"
+• Number of passes: 2
+E.3
+SECOND
+SECOND [40] implements degraded-context contrast idea where the positive branch receives
+all 16 frames while the negative branch receives only the single middle frame, intentionally
+stripping temporal context. The same per-step contrastive formula ℓfinal = ℓfull + α · (ℓfull −
+ℓpartial) is applied to upweight information that is only accessible from the full temporal
+sequence, suppressing responses that could be generated from a single static frame alone.
+• max_new_tokens: 512
+• alpha (contrastive weight): 0.5
+• Positive branch: all 16 original frames
+• Negative branch: single middle frame (paths[len(paths)//2])
+• Number of branches: 2 (full / partial)
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+35
+Model
+Q1
+Q2
+Q3
+Q4R
+Q5
+Avg
+Agree
+Q4TF
+Closed-source
+GPT-5
+20.90
+36.09
+29.28
+47.39
+38.40
+34.41
+96.96
++ CCW 16 frames
+19.68−1.22
+42.41+6.32
+34.51+5.23
+51.40+4.01
+43.01+4.61
+38.20+3.79
+97.81+0.85
++ CCW 32 frames
+19.20−1.70
+40.22+4.13
+32.44+3.16
+50.43+3.04
+43.01+4.61
+37.06+2.65
+98.18+1.22
+Open-source
+Qwen3-VL (8B)
+17.98
+14.95
+13.97
+20.90
+21.02
+17.76
+70.84
++ CCW 16 frames
+13.61−4.37
+18.35+3.40
+15.19+1.22
+22.11+1.21
+23.57+2.55
+18.57+0.81
+73.39+2.55
++ CCW 32 frames
+14.58−3.40
+20.66+5.71
+13.85−0.12
+23.45+2.55
+22.72+1.70
+19.05+1.29
+69.50−1.34
+InternVL3.5 (8B)
+3.65
+8.02
+6.68
+10.57
+12.15
+8.21
+74.48
++ CCW 16 frames
+4.74+1.09
+9.11+1.09
+7.65+0.97
+14.22+3.65
+15.19+3.04
+10.18+1.97
+85.05+10.57
++ CCW 32 frames
+5.47+1.82
+12.88+4.86
+9.84+3.16
+15.31+4.74
+13.00+0.85
+11.30+3.09
+80.60+6.12
+Table 9: Accuracy (%) of selected models on the CCW subset. Each model’s full-video
+run is compared against its CCW runs using 16/32 frames sampled from the corner case
+window only. Subscripts show the change in score relative to the corresponding full-video
+run: improvement and regression are indicated by the respective signs.
+E.4
+TriCD
+TRiCD [54] employs two branches in parallel: a positive branch receiving the original frame
+sequence and a negative branch receiving a randomly shuffled copy (seed = 0), which de-
+stroys temporal ordering. At each decoding step, the next-token logits from both branches
+are combined as ℓfinal = ℓpos + α · (ℓpos −ℓneg), encouraging the model to rely on temporal
+context rather than frame-level statistics. Both branches maintain independent KV-caches
+synchronized at each step with the same selected token.
+• max_new_tokens: 512
+• alpha (contrastive weight): 0.5
+• neg_perturb:
+shuffle (fixed seed = 0; alternatives:
+blur, grayscale,
+noise, reverse)
+• Number of branches: 2 (positive / negative)
+F
+Additional Results
+In this section, we provide supplementary information and results for the experiments pre-
+sented in the main paper. First, using Qwen3-VL 8B as a reference, we report category-wise
+accuracy in Table 6. The grouped results show an accuracy of 15.89% for collision categories
+and 21.29% for non-collision categories, while the MMAU and RoadSocial subsets achieve
+18.78% and 17.13%, respectively. Additionally, in Table 9 we show the results of the corner-
+case window experiments when not only 16, but also 32 frames, are sampled uniformly only
+from the corner-case window.
+
+
+36
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+G
+Additional Qualitative Examples
+G.1
+Failing to Identify Evident Corner Cases
+Despite being evident in the sequence of frames, we show that Video LLMs regardless of
+proprietary status, size, and whether it was fine-tuned on driving data fails to identify obvi-
+ous corner cases, instead focusing on other parts of the road, as shown by the response of
+CrashChat on Figure 12 and Gemini-3-Flash on Figure 16.
+G.2
+Hallucinating On the Road
+Figures 13 shows a case where Video LLMs hallucinate road agents or objects on the road,
+which are simply not there. For possible deployment as part of a vision-language-action
+framework enabler, Video LLMs need to overcome this glaring issue of hallucinating on the
+road.
+G.3
+Collisions as Near-Misses
+Genuine collisions on the road are important corner cases because they might affect subse-
+quent actions that will be taken by the ADS based on the Video LLM’s observation ; treating
+them as near-misses due to failing to localize the exact moment where a collision occurs
+(possibly due to the large number of frames passed) presents a severe issue that should be
+addressed. Figure 14 shows this occurrence.
+G.4
+Making Up Actions on the Road
+Another concerning point for Video LLMs as future co-navigators and planners is if they
+invent or misinterpret the actions of other road agents (e.g., a swerving car when in reality
+the car is driving straight). Figure 15 shows a case where the Video LLMs’ hallucination of
+actions and behavior can lead to different crucial decisions made in that scenario.
+H
+License and Dataset Usage
+DashBench is derived from two publicly available datasets and is intended strictly for non-
+commercial research use.
+MM-AU [14] is released for non-commercial use only, covering educational and re-
+search purposes. MM-AU itself aggregates footage from publicly available ego-view ac-
+cident datasets and video platforms (YouTube, Bilibili, Tencent), with all original rights
+remaining with their respective owners.
+RoadSocial [39] is released under the Creative Commons Attribution–NonCommercial–
+ShareAlike 4.0 International (CC BY-NC-SA 4.0) license. The dataset authors do not
+claim ownership of the linked video content; all rights and copyright remain with the
+respective content creators and platform owners.
+Users are responsible for ensuring
+compliance with the terms of the hosting platforms.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+37
+CrashChat misses the motorcycle right in front in the road
+Question Type: Q3 (Describe this sequence of frames in detail.)
+Ground Truth: A motorbike is riding directly toward the dash-cam vehicle in the wrong
+direction of traffic.
+CrashChat: The video shows a busy street with various vehicles and people. The camera
+is mounted on a vehicle, possibly a motorcycle, and is moving forward. In the foreground,
+there is a yellow and black auto-rickshaw, followed by a white car. On the right side of the
+road, there are several people walking, including a man in a blue shirt and a woman in a white
+dress. There are also two motorcycles with riders wearing helmets. The background features
+tall electrical towers and power lines, as well as some trees and buildings. The sky is clear
+with a few clouds.
+DeepSeekV3 (Judge): No The model response describes a general scene of a busy street
+but fails to mention the core dangerous event: a motorbike riding directly toward the dash-
+cam vehicle in the wrong direction. Instead, it provides a vague overview of the surroundings
+without highlighting the unusual or dangerous action that defines the ground truth.
+Figure 12: CrashChat fails to detect the motorcycle ahead which is driving against traffic.
+
+
+38
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+InternVL3.5 241B describes a nonexistent cyclist on the road
+Question Type: Q2 (What is dangerous in this sequence of frames?)
+Ground Truth:
+A pedestrian suddenly steps into the travel lane right in front of the
+approaching car at night, creating an immediate collision hazard.
+InternVL3.5 241B: In this sequence of frames, a person on a bicycle appears suddenly,
+crossing the road from the right to the left. This could be unexpected for the driver, especially
+at night when visibility is reduced. The cyclist is not using any lights, making them harder
+to see. The vehicle continues moving forward without any apparent reaction, which could
+be risky. It’s important for drivers to be cautious and prepared for unexpected obstacles,
+especially at night.
+DeepSeekV3 (Judge):No The model describes a cyclist crossing the road unexpectedly,
+while the ground truth specifies a pedestrian stepping into the lane. The core agents (cyclist vs.
+pedestrian) and their actions (crossing vs. stepping into the lane) differ significantly, leading
+to a mismatch in the dangerous event.
+Figure 13: InternVL3.5 241B hallucinates about a cyclist on the road when the real
+danger is a pedestrian hazard.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+39
+GLM-4.1V-Thinking cannot distinguish between an evident collision and a near-miss
+Question Type: Q1 (What is unusual in this sequence of frames?)
+Ground Truth: A car drives into the side of a tram as it crosses the intersection.
+GLM-4.1V-Thinking The unusual element is likely a **near - collision** (common
+in such busy, wet conditions), as the scene involves multiple vehicles (cars, tram) in close
+proximity with potential unsafe maneuvers. The rainy weather and dense traffic compound
+the risk, making the sequence˘2019s chaotic interaction between vehicles (especially the tram
+and cars) the unusual factor. In summary, the unusual aspect is a near - collision in the rainy,
+busy intersection involving multiple vehicles (including the tram).
+DeepSeekV3 (Judge):
+No The model response vaguely describes a ¨likely near-
+collisionïnvolving multiple vehicles in rainy conditions but does not specify the core event:
+a car driving into the side of a tram. The ground truth clearly identifies the exact dangerous
+interaction (car hitting tram), while the model only infers a general risk scenario without pin-
+pointing the specific cause or agents involved. The temporal and causal precision is missing.
+Figure 14: GLM-4.1V-Thinking fails to confidently claim that a collision is occurring,
+demonstrating lack of visual prowess.
+
+
+40
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+LLaVA-Next-Video misses a motorcycle collision and talks about a car running a red light
+instead
+Question Type:
+A corner case is an unexpected or unusual driving
+situation that deviates from normal traffic behavior, often
+rare and potentially hazardous.
+Corner cases may appear as
+visual anomalies, environmental shifts, unexpected objects,
+unusual object arrangements, or rare dynamic events.
+Examples
+include a pedestrian suddenly running onto the road from
+behind an occlusion, a car running a red light, or dropped
+cargo on the street.
+Here is a sequence of frames from a dashcam video.
+Identify
+if there is a corner case in this dashcam video, and describe
+the corner case you identified.
+Ground Truth: A motorbike collides with the suddenly opened door of a white car, scraping
+it and throwing the rider to the ground.
+LLaVA-Next-Video: The video shows a corner case where a car is seen running a
+red light and colliding with another vehicle.
+This is an unexpected and unusual driving
+situation that deviates from normal traffic behavior, as running a red light is generally
+against traffic rules and can lead to accidents.
+The car that runs the red light is the one
+that causes the collision, and the other car is the one that gets hit. This is a rare and po-
+tentially hazardous event that deviates from the normal flow of traffic and can lead to accidents.
+DeepSeekV3 (Judge):No The model describes a car running a red light and colliding with
+another vehicle, while the ground truth involves a motorbike hitting a suddenly opened car
+door, which is a completely different scenario involving different agents, causes, and effects.
+Figure 15: LLaVA-Next-Video could not identify the motorcycle hitting the car and
+hallucinates a car running a red light.
+
+
+MANALU ET AL: EVALUATING VIDEO LLM CORNER CASE UNDERSTANDING
+41
+Gemini-3-Flash fails to describe the motorcycle driving against traffic and instead hallu-
+cinates about an action of a car which is driving normally out of the frames.
+Question Type: Q1 (What is unusual in this sequence of frames?)
+Ground Truth: A motorbike is riding the wrong way, heading straight against the flow of
+oncoming traffic.
+Gemini-3-Flash: The unusual occurrence in this sequence is a white car performing a
+illegal and dangerous U-turn across multiple lanes.
+DeepSeekV3 (Judge):No. The model describes a white car performing an illegal U-turn and
+cutting across lanes. However, the ground truth states a motorbike is riding the wrong way
+against traffic flow. These are fundamentally different events — the model focuses on a car’s
+dangerous maneuver, while the ground truth centers on a motorbike’s unlawful direction. The
+core cause, agent, and danger are mismatched.
+Figure 16: Gemini-3-Flash fails to identify the evident corner case and hallucinates
+actions of other road agents.
