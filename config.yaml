@@ -25,3 +25,65 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
+  intent_profiles:
+    - tag: driving-eval
+      description: 自动驾驶系统仿真、评测与验证
+      enabled: true
+      paper_sources:
+        - arxiv
+      keywords:
+        - keyword: autonomous driving evaluation
+          keyword_cn: 自动驾驶评估
+          query: Methods and metrics for evaluating autonomous driving system performance
+        - keyword: closed-loop simulation
+          keyword_cn: 闭环仿真
+          query: closed-loop simulation for evaluating autonomous driving planning and control
+        - keyword: driving simulator
+          keyword_cn: 驾驶模拟器
+          query: driving simulators used to test autonomous vehicle performance
+        - keyword: evaluation framework
+          keyword_cn: 评测框架
+          query: evaluation frameworks for autonomous driving system assessment
+        - keyword: driving system validation
+          keyword_cn: 驾驶系统验证
+          query: Validation processes for ensuring driving system correctness and safety
+        - keyword: test scenario coverage
+          keyword_cn: 测试场景覆盖率
+          query: coverage metrics for autonomous driving test scenarios
+      intent_queries:
+        - query: How are autonomous driving systems evaluated with scenario based simulation and real world testing?
+          query_cn: 如何通过基于场景的仿真和真实世界测试来评测自动驾驶系统？
+          enabled: true
+          source: manual
+          note: ''
+        - query: What validation frameworks support closed loop evaluation of autonomous driving systems?
+          query_cn: 哪些验证框架支持自动驾驶系统的闭环评测？
+          enabled: true
+          source: manual
+          note: ''
+        - query: How are autonomous driving systems evaluated and validated using simulation and real world testing?
+          query_cn: 如何使用仿真和真实道路测试对自动驾驶系统进行评测与验证？
+          enabled: true
+          source: manual
+          note: ''
+        - query: How can simulation fidelity and sim to real transfer be assessed for autonomous driving validation?
+          query_cn: 如何评估自动驾驶验证中的仿真保真度和虚实迁移？
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-11-14T04:22:19.574Z'
+source_backends:
+  arxiv:
+    papers_table: arxiv_papers
+    use_vector_rpc: true
+    vector_rpc: match_arxiv_papers
+    vector_rpc_exact: match_arxiv_papers_exact
+    use_bm25_rpc: true
+    bm25_rpc: match_arxiv_papers_bm25
+    sync_table: arxiv_sync_status
+    sync_success_value: success
+    schema: public
+    kind: supabase
+    enabled: true
+    url: https://lyucdwgefyfbmaiopjbk.supabase.co
+    anon_key: sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq
