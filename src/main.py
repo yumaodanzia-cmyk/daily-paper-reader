@@ -32,6 +32,46 @@ def run_step(label: str, args: list[str], env: dict[str, str] | None = None) -> 
     subprocess.run(args, check=True, env=env)
 
 
+def count_candidates(path: str) -> int:
+    """统计候选论文数：raw 为列表，RRF 为 {papers, queries[].sim_scores}。"""
+    if not os.path.exists(path):
+        return 0
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return 0
+    if isinstance(data, list):
+        return len(data)
+    if not isinstance(data, dict):
+        return 0
+    ids: set[str] = set()
+    for paper in data.get("papers") or []:
+        if not isinstance(paper, dict):
+            continue
+        pid = paper.get("arxiv_id") or paper.get("id")
+        if pid:
+            ids.add(str(pid))
+    for query in data.get("queries") or []:
+        if not isinstance(query, dict):
+            continue
+        scores = query.get("sim_scores")
+        if isinstance(scores, dict):
+            ids.update(scores.keys())
+    return len(ids)
+
+
+def require_candidates(path: str, stage: str, hint: str) -> None:
+    """候选集为空时直接失败，避免“工作流显示成功但页面没有论文”。"""
+    count = count_candidates(path)
+    print(f"[INFO] {stage} 候选论文数={count}（{path}）", flush=True)
+    if count > 0:
+        return
+    print(f"[ERROR] {stage} 未产出任何候选论文，终止流水线。", flush=True)
+    print(f"[ERROR] 排查建议：{hint}", flush=True)
+    raise SystemExit(1)
+
+
 def _load_full_config() -> dict:
     if not os.path.exists(CONFIG_FILE):
         return {}
@@ -663,6 +703,12 @@ def main() -> None:
         )
     if trace_ids:
         print_trace_retrieval("RAW", raw_path, trace_ids)
+    if not skip_fetch:
+        require_candidates(
+            raw_path,
+            "Step 1 - fetch arxiv",
+            "arXiv 抓取未返回论文。检查 fetch_arxiv.py 日志中的接口响应与时间窗。",
+        )
     run_step(
         "Step 2.1 - BM25",
         [python, os.path.join(SRC_DIR, "2.1.retrieval_papers_bm25.py")],
@@ -688,6 +734,13 @@ def main() -> None:
     )
     if trace_ids:
         print_trace_retrieval("RRF", rrf_path, trace_ids)
+    require_candidates(
+        rrf_path,
+        "Step 2.3 - RRF",
+        "召回未命中任何论文：检查 Step 2.1/2.2 日志中的 RPC 报错与时间窗；"
+        "若库端为空或不可达，请把 config.yaml 的 supabase.enabled 与 "
+        "source_backends.<source>.enabled 置为 false，让 Step 1 直接抓取。",
+    )
     run_step(
         "Step 3 - Rerank",
         [python, os.path.join(SRC_DIR, "3.rank_papers.py")],

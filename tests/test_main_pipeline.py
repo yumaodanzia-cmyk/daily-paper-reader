@@ -95,6 +95,8 @@ class MainPipelineTest(unittest.TestCase):
             ), patch.object(
                 self.mod, "parse_trace_ids", return_value=[]
             ), patch.object(
+                self.mod, "require_candidates"
+            ), patch.object(
                 self.mod, "run_step", side_effect=fake_run_step
             ), patch.object(
                 sys, "argv", ["main.py"]
@@ -130,6 +132,8 @@ class MainPipelineTest(unittest.TestCase):
             ), patch.object(
                 self.mod, "parse_trace_ids", return_value=[]
             ), patch.object(
+                self.mod, "require_candidates"
+            ), patch.object(
                 self.mod, "run_step", side_effect=fake_run_step
             ), patch.object(
                 sys, "argv", ["main.py"]
@@ -142,6 +146,44 @@ class MainPipelineTest(unittest.TestCase):
 
             labels = [item[0] for item in calls]
             self.assertIn("Step 3 - Rerank", labels)
+
+    def test_count_candidates_handles_raw_and_rrf_shapes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            raw_path = Path(tmpdir) / "raw.json"
+            raw_path.write_text(
+                json.dumps([{"id": "p1"}, {"id": "p2"}]), encoding="utf-8"
+            )
+            self.assertEqual(self.mod.count_candidates(str(raw_path)), 2)
+
+            rrf_path = Path(tmpdir) / "rrf.json"
+            rrf_path.write_text(
+                json.dumps(
+                    {
+                        "papers": [{"id": "p1"}],
+                        "queries": [{"sim_scores": {"p1": {}, "p2": {}}}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(self.mod.count_candidates(str(rrf_path)), 2)
+
+            self.assertEqual(self.mod.count_candidates(str(Path(tmpdir) / "missing.json")), 0)
+
+    def test_require_candidates_exits_when_empty(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            empty_path = Path(tmpdir) / "empty.json"
+            empty_path.write_text(
+                json.dumps({"papers": [], "queries": []}), encoding="utf-8"
+            )
+            with self.assertRaises(SystemExit) as ctx:
+                self.mod.require_candidates(str(empty_path), "Step 2.3 - RRF", "hint")
+            self.assertEqual(ctx.exception.code, 1)
+
+    def test_require_candidates_passes_when_populated(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "ok.json"
+            path.write_text(json.dumps({"papers": [{"id": "p1"}]}), encoding="utf-8")
+            self.mod.require_candidates(str(path), "Step 2.3 - RRF", "hint")
 
 
 if __name__ == "__main__":
