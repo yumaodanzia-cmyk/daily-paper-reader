@@ -1,0 +1,315 @@
+Title: EViDS: An Environment–Vehicle Dynamics Integrated Simulation Platform for Intelligent Chassis Development
+
+URL Source: https://arxiv.org/pdf/2611.17660v1
+
+Published Time: Mon, 16 Nov 2026 01:32:46 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# EViDS: An Environment–Vehicle Dynamics Integrated Simulation Platform for Intelligent Chassis Development 
+
+Lu Xiong 1, Yiming Zhou 1, Xuge Hu 1, Yi Zhang 1, Haoran Lv 1,2, and Chen Tang 1 
+
+> 1
+
+College of Automotive and Energy Engineering, Tongji University, Shanghai 200092, China 
+
+chen tang@tongji.edu.cn  
+
+> 2
+
+Shanghai Research Institute for Intelligent Autonomous Systems, Tongji University, Shanghai 200092, China 
+
+Abstract. The development of intelligent chassis increasingly requires the integration of environmental and perception information with high-fidelity vehicle dynamics to support environment-aware intelligent chas-sis control. However, existing autonomous-driving simulators and profes-sional vehicle-dynamics tools are generally developed for different pur-poses, making it difficult to integrate environmental information, vehi-cle dynamics, and chassis algorithms. This paper proposes EViDS, an Environment–Vehicle Dynamics Integrated Simulation Platform for In-telligent Chassis Development. EViDS integrates CARLA-based envi-ronment and sensor simulation with CarSim-based high-fidelity vehicle dynamics. Reference-pose-based state alignment and multi-rate interac-tion maintain spatial and temporal consistency, while ray-casting-based tire–road interaction transfers environmental information to the vehicle-dynamics model. Scenario configuration, synchronized data acquisition, and algorithm interfaces further support intelligent chassis development. The platform is evaluated through environment–dynamics interaction tests with vehicle-dynamics consistency comparisons, together with in-telligent chassis applications. Results show that EViDS preserves vehicle-dynamics characteristics, reliably transfers environmental information, and supports online closed-loop intelligent chassis control, providing a unified simulation basis for environment-aware intelligent chassis devel-opment and validation. 
+
+Keywords: Intelligent Chassis · Autonomous Driving Simulation · Ve-hicle Dynamics · Environment–Dynamics Integration 
+
+1 Introduction 
+
+With the development of autonomous driving technologies, intelligent chassis systems increasingly require coordinated exchanges of environmental informa-tion, vehicle states, and control commands for precise motion control [1]. Mean-while, the growing complexity of chassis architectures and multi-actuator coor-dination further strengthens the need for integrating environmental information arXiv:2611.17660v1 [cs.RO] 13 Nov 2026 2 Lu Xiong et al. 
+
+with high-fidelity vehicle dynamics [2]. Therefore, intelligent chassis development requires simulation frameworks that combine realistic driving environments with high-fidelity vehicle dynamics. However, existing simulation platforms still have limitations in supporting intelligent chassis development. Autonomous-driving-oriented platforms, such as CARLA and PreScan, mainly focus on environment and perception simu-lation, while their built-in vehicle models provide limited fidelity for detailed chassis dynamics analysis and control validation [3,4]. Vehicle-dynamics-oriented platforms, such as CarSim and Adams/Car, provide high-fidelity vehicle and tire models but generally lack realistic and configurable driving environments and perception capabilities [5]. Existing integrated simulation approaches still face challenges in simultaneously providing realistic autonomous-driving envi-ronments and high-fidelity vehicle dynamics [6]. These limitations hinder the integrated development of environment-aware intelligent chassis algorithms. Moreover, coupling heterogeneous simulators requires addressing differences in simulation interfaces, state representations, and time-management mecha-nisms to ensure consistent cross-platform interaction [7]. To address these chal-lenges, this paper develops EViDS, an Environment–Vehicle Dynamics Inte-grated Simulation Platform for Intelligent Chassis Development, based on CARLA, CarSim, and MATLAB/Simulink. The main contributions of this work are summarized as follows: (1) An integrated environment–vehicle dynamics co-simulation architecture is proposed, enabling closed-loop interaction between autonomous-driving envi-ronments and high-fidelity vehicle dynamics for intelligent chassis development. (2) Cross-domain interaction mechanisms are developed, including reference-pose-based state alignment, multi-rate interaction, and ray-casting-based tire– road interaction, to maintain spatial and temporal consistency and transfer en-vironmental information to the vehicle dynamics domain. (3) The proposed platform is evaluated through environment–dynamics in-teraction tests with vehicle-dynamics consistency comparisons and intelligent chassis applications, demonstrating its capability to support the development and closed-loop validation of environment-aware intelligent chassis algorithms. EViDS will be released as open source upon publication. 3
+
+2 Architecture of the EViDS Platform 
+
+2.1 Overall Architecture 
+
+The proposed EViDS platform integrates high-fidelity vehicle dynamics simu-lation with virtual environment simulation to establish an environment–vehicle dynamics co-simulation framework, as illustrated in Fig. 1. CarSim is connected to MATLAB/Simulink through an S-function interface for vehicle dynamics com-putation, while CARLA is accessed through the Python API for environment and sensor simulation. MATLAB/Simulink serves as the central integration layer  
+
+> 3https://github.com/YimingZhou-tj/EViDS
+
+EViDS for Intelligent Chassis Development 3Vehicle pose  
+
+> wheel positions
+> Algorithms
+> in MATLAB
+> Map data export
+> and visualization
+> Vehicle initialization data generation
+> Control
+> Inputs/Commands Via UDP module
+> Other
+> Variables
+> Transformed state
+> State Synchronization
+> Wheel contact locations Road height
+> friction
+> Tire–Road
+> Interaction
+> Sensor
+> Management
+
+MATLAB 
+
+> Simulation Integration
+
+CarSim 
+
+> Dynamics response
+> Exchange
+> Variables
+> Exchange
+> Variables
+> Other
+> Variables
+
+CARLA 
+
+> Sensor & Environment
+
+Python    
+
+> External interface
+> Algorithms
+> in Python
+> trajectory
+> generation
+> Scenario
+> configuration
+> Map
+> visualization
+> World
+> Management
+> Sensor Data World State Control Commands
+> Vehicle Dynamics Data Semantic
+> Segmentation RGB
+> LiDAR
+> Depth
+> Fz
+> yaw rate
+
+Fig. 1. Architecture of the EViDS platform. 
+
+for state synchronization, tire–road interaction, simulation management, and algorithm integration. The world management module handles CARLA world initialization and the creation and removal of scenario objects. Algorithms can be implemented in MATLAB/Simulink or developed externally in Python and connected through the Python interface. EViDS data comprise cross-domain exchange variables and domain-specific internal variables. The former category includes the vehicle pose, tire-contact positions, and road information required for environment–dynamics interaction. Domain-specific variables, such as additional vehicle-dynamics states and CARLA sensor and environment data, are retained within their respective simulation do-mains and made available to the algorithm layer as needed. During simulation, the vehicle pose and tire-contact positions obtained from CarSim are transformed into the CARLA representation. The aligned vehicle pose is used for vehicle syn-chronization, while the transformed tire-contact positions are used for tire–road interaction. CARLA then returns local road height and friction coefficients to the vehicle dynamics model and provides sensor and environmental information to the algorithm layer, forming a closed-loop connection among the environment, vehicle dynamics, and chassis algorithms. Beyond runtime co-simulation, the external Python interface provides func-tions for map data export and visualization, scenario configuration, trajectory generation, and vehicle initialization. The generated initialization information is transferred to CarSim to maintain consistent initial conditions between the two simulation domains. Further capabilities for intelligent chassis algorithm development are introduced in Sect. 3. 
+
+2.2 Runtime Workflow and Key Interaction Mechanisms 
+
+The runtime workflow of EViDS is illustrated in Fig. 2. At each vehicle dynamics step with period Tdyn , CarSim provides the vehicle pose and four tire-contact positions. The vehicle pose is denoted by Xveh = [ x, y, z, ψ, θ, ϕ ]T , where x,4 Lu Xiong et al. State Alignment    
+
+> 𝒑 𝑪 = 𝒑 𝟎 + 𝑻 𝒑 𝑺 − 𝒑 𝟎
+> 𝑝 𝐶
+
+x
+
+y             
+
+> Multi-Rate Data Interaction  t
+> 𝑇 dyn
+> 𝑇 env
+> t
+> Triggered when accumulated time ≥ 𝑻 𝒆𝒏𝒗
+> 𝑿 veh 𝑪
+> CARLA world update (𝑇 env )
+> CarSim
+> Vehicle states: 𝑿 veh 𝑺
+> Wheel contact positions: 𝒑 𝒊 𝑺
+> End point ( 𝒙 𝒊 𝑪 , 𝒚 𝒊 𝑪 , 𝒛 𝑪 − 𝟑𝟎 )
+> Ray-casting Start point ( 𝒙 𝒊 𝑪 , 𝒚 𝒊 𝑪 , 𝒛 𝑪 + 𝟑 )
+> Vehicle body (Label 10 )→skip
+> Prop candidate
+> Road layer → get 𝜇 𝑖 , 𝑧 𝑖
+> CARLA
+> 𝑿 veh
+> 𝑪 (𝑇 env )
+> Vehicle pose/Sensor update world rendering in CARLA
+> Dynamics feedback:
+
+𝝁 𝒊 , 𝒛 𝒊 
+
+𝑝 𝑖 𝐶 , 𝑧 𝐶 (𝑇 𝑑𝑦𝑛 )     
+
+> 𝑿 veh 𝑪 ,𝒑 𝒊 𝑪
+> 𝑇 𝑑𝑦𝑛
+> Irrelevant prop → Ignore and continue
+> Friction only → get 𝜇 𝑖 ,continue
+> Friction and height → get 𝜇 𝑖 , 𝑧 𝑖
+
+𝑝 𝑖  
+
+> 𝐶
+
+, 𝑧 𝐶 (𝑇 𝑑𝑦𝑛 )
+
+> Tire-Road Interaction
+
+𝜇 𝑖 , 𝑧 𝑖 (𝑇 𝑑𝑦𝑛 )  
+
+> 𝑇 𝑑𝑦𝑛
+> 𝑿 veh 𝑺 ,𝒑 𝒊 𝑺
+
+Fig. 2. Runtime workflow and key cross-domain interaction mechanisms of EViDS. 
+
+y, and z represent the vehicle position, and ψ, θ, and ϕ represent yaw, pitch, and roll, respectively. Superscripts S and C indicate the corresponding CarSim and CARLA representations. The planar tire-contact position is denoted by 
+
+pi = [ xi, y i]T , where i ∈ { FL , FR , RL , RR }.
+
+Reference-Pose-Based State Alignment Because CarSim follows the ISO coordinate convention whereas CARLA adopts the Unreal Engine convention, their pose representations cannot be directly exchanged. EViDS therefore uses the initial vehicle pose generated from the CARLA map as the common reference for state alignment and transfers it to CarSim for initialization. Let pxy = [ x, y ]T
+
+denote the planar vehicle position, and let p0 = [ x0, y 0]T and ψ0 denote the reference position and heading, respectively. The planar position mapping is expressed as 
+
+pCxy (t) = p0 + T(ψ0) pSxy (t) − p0
+
+ (1) The transformation matrix is defined as 
+
+T(ψ0) = R(ψ0)MR (−ψ0) (2) where 
+
+R(ψ) = 
+
+cos ψ − sin ψ
+
+sin ψ cos ψ
+
+
+
+, M =
+
+1 00 −1
+
+
+
+(3) Here, M accounts for the axis-direction difference between the ISO and UE conventions, while R establishes the mapping with respect to the initial heading 
+
+ψ0.The orientation mapping is expressed as 
+
+ψC (t), θ C (t), ϕ C (t)T = wrap180  2ψ0 − ψS (t) , −θS (t), ϕ SE (t)T (4) EViDS for Intelligent Chassis Development 5
+
+where ϕSE denotes the Euler roll angle provided by CarSim for the CARLA roll update, and wrap180( ·) limits the yaw angle to [ −180 ◦, 180 ◦). The aligned pose 
+
+XC 
+
+> veh
+
+is used for CARLA synchronization, while the transformed tire-contact positions pCi = [ xCi , y Ci ]T are used for tire–road interaction. 
+
+Multi-Rate Data Interaction Vehicle dynamics computation and CARLA environment updates have different update-rate requirements. The vehicle dy-namics model must be solved at a high rate to capture rapid changes in vehicle motion, whereas scene rendering, vehicle synchronization, and sensor updates can operate with a longer environment update period Tenv . Tire–road infor-mation, however, directly participates in the vehicle dynamics calculation and therefore needs to be updated at the dynamics period Tdyn . Otherwise, localized variations in road geometry or surface properties may be missed between two environment updates. EViDS therefore adopts a multi-rate interaction mechanism [7]. Simulink uses 
+
+Tdyn as the master simulation period. When the accumulated simulation time reaches Tenv , the aligned vehicle pose XC 
+
+> veh
+
+is applied to CARLA for vehicle-pose synchronization, scene rendering, and sensor updates. In parallel, the trans-formed tire-contact positions pCi are used for tire–road queries at every dynamics step, and the resulting friction coefficient μi and road height zi are returned to CarSim at the same dynamics rate. This preserves the high-rate road feedback required for vehicle dynamics computation without requiring the CARLA envi-ronment and sensors to update at the same rate. 
+
+Ray-Casting-Based Tire–Road Interaction For tire–road interaction, a downward ray is generated at each transformed tire-contact location in CARLA. Its horizontal position is given by ( xCi , y Ci ), while the vehicle height zC from the aligned pose is used as the reference for the vertical search range. In the current implementation, vertical offsets of +3 m and −30 m relative to zC are used to define the ray start and end points, respectively. This enables local road properties to be obtained directly from the virtual environment rather than relying only on predefined road inputs [8]. The detected intersections are processed according to their semantic labels. Intersections with the ego vehicle and irrelevant objects are skipped. For friction-only objects, μi is recorded while the ray continues downward to determine the underlying road height. For objects affecting both friction and geometry, the detected friction coefficient and collision height are directly used as μi and zi,respectively. When the underlying road surface is reached, its friction property and collision height are used to determine the corresponding road inputs. The resulting μi and zi are then fed back to CarSim. Together, reference-pose-based state alignment, multi-rate data interaction, and ray-casting-based tire–road interaction establish consistent environment– vehicle dynamics interaction and enable environmental information to be incor-porated into high-fidelity vehicle dynamics simulation. 6 Lu Xiong et al.  
+
+> Fig. 3. Scenario configuration and reference paths in EViDS. (a) Scenario configuration GUI. (b) Representative reference paths.
+
+3 Functional Modules of EViDS for Intelligent Chassis Development 
+
+3.1 Scenario Configuration and Test Setup 
+
+EViDS provides a graphical interface for map visualization, scenario and maneu-ver selection, reference-path generation, and data export, as shown in Fig. 3(a). Conventional CarSim tests are generally conducted in simple and fixed road en-vironments, whereas EViDS integrates the diverse virtual scenarios provided by CARLA. For environment-aware intelligent chassis algorithms, the same vehicle-dynamics maneuver may exhibit different control performance under different vi-sual and environmental conditions. Therefore, an independent scenario library is established to manage CARLA scenarios, maneuver definitions, and their place-ment information, allowing different scenarios and test maneuvers to be com-bined into configurable test cases. The current library includes 11 scenario cate-gories: residential, commercial, industrial, park, urban mixed, intersection-dense, highway/multi-lane, roundabout, grade/bridge, suburban/rural, and closed-test-area environments. Nine maneuver definitions are provided, including two double-lane-change configurations, single-lane change, constant-radius circular driving, lane following, curve following, grade following, roundabout following, and a legacy double-lane-change configuration. These data form 94 available map– scenario–maneuver–placement combinations. For a selected maneuver, EViDS retrieves its placement and reference-path data, verifies consistency with the loaded CARLA map, and maps the path between the CarSim local coordinates and the CARLA world coordinates. As EViDS for Intelligent Chassis Development 7
+
+illustrated in Fig. 3(b), double-lane-change paths are generated from the orig-inal CarSim LTARG data, road- and curve-following paths are extracted from CARLA road geometry, and constant-radius circular paths are generated from parameterized geometry. The GUI also supports interactive specification of start points, waypoints, and endpoints for customized reference paths. After configuration, the initial position and heading can be exported for CarSim initialization, while the complete reference path is retained in both Car-Sim local and CARLA world coordinates. This provides a consistent basis for scenario configuration, visualization, vehicle initialization, and reference-path management across the two simulation domains. 
+
+3.2 Complex Road-Condition and Environmental Object Configuration 
+
+Although road inputs such as elevation and friction can be predefined in CarSim, environment-aware intelligent chassis development requires not only accurate vehicle-dynamics inputs but also corresponding visual and sensor-level environ-mental information. CARLA provides realistic road scenes, traffic participants, and multi-source sensor simulation, making it more suitable for constructing road conditions that need to be perceived by chassis algorithms. Therefore, EViDS configures dynamics-related road conditions in CARLA and feeds the corre-sponding physical properties back to CarSim through the tire–road interaction mechanism, so that environmental perception and vehicle-dynamics inputs orig-inate from the same virtual scene. EViDS supports both standard and customized environment configuration. General scene objects, such as traffic cones and obstacles, can be directly de-ployed from the CARLA blueprint library through the Python API. For specific road-condition tests, however, existing assets may provide limited flexibility in geometry, material appearance, semantic identification, or association with pre-defined road properties. EViDS therefore introduces customized road-condition assets for controlled configuration of local friction variations, road-elevation dis-turbances, and other dynamics-related road features. As shown in Fig. 4(a), customized road-surface assets with different material appearances are integrated into CARLA and assigned corresponding semantic labels and road properties. These assets can be deployed at specified road loca-tions according to test requirements. Fig. 4(b) shows a customized road surface deployed in CARLA, while Fig. 4(c) shows its semantic representation, where the customized region appears black and is semantically distinguished from the surrounding normal road shown in purple. Based on tire-contact positions and semantic information, the tire–road interaction module identifies the configured region and obtains the corresponding friction or elevation property for vehicle dynamics calculation. 8 Lu Xiong et al.  
+
+> Fig. 4. Road-condition configuration in EViDS. (a) Customized road-surface assets. (b) Deployment in CARLA. (c) Semantic identification.
+
+4 Validation and Application 
+
+The experiments were conducted using the proposed EViDS platform, integrat-ing CARLA 0.9.11, CarSim 2019.1, and MATLAB/Simulink 2021b. EViDS in-herits the environment and sensor-simulation capabilities of CARLA, allowing existing maps, traffic scenes, and environmental information to be directly in-corporated into intelligent chassis development. For environment-aware intelligent chassis development, road information that directly affects vehicle dynamics is also required. Road geometry and local fric-tion conditions, for example, may be perceived in advance and incorporated into chassis algorithms. Therefore, this section first validates whether informa-tion about such road-condition variations can be correctly transferred from the CARLA environment to the CarSim dynamics domain, and then demonstrates the platform’s support for an environment–aware perception–estimation–control application. 
+
+4.1 Validation of Environment–Dynamics Interaction 
+
+Two representative road conditions were considered: heterogeneous friction and local road-elevation disturbance, representing variations in road-surface proper-ties and road geometry, respectively. In EViDS, these local road-condition vari-ations were introduced in CARLA, detected at the corresponding tire contact positions, and transferred to CarSim as tire–road inputs. Standalone CarSim simulations with equivalent prescribed road inputs were used as references. EViDS for Intelligent Chassis Development 9(a)                               
+
+> (b)
+> 03.6 4.0 6.0 6.4 10
+> Time / s
+> 0.3 0.5 0.7 0.9 1.0
+> Friction coefficient
+> (c)
+> 050 100 150 200
+> Longitudinal displacement / m
+> 012345
+> Lateral displacement / m
+> (d)
+> RMSE = 0.137 m
+> 0246810
+> Time / s
+> −15 −10 −5 0510 15
+> Yaw angle / deg
+> (e)
+> RMSE = 0.046 deg
+> 00.55 0.65 0.75 0.85 3
+> Time / s
+> 0.000 0.025 0.050 0.075 0.100 0.125
+> Vertical displacement / m
+> (f)
+> 0123
+> Time / s
+> −4 −3 −2 −1 01
+> Pitch angle / deg
+> (g)
+> RMSE = 0.012 deg
+> 0123
+> Time / s
+> −7.5 −5.0 −2.5 0.0 2.5
+> Roll angle / deg
+> (h)
+> RMSE = 0.036 deg
+> FL FR RL RR CarSim EViDS
+
+Fig. 5. Validation of environment–dynamics interaction. (a) Heterogeneous-friction scene. (b) Road-elevation scene. (c) Tire friction feedback. (d) Trajectory comparison. (e) Yaw-angle comparison. (f) Road-elevation feedback. (g) Pitch-angle comparison. (h) Roll-angle comparison. 
+
+Figs. 5(c)–(e) show the results under the heterogeneous-friction scenario in Fig. 5(a), while Fig. 5(f)–(h) correspond to the road-elevation scenario in Fig. 5(b). For the heterogeneous-friction scenario, the four tires enter and leave the local low-friction region at different times because of their different spatial positions. Accordingly, their friction coefficients change from μ = 1 .0 to μ = 0 .3 and recover after leaving the region, as shown in Fig. 5(c). This demonstrates the spatial and temporal correspondence between the local road property and the tire contact positions. The resulting trajectory and yaw-angle responses are compared with the standalone CarSim references in Fig. 5(d)–(e). The two simulations show close agreement, with RMSE values of 0.137 m and 0.046 deg, respectively. This indi-cates that the friction information obtained from CARLA is correctly transferred to the vehicle dynamics model and produces the expected dynamic response. For the road-elevation scenario, the local elevation disturbance is detected successively at the corresponding tire contact positions as the vehicle passes through the region, as shown in Fig. 5(f). The resulting pitch and roll responses in Fig. 5(g)–(h) also closely match the standalone CarSim references, with RMSE values of 0.012 deg and 0.036 deg, respectively. These results demonstrate that EViDS can associate local road conditions with tire motion and transfer both road-surface and road-geometry information to the vehicle dynamics domain while maintaining dynamic responses consis-10 Lu Xiong et al. 0 5000 10000 15000 20000         
+
+> Sample index
+> −0.2 −0.1 0.0 0.1 0.2
+> Sideslip angle  β / rad
+> (a)
+> Reference Chassis-only Fusion
+> Low ≤ 0.00593 Medium (0.00593, 0.02052] High > 0.02052
+> Reference sideslip magnitude |β|/ rad
+> 0.000 0.005 0.010 0.015 0.020
+> Sideslip angle  β MAE / rad
+> (b)
+> Low ≤ 3.546 Medium (3.546, 4.956] High > 4.956
+> Reference longitudinal speed vx/ (m s −1 )
+> 0.000 0.005 0.010 0.015 0.020
+> Sideslip angle  β MAE / rad
+> (c)
+> Chassis-only Vision-only Fusion
+
+Fig. 6. Real-vehicle sideslip estimation under different operating conditions. (a) Sideslip-angle estimation results. (b) MAE under different sideslip-magnitude ranges. (c) MAE under different longitudinal-speed ranges. 
+
+tent with the standalone CarSim references, validating the main environment– dynamics interaction mechanism described in Sect. 2. 
+
+4.2 Intelligent Chassis Application 
+
+To further demonstrate the applicability of EViDS to environment-aware in-telligent chassis development, a perception–estimation–control application was implemented following a three-stage workflow: preliminary algorithm develop-ment and interface integration in EViDS, estimator refinement and evaluation using real-vehicle data, and online closed-loop execution after reintegration into the platform. The application serves as a platform-level demonstration rather than an independent algorithmic contribution. Within EViDS, visual observations from CARLA and chassis signals from CarSim were used for multi-source vehicle-state estimation. Three estimation branches were considered: a chassis-only learnable Kalman filter with hybrid physics- and data-driven components, a stereo visual-odometry baseline based on RAFT-Stereo, LoFTR, and RANSAC-PnP, and a quality-aware vision–chassis multi-source Kalman fusion estimator. The chassis-only estimator combines vehicle-dynamics prediction with learnable residual correction and Kalman updates, whereas the visual branch obtains vehicle-motion states through stereo depth es-timation, inter-frame matching, and pose estimation rather than directly regress-EViDS for Intelligent Chassis Development 11 
+
+ing the sideslip angle from images. The fusion estimator further combines chassis observations with visual-odometry outputs through quality-aware Kalman up-dates. The fused vehicle states were subsequently supplied to a motion controller with sideslip-related stability constraints, and the resulting control commands were returned to the vehicle dynamics model. This forms a complete perception– estimation–control chain through the unified data and control interfaces of EViDS. Fig. 6 presents the real-vehicle sideslip-estimation results after estimator re-finement. Fig. 6(a) compares the reference sideslip angle with the chassis-only and fusion estimates, while Fig. 6(b)–(c) compare the chassis-only, vision-only, and fusion methods under different reference sideslip-magnitude and longitudinal-speed ranges. The results show condition-dependent complementarity among the different information sources. In the highest-speed range, fusion achieves an MAE of 0.00438 rad, compared with 0.00971 rad for chassis-only estimation and 0.00442 rad for vision-only estimation. In the highest-sideslip-magnitude range, fusion also yields the lowest MAE of 0.01208 rad. The chassis-only and vision-only estimators achieve the lowest MAE in several other operating ranges, indicating that no single information source is uniformly superior. The refined fusion estimator was then reintegrated into EViDS together with the motion-control module for online closed-loop execution. During operation, the estimated states were supplied to the controller, while the resulting com-mands were applied to the CarSim vehicle model to update the vehicle response. The completed signal loop demonstrates that EViDS can support the work-flow from preliminary algorithm development and real-data refinement to online closed-loop execution of environment-aware intelligent chassis algorithms. 
+
+5 Conclusion 
+
+This paper developed EViDS, an environment–vehicle dynamics integrated co-simulation platform for intelligent chassis development, which integrates en-vironmental and sensor information from autonomous-driving simulation with high-fidelity vehicle dynamics. The platform was evaluated through environ-ment–dynamics interaction tests with vehicle-dynamics consistency comparisons and intelligent chassis applications. The results demonstrate that EViDS pre-serves vehicle-dynamics characteristics, enables environmental information to be reliably incorporated into the vehicle-dynamics domain, and supports the development and online closed-loop validation of environment-aware intelligent chassis algorithms. Overall, EViDS provides a unified simulation basis for inte-grating environmental information with high-fidelity vehicle dynamics in intelli-gent chassis development. 
+
+Acknowledgments. This work was supported in part by the Jiangxi Provincial Major Science and Technology Special Project under Grant No. 20262ABE010004, and in part by the National Natural Science Foundation of China under Grants No. 52472452 and No. 52325212. 12 Lu Xiong et al. 
+
+References 
+
+1. Skrickij, V., Kojis, P., ˇSabanovi´ c, E., Shyrokau, B., Ivanov, V.: Review of integrated chassis control techniques for automated ground vehicles. Sensors 24, 600 (2024). 2. Lv, H., Tang, C., Zhang, P., Xiong, L.: Minimizing impacts of road adhesion per-turbations: Uncertainty allocation for control synthesis of X-by-wire chassis. In: SAE 2025 Intelligent and Connected Vehicles Symposium. SAE Technical Paper 380715 (2025). 3. Dosovitskiy, A., Ros, G., Codevilla, F., Lopez, A., Koltun, V.: CARLA: An open ur-ban driving simulator. In: Conference on Robot Learning (CoRL), pp. 1–16 (2017). 4. Wang, C.-S., Liu, D.-Y., Hsu, K.-S.: Simulation and application of cooperative driving sense systems using PreScan software. Microsyst. Technol. 27, 1201–1210 (2021). doi:10.1007/s00542-018-4164-z 5. Cantas, M.R., Guvenc, L.: Customized co-simulation environment for autonomous driving algorithm development and evaluation. SAE Technical Paper 2021-01-0111 (2021). doi:10.4271/2021-01-0111 6. Rajabi Nezhad, T., Louback, E., Ahmed, R., Emadi, A.: Driving simulators for autonomous vehicles: Comprehensive review of current applications and research trends. Vehicles 8(7), 158 (2026). doi:10.3390/vehicles8070158 7. Gomes, C., Thule, C., Broman, D., Larsen, P.G., Vangheluwe, H.: Co-simulation: A survey. ACM Comput. Surv. 51(3), 1–33 (2018). doi:10.1145/3179993 8. Sayers, M.W.: Road characterization for the simulation of automotive vehicle dy-namics. SAE Int. J. Mater. Manuf. 4(1), 251–262 (2011).

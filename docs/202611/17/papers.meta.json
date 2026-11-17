@@ -1,0 +1,69 @@
+{
+  "label": "2026-11-17",
+  "date": "2026-11-17",
+  "generated_at": "2026-11-17T02:33:59",
+  "count": 4,
+  "papers": [
+    {
+      "paper_id": "202611/17/2611.17720v1-ego2flow-benchmarking-the-traffic-system-impact-of-autonomous-driving-on-maps-distilled-from-real-world-roads",
+      "section": "deep",
+      "title_en": "Ego2Flow: Benchmarking the Traffic-System Impact of Autonomous Driving on Maps Distilled from Real-World Roads",
+      "authors": "Yu Dong, Weiying Shen, Hangyu Li, Shu Han, Hong Li, Xiangbo Gao, Keshu Wu, Zhengzhong Tu, Soyoung Ahn, Zhiyuan Liu, Xiaopeng Li",
+      "date": "2026-11-13",
+      "pdf": "https://arxiv.org/pdf/2611.17720v1",
+      "score": "9.0",
+      "evidence": "用于评估自动驾驶规划闭环性能的交通仿真基准",
+      "tldr": "端到端自动驾驶多只评估自车安全与任务完成，难以刻画城市交通中的持续交互与系统影响。Ego2Flow构建闭环基准，用智能体引导的地图蒸馏从真实城市生成CARLA地图，并结合交通信息图与迭代反馈保持车道拓扑和关键几何。基于Argoverse 2发布六张地图，支持真实与仿真观测配对比较，并评测策略对效率、安全、稳定性和能耗的影响。其地图构建取得最低平均位移误差，为自动驾驶交通系统级评估提供新平台。",
+      "tags": "query:driving-eval",
+      "abstract_en": "End-to-end autonomous driving is predominantly evaluated through ego-vehicle safety and task completion. Its deployment in urban traffic, however, creates sustained interactions among vehicles whose collective effects remain insufficiently evaluated. We introduce Ego2Flow, a closed-loop benchmark for assessing the traffic-system impact of autonomous driving on maps distilled from real-world cities. To construct realistic 3D urban environments for sustained closed-loop traffic simulation, we develop an agent-guided map distillation framework that integrates real-world maps and observations with complementary geographic information. Through an iterative feedback mechanism and a traffic information graph that jointly guide scene generation, the framework preserves lane topology, critical road geometry and decision-relevant visual conditions while simplifying nonessential details and completing unobserved regions. Using our proposed framework, we generate and publicly release six CARLA maps from the Argoverse 2 dataset, covering the corresponding real-world regions and enabling paired comparisons of driving behavior under real and simulated observations. On these maps, Ego2Flow evaluates how autonomous driving policies affect traffic efficiency, safety, stability and energy consumption across diverse road structures. Compared with existing construction methods, our framework achieves the lowest average displacement error between planning outputs from paired real and simulated observations. We further benchmark representative driving policies to characterize their system-level impact on urban traffic. Project Page: https://github.com/Fisher-007/Ego2Flow.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202611/17/2611.17660v1-evids-an-environment--vehicle-dynamics-integrated-simulation-platform-for-intelligent-chassis-development",
+      "section": "deep",
+      "title_en": "EViDS: An Environment--Vehicle Dynamics Integrated Simulation Platform for Intelligent Chassis Development",
+      "authors": "Lu Xiong, Yiming Zhou, Xuge Hu, Yi Zhang, Haoran Lv, Chen Tang",
+      "date": "2026-11-13",
+      "pdf": "https://arxiv.org/pdf/2611.17660v1",
+      "score": "8.0",
+      "evidence": "融合CARLA与CarSim的自动驾驶仿真平台",
+      "tldr": "智能底盘开发需融合环境感知与高保真车辆动力学，但现有自动驾驶仿真器与专业动力学工具目标不同、难以集成。EViDS将CARLA环境/传感器仿真与CarSim高保真动力学结合，采用参考位姿状态对齐、多速率交互和射线投射轮胎—路面作用保持时空一致并传递环境信息。实验表明平台能保持车辆动力学特性、可靠传递环境信息并支持在线闭环智能底盘控制。为环境感知型智能底盘开发与验证提供统一仿真基础。",
+      "tags": "query:driving-eval",
+      "abstract_en": "The development of intelligent chassis increasingly requires the integration of environmental and perception information with high-fidelity vehicle dynamics to support environment-aware intelligent chassis control. However, existing autonomous-driving simulators and professional vehicle-dynamics tools are generally developed for different purposes, making it difficult to integrate environmental information, vehicle dynamics, and chassis algorithms. This paper proposes EViDS, an Environment-Vehicle Dynamics Integrated Simulation Platform for Intelligent Chassis Development. EViDS integrates CARLA-based environment and sensor simulation with CarSim-based high-fidelity vehicle dynamics. Reference-pose-based state alignment and multi-rate interaction maintain spatial and temporal consistency, while ray-casting-based tire-road interaction transfers environmental information to the vehicle-dynamics model. Scenario configuration, synchronized data acquisition, and algorithm interfaces further support intelligent chassis development. The platform is evaluated through environment-dynamics interaction tests with vehicle-dynamics consistency comparisons, together with intelligent chassis applications. Results show that EViDS preserves vehicle-dynamics characteristics, reliably transfers environmental information, and supports online closed-loop intelligent chassis control, providing a unified simulation basis for environment-aware intelligent chassis development and validation.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202611/17/2611.17505v1-adversarial-tracking-attacks-on-image-sensors-for-object-tracking-in-autonomous-vehicles",
+      "section": "quick",
+      "title_en": "Adversarial Tracking: Attacks on Image Sensors for Object Tracking in Autonomous Vehicles",
+      "authors": "Han Wu, Alex Chan, Ekin Can Erkus, Tousif Rahman, Rishad Shafik",
+      "date": "2026-11-12",
+      "pdf": "https://arxiv.org/pdf/2611.17505v1",
+      "score": "6.0",
+      "evidence": "在CARLA驾驶仿真器中评测跟踪系统",
+      "tldr": "跟踪-by-detection系统依赖神经网络检测器，但对抗攻击对下游轨迹估计的影响不能仅由检测精度刻画。本文在CARLA中评估YOLOv3/YOLOv4与SORT、Deep SORT、Strong SORT、OC-SORT组合，用MOTA、HOTA、IDF1衡量图像特定和通用扰动下的跟踪质量。图像特定攻击使YOLOv3跟踪器HOTA从53.45-56.19%降至14.85-17.03%，最差MOTA为-772.60%；YOLOv4较稳健，HOTA仍降至25.06-26.86%，单个通用扰动也可显著降低跟踪精度。",
+      "tags": "query:driving-eval",
+      "abstract_en": "Object tracking systems estimate the motion of surrounding vehicles by linking detected objects across video frames. In particular, Tracking-By-Detection (TBD) systems combine object detectors with motion prediction and data association to maintain object identities over time. However, neural network-based detectors are vulnerable to adversarial attacks that perturb input images, and their impact on downstream trajectory estimation is not fully characterized by detection accuracy alone. Therefore, this paper evaluates image-specific and image-agnostic attacks on YOLOv3 and YOLOv4 detectors paired with SORT, Deep SORT, Strong SORT, and OC-SORT tracking systems. The evaluation uses CARLA simulator and measures tracking quality through Multiple Object Tracking Accuracy (MOTA), Higher Order Tracking Accuracy (HOTA), and Identification F1 (IDF1). Under image-specific attacks, HOTA for YOLOv3-based trackers declines from 53.45-56.19% to 14.85-17.03%, while MOTA reaches -772.60% in the worst case. YOLOv4-based trackers exhibit greater robustness, while HOTA still declines to 25.06-26.86%. In addition, image-agnostic attacks can reduce the tracking accuracy using a single Universal Adversarial Perturbation (UAP), without generating a separate perturbation for individual frames.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "paper_id": "202611/17/2611.19184v1-do-vlms-really-look-at-the-road-a-diagnostic-evaluation-for-autonomous-driving",
+      "section": "quick",
+      "title_en": "Do VLMs Really Look at the Road? A Diagnostic Evaluation for Autonomous Driving",
+      "authors": "Shankar Gangisetty, Muskan Singh, C V Jawahar",
+      "date": "2026-11-14",
+      "pdf": "https://arxiv.org/pdf/2611.19184v1",
+      "score": "6.0",
+      "evidence": "针对自动驾驶视觉语言模型的诊断评测框架",
+      "tldr": "视觉语言模型在自动驾驶问答基准上分数亮眼，但高分未必代表真正基于视觉证据推理。论文提出诊断式评测框架，围绕恶劣天气、路口与交叉口及nuScenes空间推理扩展，用图像/无图像、反事实天气、改写与否定鲁棒性、空间推理四类协议系统检验开源模型。结果显示总体准确率掩盖肯定偏差、反事实不敏感、否定题近随机、无图也自信决策等失败模式。该工作说明当前开源VLM视觉grounding不足，需超越聚合准确率的诊断评测。",
+      "tags": "query:driving-eval",
+      "abstract_en": "Vision-language models (VLMs) are increasingly being evaluated for autonomous driving through question-answering benchmarks, yet high benchmark accuracy does not necessarily reflect visually grounded reasoning. We present a diagnostic evaluation framework that systematically probes whether VLMs base safety-critical driving decisions on visual evidence or instead rely on language priors, answer biases, and dataset regularities. Our benchmark comprises two task categories, Adverse Weather and Junctions \\& Intersections, with a nuScenes spatial reasoning extension, and evaluates open-source (general, driving, and spatial-reasoning) VLMs along four diagnostic protocols: image versus no-image evaluation, counterfactual weather sensitivity, linguistic robustness under paraphrasing and negation, and spatial reasoning. All ground-truth labels are derived programmatically from BDD100K and DriveLM annotations, enabling reproducible evaluation without manual labeling. Across all models, we find that competitive overall accuracy conceals systematic failure modes, including strong affirmation bias, limited sensitivity to counterfactual scene changes, near-chance performance on negated questions despite high paraphrase consistency, and confident driving decisions even without visual input. These results demonstrate that current open-source VLMs remain insufficiently grounded for safety-critical autonomous driving and underscore the need for diagnostic evaluation beyond aggregate accuracy.",
+      "source": "arxiv",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "errors": []
+}

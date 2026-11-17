@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-11-05 ~ 2026-11-14</span>
+      <span class="dpr-home-dashboard-kicker">2026-11-17</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 16 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 4 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
-    <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>3 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>5</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>11</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>2</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>2</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-11-14 06:57:24 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-11-17 02:33:57 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>2026-11-05至11-14共筛出16篇论文（精读5篇、速读11篇），重点聚焦自动驾驶与机器人导航的闭环评测。最值得看的是满分精读《Beyond Infraction Scores》提出的失败边界画像，以及9分的场景编排闭环评测方法，二者都推动评测从单一违规分数转向更细致的失效刻画。普通读者可优先从这两篇入手，理解闭环评测如何更真实反映系统在边缘场景下的表现。</p>
+<p>2026-11-17 日报共收录 4 篇论文，精读 2 篇、速读 2 篇，主题集中在自动驾驶对交通系统的影响与智能底盘仿真。</p>
+<p>最值得看的是 9.0 分的 Ego2Flow：它用从真实道路蒸馏出的地图，评估自动驾驶对交通系统的影响；其次是 8.0 分的 EViDS，它提供环境与车辆动力学一体化仿真平台。</p>
+<p>普通读者可以先看 Ego2Flow 的摘要和实验设置，再浏览 EViDS 的平台架构图；两篇 6 分速读文章可以了解感知攻击与 VLM 评测方面的风险。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">5 篇</strong>
+    <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Beyond Infraction Scores: Failure-Boundary Profiles for Closed-Loop Evaluation of Driving and Robot Navigation Agents">Beyond Infraction Scores: Failure-Boundary Profiles for Closed-Loop Evaluation of Driving and Robot Navigation Agents</span></li><li><span class="dpr-home-dashboard-paper-title" title="Scenario Orchestration for Closed-loop Policy Evaluation of Autonomous Driving">Scenario Orchestration for Closed-loop Policy Evaluation of Autonomous Driving</span></li><li><span class="dpr-home-dashboard-paper-title" title="Bug2Scenario: Root-Cause-Preserving Test Scenario Amplification for Autonomous Driving Software">Bug2Scenario: Root-Cause-Preserving Test Scenario Amplification for Autonomous Driving Software</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Ego2Flow: Benchmarking the Traffic-System Impact of Autonomous Driving on Maps Distilled from Real-World Roads">Ego2Flow: Benchmarking the Traffic-System Impact of Autonomous Driving on Maps Distilled from Real-World Roads</span></li><li><span class="dpr-home-dashboard-paper-title" title="EViDS: An Environment--Vehicle Dynamics Integrated Simulation Platform for Intelligent Chassis Development">EViDS: An Environment--Vehicle Dynamics Integrated Simulation Platform for Intelligent Chassis Development</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">driving-eval <strong>5</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">driving-eval <strong>2</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -91,12 +93,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">11 篇</strong>
+    <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="CoSafe: Cooperative Runtime Safety Assurance for Mixed-Traffic Autonomous Driving">CoSafe: Cooperative Runtime Safety Assurance for Mixed-Traffic Autonomous Driving</span></li><li><span class="dpr-home-dashboard-paper-title" title="Training-Independent Validation of a Learning-Based Controller for Stunt Maneuvers">Training-Independent Validation of a Learning-Based Controller for Stunt Maneuvers</span></li><li><span class="dpr-home-dashboard-paper-title" title="WAM-Sim0.1: World Anchored Memory Meets Online RL for Consistent and Realistic Driving Simulation">WAM-Sim0.1: World Anchored Memory Meets Online RL for Consistent and Realistic Driving Simulation</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Adversarial Tracking: Attacks on Image Sensors for Object Tracking in Autonomous Vehicles">Adversarial Tracking: Attacks on Image Sensors for Object Tracking in Autonomous Vehicles</span></li><li><span class="dpr-home-dashboard-paper-title" title="Do VLMs Really Look at the Road? A Diagnostic Evaluation for Autonomous Driving">Do VLMs Really Look at the Road? A Diagnostic Evaluation for Autonomous Driving</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">driving-eval <strong>11</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">driving-eval <strong>2</strong></span></div>
 </section>
 </div>
 

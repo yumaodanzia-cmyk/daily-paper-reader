@@ -1,0 +1,429 @@
+Title: Ego2Flow: Benchmarking the Traffic-System Impact of Autonomous Driving on Maps Distilled from Real-World Roads
+
+URL Source: https://arxiv.org/pdf/2611.17720v1
+
+Published Time: Mon, 16 Nov 2026 01:39:06 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# Ego2Flow: Benchmarking the Traffic-System Impact of Autonomous Driving on Maps Distilled from Real-World Roads 
+
+## Yu Dong 1 Weiying Shen 1 Hangyu Li 1 Shu Han 1 Hong Li 2
+
+## Xiangbo Gao 3 Keshu Wu 1 Zhengzhong Tu 3 Soyoung Ahn 1 Zhiyuan Liu 2 Xiaopeng Li 1,* 
+
+> 1
+
+University of Wisconsin–Madison 2Southeast University 3Texas A&M University–College Station *Corresponding author Autonomous vehicles Human-driven vehicles 
+
+> A pedestrian had just crossed
+
+# Ego2Flow 
+
+Traffic-system evaluation Six CARLA maps      
+
+> Austin Detroit Miami Palo Alto Pittsburgh Washington, D.C.
+
+Homogeneous and mixed policy deployments Safety Stability Energy Consumption   
+
+> With AVs at t*
+> 1234Speed
+> v₀
+> t* Time
+> Amplification
+> Human-driven at t*
+> 1234Speed
+> v₀
+> t* Time
+> No amplification
+
+Efficiency 
+
+Perturbation propagation Sustained traffic Bottleneck response 
+
+> Ego-vehicle performance alone does not capture the vehicle’s impact on traffic system
+> Blue marks regions with corresponding Argoverse 2 recordings
+
+Figure 1. Ego2Flow: From ego-vehicle evaluation to system-level traffic-flow evaluation. Motivation. Strong ego-vehicle performance does not necessarily translate into safer or more stable traffic flow. The schematic illustrates one possible situation: speed disturbances may amplify along a platoon containing autonomous vehicles (AVs), increasing delays for following vehicles, while remaining unamplified in a human-driven vehicle (HV) platoon. Such collective effects are not captured by ego-vehicle performance alone. Benchmark. Ego2Flow addresses this evaluation gap by assessing the traffic-system impact of end-to-end driving policies in closed-loop simulation. It provides six CARLA maps distilled from real-world roads and spatially aligned with the corresponding Argoverse 2 (AV2) regions, supporting evaluation of traffic efficiency, safety, stability and estimated energy consumption across diverse urban road environments. 
+
+## Abstract 
+
+End-to-end autonomous driving is predominantly evaluated through ego-vehicle safety and task completion. Its deploy-ment in urban traffic, however, creates sustained interac-tions among vehicles whose collective effects remain insuf-ficiently evaluated. We introduce Ego2Flow, a closed-loop benchmark for assessing the traffic-system impact of au-tonomous driving on maps distilled from real-world cities. To construct realistic 3D urban environments for sustained closed-loop traffic simulation, we develop an agent-guided map distillation framework that integrates real-world maps and observations with complementary geographic informa-tion. Through an iterative feedback mechanism and a traffic information graph that jointly guide scene generation, the framework preserves lane topology, critical road geometry and decision-relevant visual conditions while simplifying nonessential details and completing unobserved regions. Using our proposed framework, we generate and publicly release six CARLA maps from the Argoverse 2 dataset, cov-
+
+1arXiv:2611.17720v1 [cs.RO] 13 Nov 2026 ering the corresponding real-world regions and enabling paired comparisons of driving behavior under real and sim-ulated observations. On these maps, Ego2Flow evaluates how autonomous driving policies affect traffic efficiency, safety, stability and energy consumption across diverse road structures. Compared with existing construction methods, our framework achieves the lowest average displacement error between planning outputs from paired real and simu-lated observations. We further benchmark representative driving policies to characterize their system-level impact on urban traffic. Project Page: https://github.com/Fisher-007/Ego2Flow. 
+
+## 1. Introduction 
+
+End-to-end autonomous driving learns policies that trans-late sensor observations into driving decisions and has emerged as a prominent paradigm in autonomous driving research [14, 21, 23, 26]. Closed-loop simulation is cen-tral to evaluating these policies because it captures the feed-back between their actions and subsequent observations, re-vealing driving behavior that open-loop prediction metrics may fail to reflect [7, 9]. Within this closed-loop setting, existing driving benchmarks primarily assess the ego ve-hicle’s ability to navigate safely and complete its assigned task [1, 3, 17]. However, urban deployment raises a further question about the traffic produced by those decisions. A policy’s ability to complete an individual trip does not es-tablish how its widespread deployment would affect urban traffic systems. Vehicle interactions carry the effects of a vehicle’s driv-ing decision beyond the controlled vehicle. For example, a vehicle’s braking can induce speed disturbances that prop-agate through a platoon and delay following vehicles. Fig-ure 1 illustrates this distinction: the same pedestrian cross-ing can induce different patterns of speed loss and spacing along a platoon, even when the leading vehicle completes the maneuver safely. Autonomous driving policies should therefore avoid amplifying such disturbances and exacer-bating delays for following vehicles. Yet evaluating ego-vehicle performance alone cannot fully capture these col-lective effects. Transferring driving control to algorithms also creates an opportunity to improve traffic-system outcomes that individual human drivers do not typically optimize for. Learning-based control has improved traffic flow in sim-ulation [33], and field experiments have shown that con-trolling a single vehicle can suppress stop-and-go waves in predominantly human-driven traffic [29]. However, exper-iments with commercial adaptive cruise control have also observed disturbance amplification [12]. These contrasting findings motivate the central question of Ego2Flow: how does a driving policy affect the traffic it joins, and does its control improve collective outcomes? 
+
+Evaluating these effects for sensor-based driving poli-cies requires environments that preserve decision-relevant road and visual conditions while supporting sustained in-teractions among vehicles. We introduce Ego2Flow , a closed-loop benchmark for assessing the traffic-system im-pact of autonomous driving on maps distilled from real-world roads. As summarized in Fig. 1, it provides six CARLA [10] maps covering the corresponding Argoverse 2 (AV2) regions [32]. Across these diverse urban road envi-ronments, Ego2Flow assesses end-to-end driving policies through their effects on traffic efficiency, safety, stability and estimated energy consumption. To support this evaluation, we develop an agent-guided map-distillation framework for constructing 3D urban en-vironments. Distillation focuses on faithfully retaining the road structure and visual cues that shape driving decisions, while simplifying less relevant geometry and appearance in-stead of reproducing every scene detail. A traffic informa-tion graph connects these priorities to source evidence and dependencies among road elements, guiding the agent’s de-cisions about how to represent observed features and com-plete the surrounding network (Fig. 2). Static and dynamic review provide localized feedback on agreement with the recorded scene and functionality in simulation, allowing the maps to be refined for traffic evaluation. We publicly release six CARLA maps covering the cor-responding AV2 regions and connected surrounding roads, supporting joint use with AV2 data for closed-loop sim-ulation of end-to-end driving policies. Across six cities, our framework achieves the lowest mean ADE between a frozen driving model’s planning outputs under real and rendered observations, 9.3% below the next-best construc-tion method. Initial benchmarking of representative rule-based and learned driving policies reveals differences in traffic-system performance that task completion alone can-not capture. These findings establish empirical baselines and identify opportunities to improve collective traffic out-comes through driving-policy development. Our contributions are threefold: • We introduce Ego2Flow, a closed-loop benchmark that extends the evaluation of end-to-end driving policies be-yond ego-vehicle outcomes to the collective performance of urban traffic. • We develop an agent-guided map-distillation framework that prioritizes information relevant to driving decisions when constructing executable 3D urban environments. A traffic information graph informs construction, while static and dynamic feedback guide refinement. • We publicly release six CARLA maps spatially aligned with AV2, enabling paired evaluation of driving poli-cies under real and simulated observations and supporting closed-loop simulation in the realistic urban regions. 22. Related Work 
+
+End-to-end autonomous driving. End-to-end au-tonomous driving uses a unified learning framework to map raw sensor inputs directly to vehicle motion plans or control commands. Such policies can be learned through imitation learning [23] and further refined through reinforcement learning [38]. Recent vision–language–action (VLA) models augment this mapping with language reasoning for trajectory planning [25]. World modeling can further support these policies through future scene prediction [21] and help assess navigation instructions by imagining their consequences [34]. Given the prominence of end-to-end driving, we evaluate the traffic-system effects of policies that act on sensor observations, extending beyond motion controllers operating on explicit traffic states. 
+
+Closed-loop evaluation. Closed-loop evaluation assesses driving policies through interaction, typically in simula-tors where actions shape subsequent observations. Driv-ing benchmarks emphasize safety, progress and task com-pletion [1, 3, 17], while simulation benchmarks assess the realism of agent behavior [22]. Cooperative benchmarks examine whether perception sharing and decision negoti-ation improve the driving performance of connected ve-hicles [8, 19, 20]. At the traffic-system level, Flow [33] and freeway benchmarks [36] study mixed-autonomy con-trol and its collective effects, while IntersectionZoo [16] ex-amines the generalization of cooperative eco-driving across urban intersections. These traffic-control studies primar-ily use explicit traffic states as policy inputs in their eval-uations. Ego2Flow evaluates the traffic-system impact of sensor-based end-to-end policies in 3D urban environments that support sensor rendering and sustained vehicle interac-tions. 
+
+Environment construction for driving simulation. Ex-isting pipelines construct explicit 3D environments from ge-ographic data and scene evidence through procedural mod-eling and asset assembly [4, 8, 28], or multimodal agent-guided generation [31]. Neural reconstruction methods learn renderable scene representations from driving logs to improve visual fidelity [35, 37], while Cam2Sim [15] inte-grates Gaussian Splatting with executable CARLA scenes. Generative models provide complementary capabilities for synthesizing road layouts [6, 27] and visual content [24]. We focus on distilling real-world scenes into CARLA maps that preserve driving-relevant features. 
+
+## 3. Agent-Guided Map Distillation 
+
+Map distillation converts partial road observations into exe-cutable 3D environments by retaining information that gov-erns driving and traffic interactions. Ego2Flow assigns scene detail according to lane connectivity, physical geom-etry, traffic controls, and decision-relevant visibility. As shown in Fig. 2, a traffic information graph connects these requirements to source evidence and construction tasks. The construction agent uses the graph to select which prop-erties to retain and which elements to revise. The resulting conditions guide local generation and simulator assembly, while static and dynamic feedback identify the properties requiring further revision. 
+
+3.1. Source Alignment and Fusion 
+
+Let O denote the available source evidence. AV2 dataset provides local lane maps, calibrated images, LiDAR, ego poses, and object annotations [32], OpenStreetMap supplies the surrounding road network and building footprints [13] and terrain data provides regional elevation. We register these sources in a common metric frame and fuse detailed AV2 geometry with the surrounding network. Roads, cam-era poses, and actor states share the same alignment, while image timestamps and calibration retain the correspondence needed for source-aligned simulation. The extended net-work supports routes and traffic interactions beyond the recorded regions. At construction iteration n = 0 , 1, . . . , the scene repre-sentation Sn contains geometry, traffic attributes, objects, and source references. Evidence is associated with individ-ual properties, allowing an observed lane boundary to re-main fixed while an inferred height or adjacent surface is refined. Fusion identifies gaps between retained road seg-ments. The positions, tangents, widths, elevations, and lane connections at their interfaces provide boundary conditions for local completion. 
+
+3.2. Traffic Information Graph and Construction Decisions 
+
+Relational representation. We represent construction dependencies with an attributed graph Gn = (Vn, En),where Vn is the node set and En the set of typed edges. Nodes represent road elements, evidence, construction tasks, and simulator realizations. Edges express lane suc-cession, evidence support, physical connections, and task dependencies. Semantic relations are directed; physical connectivity is symmetric. The graph associates required properties, construction decisions, and review findings with the relevant elements, while distinguishing source-supported relations from candidate associations. The graph captures dependencies over the scene geometry in Sn.The driveway example in Fig. 2 illustrates the role of these dependencies. Source images support the entrance, which comprises a curb cut and an apron connected to the roadway. Preserving vehicle access requires both an open-ing in the curb and continuous surface elevations across the connected elements. The graph links these requirements, 3Traffic Information Graph         
+
+> Curb cut Source image 3D Mesh
+> targets includes represented by supports connects to
+> Query (retrieve) Update (add / refine)
+> Construction Agent
+> Retain Simplify Enhance Seek evidence
+> Static Reviewer
+> Input Argoverse 2
+> Camera HD map LiDAR Road completion Appearance generation
+> OSM Terrain
+> Dynamic Reviewer
+> Source Render BasicAgent + learned policy Validated maps
+> Roadway Driveway entrance Driveway apron
+> includes
+> Construction task Source evidence Road elements Construction task 3D representation Directed semantic relation Physical connection (undirected)
+> Static and dynamic feedback
+> Blender CARLA / Unreal
+
+Figure 2. Agent-guided map distillation. Aligned AV2 observations and geographic data provide the geometry and evidence for con-struction. The traffic information graph links road elements, evidence, tasks and their simulator realizations. The construction agent uses these relations to constrain road completion and appearance generation. Static and dynamic reviewers return feedback for local refinement. The driveway example connects a curb cut and apron to the evidence and mesh needed to preserve vehicle access. 
+
+their evidence, and their simulator realization to a common task. Retrieving them together lets the agent coordinate the related modifications while preserving the entrance’s traffic function. 
+
+From evidence to construction conditions. Let A de-note the construction agent and Fn the set of available re-view findings, with F0 = ∅. The agent selects tasks using the graph and feedback, then retrieves a decision context Pn
+
+containing the relevant dependency subgraphs, scene geom-etry, source observations, prior decisions, and unresolved findings. Retrieval follows incoming and outgoing depen-dencies so that adjacent structures enter the same decision context. The agent produces a decision set Un. Each decision identifies a target, supporting evidence, required properties, and an operation: retain , simplify , enhance , or seek evi-dence . Retaining and simplifying preserve required traf-fic properties at different levels of detail; enhancement re-pairs or completes selected elements; evidence retrieval re-solves uncertainty. For example, a building can use a sim-plified material while retaining the geometry that occludes approaching traffic. The decisions are recorded in the graph and translated into construction conditions Cn:
+
+Pn = Retrieve A(Gn, F n; Sn, O),
+
+Un = A(Pn, F n),
+
+Cn = Conditions( Sn, Gn, Un).
+
+(1) Road conditions specify the geometry to retain, editable re-gions, and boundary constraints. Appearance conditions identify relevant source evidence and visual requirements. Simulator conditions specify the physical assets and traf-fic controls to implement. Unresolved properties remain associated with their tasks for further evidence gathering. This connects traffic-relevant information selection to ex-plicit construction constraints. 
+
+3.3. Constrained Generation and Simulator Inte-gration 
+
+Local road completion. A pretrained Scenario Dreamer model [27] provides a geometric prior for the selected gaps. We initialize each connection by interpolating between its source boundaries and encode it together with neighboring lanes. Noise is applied to the editable gap latent, while re-tained lane latents remain fixed. Let zsrc denote the encoded lane scene before noise is added, including the initialized gap, and let M be a binary mask equal to one on retained lanes and zero on the gap. At diffusion step t, ezt−1 denotes the proposed lane latent state and zt−1 the conditioned re-sult. With ⊙ denoting elementwise multiplication, each de-noising step restores the retained entries: 
+
+zt−1 = M ⊙ zsrc + (1 − M ) ⊙ ezt−1. (2) The pretrained model weights remain fixed. Feedback can further refine the editable latent against local geometric re-quirements. During assembly, we enforce planar endpoint positions and tangents and interpolate the boundary widths and elevations. Candidates are checked for centerline self-intersection, lane-envelope validity, and centerline inter-sections with buildings. Accepted connections fill the se-lected gaps, while retained roads are copied directly from the source with their connections and permissions. La-tent clamping constrains sampling; source retention and boundary-constrained assembly preserve the protected ge-ometry and its interfaces. 4Appearance and executable map assembly. Cos-mos [24] generates appearance candidates from selected source image crops and the construction conditions. The agent selects content for textures and materials according to the required properties. Building geometry follows geo-graphic footprints, using observed heights where available and inferred heights otherwise. Traffic signs, markings, and controls retain verified content and placement through explicit simulator assets. Calibrated imagery and LiDAR constrain observed access surfaces and curb profiles, preserving geometric relationships that govern occlusion and physical contact. Let Xuse  
+
+> n
+
+denote accepted road geometry and Juse  
+
+> n
+
+se-lected appearance content at iteration n. Scene editing pro-duces the updated representation Sn+1 , and assembly pro-duces the executable CARLA map Mn+1 [10]: 
+
+Sn+1 = Edit( Sn, X use  
+
+> n
+
+, Cn),
+
+Mn+1 = Build( Sn+1 , Cn, J use  
+
+> n
+
+). (3) The navigation network and physical road surfaces de-rive from shared geometry, aligning connectivity with traversable surfaces. Vehicles remain independently con-trollable, supporting both source trajectory replay and closed-loop traffic interactions. 
+
+3.4. Static and Dynamic Feedback 
+
+Independent review. Static and dynamic reviewers as-sess Mn+1 independently of the construction agent. Static review compares source-aligned rendered views and geo-metric measurements against O and Cn, examining connec-tivity, surface continuity, asset placement, traffic controls, visibility, and appearance. Dynamic review follows static acceptance. It combines route-following checks, learned-policy driving under sustained traffic, and replay of camera and actor states at source timestamps. These tests expose navigation failures, collisions, vehicle-response problems, and interaction failures during simulation. Each finding identifies the affected location and property together with supporting evidence. 
+
+Feedback-driven revision. Let Fn+1 collect findings from the reviews performed at this iteration. The construc-tion agent associates them with the corresponding elements and updates the graph to Gn+1 :
+
+Gn+1 = Update A
+
+ Gn, Sn+1 , Un, F n+1 
+
+. (4) The update records realized properties and retains outstand-ing tasks and their dependencies. A discontinuity at a lane connection, for example, directs the agent to the linked boundary geometry and dependent surfaces. The agent re-trieves the relevant evidence, revises the construction con-ditions, and repeats the affected generation, assembly, and review stages. A map is accepted once it passes both re-views, providing an environment for aligned source replay and sustained traffic-system evaluation. 
+
+## 4. Ego2Flow Benchmark 
+
+Ego2Flow measures how a driving policy changes the broader traffic system. The evaluation unit is the traffic gen-erated by a set of travel requests over an observation win-dow. It includes vehicles controlled by the policy, surround-ing traffic and requests waiting for admission to the road network. Each scenario fixes the road network, demand, ex-ternally prescribed controls and observation window. Fig-ure 1 organizes these evaluations into six city maps with three task families in two deployment settings and four met-ric categories. A policy can affect another vehicle through car-following interactions, lane occupancy or access to an intersection. Requests waiting for admission also experi-ence the resulting delay. The benchmark accounts for all these vehicles and requests to relate driving decisions to traffic efficiency, safety, stability and estimated energy con-sumption. 
+
+4.1. Maps and Traffic Tasks 
+
+The six maps cover Austin, Detroit, Miami, Palo Alto, Pitts-burgh and Washington, D.C. The benchmark design allo-cates eight areas per city. Each city includes four areas with sustained traffic and two each for bottlenecks and perturba-tion propagation. Each area defines legal routes and task exits. Its traffic setup specifies initially present vehicles, incoming travel requests and measurement intervals. Up-stream and downstream road space accommodates arrivals and queues. A buffer beyond each task exit allows vehicles that have completed their trips to leave without obstructing following traffic. 
+
+Sustained traffic. Vehicles serve a fixed sequence of travel requests over a continuous observation window. Compatible AV2 observations jointly initialize vehicle po-sitions, speeds and relative configurations. Additional re-quests specify continuing demand and scheduled release times. This task measures whether a policy can serve de-mand while maintaining safe and steady motion. 
+
+Bottleneck response. A lane restriction or a constraint on downstream discharge reduces the road’s capacity to serve demand. The scenario fixes the arrival process as well as the restriction location and its start and end times. Continued arrivals reveal queue accumulation, and traffic recovery is assessed after the restriction is lifted. Queue and discharge time series complement the common efficiency and safety metrics. 5Perturbation propagation. This task examines how ve-hicles respond to a disturbance transmitted through their in-teractions. After an external leader performs a sharp speed reduction, a fixed set of followers is observed. Neighbor-ing traffic remains active in the simulation. Each policy determines the car-following behavior and lane occupancy through which the disturbance propagates. This task mea-sures speed losses across all vehicles to characterize the traffic system’s response to a perturbation under each pol-icy. 
+
+4.2. Deployment and Measurement 
+
+We use two deployment settings. Homogeneous deploy-ment (H) assigns the tested policy to all vehicles. Mixed de-ployment (M) assigns it to a fixed subset of approximately 30% of requests, with CARLA BasicAgent controlling the remaining vehicles. The external leader is controlled sep-arately. H tests the collective behavior under the repeated driving policy, whereas M evaluates interactions with the background controller. Requests, routes, vehicle properties, weather, externally prescribed controls and warm-up pro-cedures are shared across policies. Each policy shapes the traffic state at the start of observation through its interac-tions during warm-up. We evaluate all vehicles except the external leader, clip-ping trajectories to the observation window and a region extending 4 m beyond the task lane surfaces. A request is completed when its vehicle follows a valid route and its rear crosses the task exit. An illegal transition or sustained de-parture from the road corridor marks the request as failed, but the vehicle remains included in motion, safety and en-ergy measurements. Failed requests and those awaiting ad-mission accrue delay until the observation window ends, en-suring that the evaluation accounts for the full demand. 
+
+4.3. Traffic-System Metrics 
+
+Efficiency. Let R denote all requests released during 
+
+[0 , T ), including those associated with vehicles initially present. For each request r, ar is its release time, set to zero for initially present vehicles. Let cr denote its legal completion time, with cr = ∞ for requests not completed within the observation window. The number of legally com-pleted requests is denoted by Ncompleted . Let αr (t) denote the ratio of forward velocity along the road tangent to the route’s reference speed for free flow, clipped to [0 , 1] . We set αr (t) = 0 before admission, during illegal motion and after route failure. The upper bound prevents speeds above the reference from offsetting accumulated delay. With T
+
+measured in seconds, we report 
+
+¯d = 1
+
+|R| 
+
+X
+
+> r∈R
+
+Z min( cr ,T )
+
+> ar
+
+ 1 − αr (t) dt, qout = 3600 Ncompleted 
+
+T .
+
+(5) The mean delay ¯d measures the average time lost per request relative to travel at the reference speed within the observa-tion window. It includes waiting for admission and unfin-ished requests. Throughput qout counts completed requests per hour, including vehicles initially present. 
+
+Safety. We report collision and hard braking rates as 
+
+Ncol /D and Nhb /D , where D is the total evaluated dis-tance traveled along road surfaces, in vehicle-km. For Ncol ,contacts between the same two objects are counted as one collision event when gaps between consecutive contacts do not exceed 1 s . The count Nhb includes hard braking events with horizontal speed above 0.5 m /s and longitudinal ac-celeration below −3 m /s2 for at least 0.3 s .Another metric, low time-to-collision (TTC) exposure, is the time with TTC < 1.5 s divided by total following time, expressed as a percentage. For positive bumper-to-bumper gap h and closing speed ∆v > 0.1 m/s, TTC equals h/ ∆v
+
+and is infinite otherwise. 
+
+Stability. For stability, we measure speed variation within groups defined by road direction, occupied lane and maneu-ver. Within each group, we calculate the mean and variance of speed along the road surface, weighting observations by the durations they represent. Let σ2 
+
+> g
+
+denote this variance and 
+
+Wg the observation time summed across vehicles in group 
+
+g. We combine the group variances as 
+
+σv =
+
+P 
+
+> g
+
+Wg σ2
+
+> g
+
+P 
+
+> g
+
+Wg
+
+!1/2
+
+. (6) This metric captures speed variation across vehicles and over time within comparable traffic movements. For the perturbation-propagation task, peak speed-loss ratio is calculated. Let B and P be the pre-event and re-sponse windows, and let vi(t) be horizontal speed. The ob-served peak speed-loss ratio is 
+
+¯vi = 1
+
+|B| 
+
+Z
+
+> B
+
+vi(t) d t, Ai =
+
+
+
+¯vi − min  
+
+> t∈P
+
+vi(t)
+
+
+
+> +
+
+,Gobs = max i∈F Ai
+
+A0
+
+, A0 > 0,
+
+(7) where 0 denotes the leader and F the fixed set of follow-ers. The ratio compares observed speed losses, including the effects of pre-event motion and changing following be-haviors. 6Table 1. Map-construction fidelity at a 5 s prediction horizon. ADE and FDE measure differences between frozen OneVL predictions from rendered and matched real AV2 images, in metres. Bold and underlining indicate the best and second-best values in each metric column. 
+
+Method City-wise displacement error Mean ∗
+
+Palo Alto Detroit Miami Austin Pittsburgh Washington, D.C. ADE ↓ FDE ↓ ADE ↓ FDE ↓ ADE ↓ FDE ↓ ADE ↓ FDE ↓ ADE ↓ FDE ↓ ADE ↓ FDE ↓ ADE ↓ FDE ↓
+
+CARLA Digital Twin Tool [4] 0.7432 2.0995 1.1145 2.9851 1.2408 2.9613 1.2948 3.5720 1.1814 3.2558 0.9320 2.3710 1.0844 2.8741 UrbanWorld2.0 [31] 0.6937 2.0092 1.0826 2.9120 1.2109 2.9682 1.2728 3.5452 1.1240 3.1217 0.7031 1.8364 1.0145 2.7321 MDrive [8] 0.7230 2.1126 0.7531 2.0016 1.0828 2.6757 1.0315 2.8889 1.2353 3.5230 0.6074 1.5759 0.9055 2.4630 TRACE † [28] 0.7842 2.2787 0.8755 2.3178 1.0969 2.6450 1.6192 4.5568 1.1992 3.4441 0.7147 1.8290 1.0483 2.8452 Cam2Sim ‡ [15] 0.8632 1.9075 0.7275 1.6314 1.8979 4.0726 0.6161 1.5329 0.5801 1.5026 0.5855 1.2913 0.8784 1.9897 Ego2Flow (Ours) 0.6095 1.8127 0.7182 1.9024 1.0632 2.5792 0.8117 2.2153 1.0482 2.9649 0.5288 1.3399 0.7966 2.1357   
+
+> ∗Equal-weight mean over six cities. Each city averages five areas, except †TRACE in Pittsburgh and Washington, D.C., and ‡Cam2Sim in Washington, D.C., which use four available areas due to bridge-related exclusions (TRACE) and SfM reconstruction failure (Cam2Sim). Missing cases are excluded.
+
+Energy. We estimate energy consumption at the battery terminals from simulated trajectories using a common lon-gitudinal energy-balance model informed by SUMO [11], with fixed vehicle parameters from FASTSim [2]. For ve-hicle i, Ei, drive and Ei, aux denote the energy drawn from the battery for propulsion and auxiliary loads. Ei, regen de-notes the energy returned to the battery through regenerative braking. Estimated net energy consumption is 
+
+enet = 100 
+
+D
+
+X
+
+> i
+
+(Ei, drive + Ei, aux − Ei, regen ) , (8) Energy and distance are accumulated over the same vehicles and trajectory intervals used for the safety metrics. 
+
+Total score. A policy may improve one aspect of traf-fic performance while degrading another. We combine the eight metrics into a total score to summarize performance across efficiency, safety, stability and energy consumption. We normalize all eight metrics to [0 , 1] , with larger scores indicating better performance. Throughput is normalized as 
+
+uq = Ncompleted /|R| . For the other seven metrics, where smaller raw values are better, we use u(x; c) = 11+ x/c to prevent extreme values from dominating the aggregate. The fixed scales are shared across policies, areas and deploy-ments. 
+
+Metric Scale c
+
+Mean delay 60 s/request Collision rate 1 event/vehicle-km Low-TTC exposure 1% 
+
+Hard braking rate 5 events/vehicle-km Speed standard deviation 2 m /s
+
+Peak speed-loss ratio 1
+
+Estimated net consumption 30 kWh /(100 vehicle-km )
+
+Let ˜ua,d,k denote the normalized value of metric k in area 
+
+a under deployment d ∈ { H, M}, set to zero for anomalous 
+
+Table 2. Ablation study of the proposed framework. 
+
+Variant Framework components Results (5 s) 
+
+Graph Static feedback Dynamic feedback ADE ↓ FDE ↓
+
+w/o graph — ✓ ✓ 0.3542 0.9363 w/o static feedback ✓ — ✓ 0.3706 0.9918 w/o dynamic feedback ✓ ✓ — 0.3634 0.9791 
+
+Full Ego2Flow ✓ ✓ ✓ 0.3465 0.9285 
+
+runs. We obtain the aggregate score Sk by averaging the normalized values equally across deployments and areas in 
+
+Ak. The total score Stotal is the equally weighted mean of the eight Sk.
+
+Sk = 1
+
+|A k|
+
+X
+
+> a∈A k
+
+˜ua, H,k + ˜ ua, M,k 
+
+2 ,Stotal = 100 × 18
+
+> 8
+
+X
+
+> k=1
+
+Sk ∈ [0 , 100] .
+
+(9) 
+
+## 5. Experiments 
+
+We evaluate Ego2Flow across six city maps to examine the consistency of planning outputs under real and rendered ob-servations, the contributions of the map-distillation frame-work’s components and the system-level effects of repre-sentative driving policies. Closed-loop simulations are con-ducted in CARLA 0.9.16 [10]. 
+
+5.1. Map Fidelity Evaluation 
+
+Across the six city maps, we compare our framework with the CARLA Digital Twin Tool [4], UrbanWorld2.0 [31], MDrive [8], TRACE [28] and Cam2Sim with Gaussian Splatting (GS) [15, 18]. For each recorded observation win-dow, the reconstructed scene reproduces the camera pose, 7Table 3. System-level performance of representative driving policies on Ego2Flow. Arrows indicate the preferred direction, and bold 
+
+marks the best value in each column.                                                               
+
+> Method Efficiency Safety Stability Energy Overall
+> delay score ↑
+> throughput score ↑
+> collision score ↑
+> low-TTC score ↑
+> braking score ↑
+> speed SD score ↑
+> peak loss score ↑
+> energy score ↑
+> failure fraction ↓
+> total score ↑
+> Normalized scores: [0 ,1] [0 ,1] [0 ,100]
+> IDM-based [30] 0.7510 0.8868 0.8733 0.8431 0.8150 0.5479 0.5242 0.5031 0.0000 71.804
+> Traffic Manager [5] 0.7048 0.8082 0.9192 0.5944 0.6038 0.5231 0.4862 0.5295 0.0000 64.615 LEAD [23] 0.5671 0.5608 0.8360 0.7649 0.4480 0.5083 0.1528 0.4994 0.0104 54.215 UniAD [14] 0.4850 0.3349 0.7687 0.7045 0.3347 0.6107 0.2355 0.4648 0.0000 49.235 Alpamayo [25] 0.4550 0.3440 0.2488 0.6125 0.3082 0.4637 0.1885 0.3785 0.0208 37.490
+> Notes. Failure fraction is the proportion of flagged runs among all scheduled runs per policy. A run is flagged if the external leader’s actual speed loss is below 0.2 m/s in a perturbation-propagation scenario, or the total evaluated distance is below 1 vehicle-m in a sustained-traffic or bottleneck scenario.
+
+calibration and surrounding traffic states in the correspond-ing AV2 recordings. A frozen OneVL model [21] receives paired real and rendered observations with the same context available up to the prediction time and the same inference settings. Let ˆpreal  
+
+> j
+
+and ˆpsim  
+
+> j
+
+be its predicted positions at the same future time points, expressed in the same ego-vehicle coordinate frame at the reference time. For K samples end-ing at 5 s, the average displacement error (ADE) and final displacement error (FDE) are 
+
+ADE = 1
+
+K
+
+> K
+
+X
+
+> j=1
+
+ˆpsim  
+
+> j
+
+− ˆpreal   
+
+> j2
+
+,
+
+FDE = ˆpsim  
+
+> K
+
+− ˆpreal   
+
+> K2
+
+.
+
+(10) Table 1 reports city-wise results and their overall means. Ego2Flow ranks first or second in both ADE and FDE across all six cities and in the overall averages. Where Ego2Flow ranks second, Cam2Sim achieves the lowest er-ror. Despite variation in baseline performance across cities, Ego2Flow maintains consistently strong planning-output fi-delity, achieving the lowest mean ADE of 0.7966 m, 9.3% below Cam2Sim. Notably, Cam2Sim incorporates Gaus-sian Splatting to reconstruct recorded appearance, while Ego2Flow achieves these competitive results using native CARLA rendering. These findings support our distillation strategy of prioritizing driving-relevant structure and visual cues, demonstrating that the resulting maps preserve the evaluated model’s planning outputs across diverse urban en-vironments. 
+
+Framework Component Analysis To assess the contri-bution of each framework component, we conduct an ab-lation study on a randomly selected scene from the Palo Alto map. We compare the full framework with vari-ants that individually omit the traffic information graph, static feedback or dynamic feedback, using the same paired OneVL evaluation. As shown in Table 2, the full frame-work achieves the lowest ADE and FDE. Removing static feedback produces the largest ADE increase of 7.0%, while separately omitting dynamic feedback and the traffic infor-mation graph increases ADE by 4.9% and 2.2%, respec-tively. These comparisons support the effectiveness of each component in the proposed framework. 
+
+5.2. Traffic-System Policy Evaluation 
+
+We compare two rule-based baselines, CARLA Traffic Manager (TM) [5] and an IDM-based controller [30], with three end-to-end policies: UniAD [14], Alpamayo [25] and LEAD [23]. The rule-based baselines use simulator state, while the end-to-end policies act on sensor observations with fixed model weights. Closed-loop simulations use syn-chronous 0.05 s time steps and identical vehicle physics set-tings across policies. Table 3 reports normalized system-level scores aggre-gated across the applicable scenarios and both deployment settings. The IDM-based controller achieves the highest to-tal score of 71.804, followed by TM at 64.615. LEAD per-forms best among the evaluated end-to-end policies, with a total score of 54.215. However, the overall ranking con-ceals differences across individual metrics, with no policy achieving the best score in every dimension. 
+
+Performance across metrics. Traffic efficiency, safety, stability and energy consumption capture different aspects of system-level performance. A policy need not achieve the best value in every metric and policy development can instead seek Pareto-efficient trade-offs that reflect deploy-ment priorities. The IDM-based controller leads in effi-ciency, low-TTC, braking and peak loss scores, while TM achieves the best collision and energy scores. Among the end-to-end policies, UniAD achieves the highest speed SD score among all evaluated policies. Compared with LEAD, it scores higher on stability metrics but lower in the other dimensions. These differences reveal strengths and weak-nesses that individual metrics cannot fully describe, provid-ing directions for policy improvement beyond ego-vehicle 8performance. 
+
+Overall performance. The total score summarizes per-formance across metrics, while the failure fraction records the proportion of runs that fail the evaluation checks, includ-ing those with negligible vehicle movement or insufficient leader speed loss. The rule-based baselines lead most of the individual metric rankings and achieve higher total scores than the evaluated end-to-end policies. These results do not negate their reported ego-level driving capabilities, for example, LEAD achieves strong performance on ego-level closed-loop benchmarks such as Bench2Drive [23]. The contrast suggests that strong ego-level performance does not necessarily translate into better traffic-system outcomes. Jointly assessing ego-level and system-level performance can therefore reveal limitations that individual-vehicle eval-uation may overlook and guide policy development toward improved urban traffic performance. 
+
+## 6. Conclusion 
+
+We presented Ego2Flow, a closed-loop benchmark for as-sessing how end-to-end driving policies affect the traf-fic they join. Our agent-guided map-distillation frame-work constructs connected 3D environments by preserv-ing driving-relevant road structure and visual cues while simplifying nonessential detail. Paired evaluations demon-strate strong planning-output fidelity, with the lowest mean ADE among the compared construction methods. Bench-marking representative policies across 48 scenarios reveals trade-offs among traffic efficiency, safety, stability and en-ergy consumption, showing that more sophisticated driv-ing models do not necessarily yield better traffic-flow per-formance. We publicly release six CARLA maps spa-tially aligned with AV2, supporting paired evaluation and closed-loop simulation in the corresponding urban regions. These resources and empirical findings provide a basis for developing driving policies that account for their effects on surrounding traffic and improve collective outcomes. 
+
+## References 
+
+[1] Yuxin Bao, Hongwei Ruan, Luobin Wang, Seth Z. Zhao, Ziyang Leng, Zihan Zhang, Yu Zeng, Rowan McAllister, Henrik Christensen, and Bolei Zhou. NavSafe-∞: Bench-marking closed-loop driving safety in photorealistic environ-ments. arXiv preprint arXiv:2609.26618 , 2026. 2, 3 [2] Aaron Brooker, Jeffrey Gonder, Lijuan Wang, Eric Wood, Sean Lopp, and Laurie Ramroth. FASTSim: A model to es-timate vehicle efficiency, cost and performance. SAE Tech-nical Paper 2015-01-0973, SAE International, 2015. 7 [3] Holger Caesar, Juraj Kabzan, Kok Seang Tan, Whye Kit Fong, Eric Wolff, Alex Lang, Luke Fletcher, Oscar Beijbom, and Sammy Omari. nuPlan: A closed-loop ML-based plan-ning benchmark for autonomous vehicles. arXiv preprint arXiv:2106.11810 , 2021. 2, 3 [4] CARLA Team. CARLA Digital Twin Tool. CARLA Simu-lator documentation, version 0.9.16, n.d.. Accessed October 29, 2026. 3, 7 [5] CARLA Team. Traffic Manager. CARLA Simulator docu-mentation, version 0.9.16, n.d.. Accessed November 2, 2026. 8[6] Kashyap Chitta, Daniel Dauner, and Andreas Geiger. SLEDGE: Synthesizing driving environments with genera-tive models and rule-based traffic. In ECCV , pages 57–74, 2024. 3 [7] Felipe Codevilla, Antonio M. Lopez, Vladlen Koltun, and Alexey Dosovitskiy. On offline evaluation of vision-based driving models. In ECCV , 2018. 2 [8] Marco Coscoy, Zewei Zhou, Seth Z. Zhao, Henry Wei, An-gela Magtoto, Johnson Liu, Rui Song, Walter Zimmer, Zhiyu Huang, Chen Tang, et al. MDrive: Benchmarking closed-loop cooperative driving for end-to-end multi-agent systems. 
+
+arXiv preprint arXiv:2605.10904 , 2026. 3, 7 [9] Daniel Dauner, Marcel Hallgarten, Andreas Geiger, and Kashyap Chitta. Parting with misconceptions about learning-based vehicle motion planning. In CoRL , pages 1268–1281, 2023. 2 [10] Alexey Dosovitskiy, German Ros, Felipe Codevilla, Antonio Lopez, and Vladlen Koltun. CARLA: An open urban driving simulator. In CoRL , pages 1–16, 2017. 2, 5, 7 [11] Eclipse SUMO contributors. Electric vehicles. Eclipse SUMO documentation, n.d. Accessed November 2, 2026. 7[12] George Gunter, Derek Gloudemans, Raphael E. Stern, Sean McQuade, Rahul Bhadani, Matt Bunting, Maria Laura Delle Monache, Roman Lysecky, Benjamin Seibold, Jonathan Sprinkle, et al. Are commercially implemented adaptive cruise control systems string stable? IEEE Trans. Intell. Transp. Syst. , 22(11):6992–7003, 2021. 2 [13] Mordechai Haklay and Patrick Weber. OpenStreetMap: User-generated street maps. IEEE Pervasive Comput. , 7(4): 12–18, 2008. 3 [14] Yihan Hu, Jiazhi Yang, Li Chen, Keyu Li, Chonghao Sima, Xizhou Zhu, Siqi Chai, Senyao Du, Tianwei Lin, Wenhai Wang, et al. Planning-oriented autonomous driving. In 
+
+CVPR , pages 17853–17862, 2023. 2, 8 [15] Davide Jannussi, Stefano Carlo Lambertenghi, Constantin Carste, and Andrea Stocco. Cam2Sim: Neural scenario re-construction for closed-loop autonomous driving simulation. In ASE , 2026. Tools and Datasets Track. 3, 7 [16] Vindula Jayawardana, Baptiste Freydt, Ao Qu, Cameron Hickert, Zhongxia Yan, and Cathy Wu. IntersectionZoo: Eco-driving for benchmarking multi-agent contextual rein-forcement learning. In ICLR , 2025. 3 [17] Xiaosong Jia, Zhenjie Yang, Qifeng Li, Zhiyuan Zhang, and Junchi Yan. Bench2Drive: Towards multi-ability bench-marking of closed-loop end-to-end autonomous driving. In 
+
+NeurIPS , 2024. 2, 3 [18] Bernhard Kerbl, Georgios Kopanas, Thomas Leimk¨ uhler, and George Drettakis. 3D Gaussian Splatting for real-time radiance field rendering. ACM TOG , 42(4), 2023. 7 
+
+9[19] Changxing Liu, Genjia Liu, Zijun Wang, Jinchang Yang, and Siheng Chen. CoLMDriver: LLM-based negotiation bene-fits cooperative autonomous driving. In ICCV , pages 25951– 25960, 2025. 3 [20] Genjia Liu, Yue Hu, Chenxin Xu, Weibo Mao, Junhao Ge, Zhengxiang Huang, Yifan Lu, Yinda Xu, Junkai Xia, Yafei Wang, et al. Toward collaborative autonomous driving: Sim-ulation platform and end-to-end system. IEEE Trans. Pattern Anal. Mach. Intell. , 47(8):6566–6584, 2025. 3 [21] Jinghui Lu, Jiayi Guan, Zhijian Huang, Jinlong Li, Guang Li, Lingdong Kong, Yingyan Li, Han Wang, Shaoqing Xu, Yuechen Luo, et al. OneVL: One-step latent reasoning and planning with vision-language explanation. In NeurIPS ,2026. 2, 3, 8 [22] Nico Montali, John Lambert, Paul Mougin, Alex Kuefler, Nicholas Rhinehart, Michelle Li, Cole Gulino, Tristan Em-rich, Zoey Yang, Shimon Whiteson, et al. The Waymo Open Sim Agents Challenge. In NeurIPS , 2023. 3 [23] Long Nguyen, Micha Fauth, Bernhard Jaeger, Daniel Dauner, Maximilian Igl, Andreas Geiger, and Kashyap Chitta. LEAD: Minimizing learner-expert asymmetry in end-to-end driving. In CVPR , pages 39775–39785, 2026. 2, 3, 8, 9[24] NVIDIA, Niket Agarwal, Arslan Ali, Maciej Bala, Yo-gesh Balaji, Erik Barker, Tiffany Cai, Prithvijit Chattopad-hyay, Yongxin Chen, Yin Cui, et al. Cosmos world foun-dation model platform for physical AI. arXiv preprint arXiv:2501.03575 , 2025. 3, 5 [25] NVIDIA, Yan Wang, Wenjie Luo, Junjie Bai, Yulong Cao, Tong Che, Ke Chen, Yuxiao Chen, Jenna Diamond, Yifan Ding, et al. Alpamayo-R1: Bridging reasoning and action prediction for generalizable autonomous driving in the long tail. arXiv preprint arXiv:2511.00088 , 2025. 3, 8 [26] Aditya Prakash, Kashyap Chitta, and Andreas Geiger. Multi-modal fusion transformer for end-to-end autonomous driv-ing. In CVPR , pages 7077–7087, 2021. 2 [27] Luke Rowe, Roger Girgis, Anthony Gosselin, Liam Paull, Christopher Pal, and Felix Heide. Scenario Dreamer: Vec-torized latent diffusion for generating driving simulation en-vironments. In CVPR , pages 17207–17218, 2025. 3, 4 [28] Nahian Salsabil and Sebastian Elbaum. TRACE: Topology-aware reconstruction of accidents in CARLA for AV evalua-tion. In FSE Companion , 2026. Tool Demonstrations Track. 3, 7 [29] Raphael E. Stern, Shumo Cui, Maria Laura Delle Monache, Rahul Bhadani, Matt Bunting, Miles Churchill, Nathaniel Hamilton, R’mani Haulcy, Hannah Pohlmann, Fangyu Wu, et al. Dissipation of stop-and-go waves via control of au-tonomous vehicles: Field experiments. Transp. Res. Part C: Emerg. Technol. , 89:205–221, 2018. 2 [30] Martin Treiber, Ansgar Hennecke, and Dirk Helbing. Con-gested traffic states in empirical observations and micro-scopic simulations. Phys. Rev. E , 62(2):1805–1824, 2000. 8[31] Shengyuan Wang, Zhiheng Zheng, Yu Shang, Lixuan He, Yangcheng Yu, Hangyu Fan, Jie Feng, Qingmin Liao, and Yong Li. UrbanWorld2.0: A multimodal agentic framework for reality-aligned 3D world generation at city-scale. In ACM MM , 2026. 3, 7 [32] Benjamin Wilson, William Qi, Tanmay Agarwal, John Lam-bert, Jagjeet Singh, Siddhesh Khandelwal, Bowen Pan, Rat-nesh Kumar, Andrew Hartnett, Jhony Kaesemodel Pontes, et al. Argoverse 2: Next generation datasets for self-driving perception and forecasting. In NeurIPS Datasets and Bench-marks , 2021. 2, 3 [33] Cathy Wu, Abdul Rahman Kreidieh, Kanaad Parvate, Eu-gene Vinitsky, and Alexandre M. Bayen. Flow: A modular learning framework for mixed autonomy traffic. IEEE Trans. Robot. , 38(2):1270–1286, 2022. 2, 3 [34] Shaoyuan Xie, Zihan Zhang, Jingxuan Wang, Jiashu Qu, Xi-aoqing Liang, Lingdong Kong, Junchi Lu, Henrik I. Chris-tensen, and Qi Alfred Chen. SafeDriveVLA: Navigation-conditioned world model dreaming for conflict-aware end-to-end autonomous driving. In CoRL , 2026. 3 [35] Ze Yang, Yun Chen, Jingkang Wang, Sivabalan Mani-vasagam, Wei-Chiu Ma, Anqi Joyce Yang, and Raquel Ur-tasun. UniSim: A neural closed-loop sensor simulator. In 
+
+CVPR , pages 1389–1399, 2023. 3 [36] Ziyi Zhang, Tyler Ard, Jihun Han, Dominik Karbowski, and Yanbing Wang. Mixed-traffic impacts of CAVs: A repro-ducible benchmark and multi-aspect evaluation framework for freeway corridors. Control Engineering Practice , 173: 106982, 2026. 3 [37] Hongyu Zhou, Longzhong Lin, Jiabao Wang, Yichong Lu, Dongfeng Bai, Bingbing Liu, Yue Wang, Andreas Geiger, and Yiyi Liao. HUGSIM: A real-time, photo-realistic and closed-loop simulator for autonomous driving. IEEE Trans. Pattern Anal. Mach. Intell. , 48(4):4673–4691, 2026. 3 [38] Jialv Zou, Shaoyu Chen, Bencheng Liao, Zhiyu Zheng, Yue-hao Song, Lefei Zhang, Qian Zhang, Wenyu Liu, and Xing-gang Wang. DiffusionDriveV2: Reinforcement learning-constrained truncated diffusion modeling in end-to-end au-tonomous driving. arXiv preprint arXiv:2512.07745 , 2025. 3
+
+10

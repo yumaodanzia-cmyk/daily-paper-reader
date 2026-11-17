@@ -1,0 +1,358 @@
+Title: Do VLMs Really Look at the Road? A Diagnostic Evaluation for Autonomous Driving
+
+URL Source: https://arxiv.org/pdf/2611.19184v1
+
+Published Time: Tue, 17 Nov 2026 01:56:13 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+## Do VLMs Really Look at the Road? 
+
+## A Diagnostic Evaluation for Autonomous Driving 
+
+Shankar Gangisetty ∗ , Muskan Singh ∗ , and C.V. Jawahar 
+
+International Institute of Information Technology, Hyderabad, India 
+
+Abstract. Vision-language models (VLMs) are increasingly being eval-uated for autonomous driving through question-answering benchmarks, yet high benchmark accuracy does not necessarily reflect visually grounded reasoning. We present a diagnostic evaluation framework that system-atically probes whether VLMs base safety-critical driving decisions on visual evidence or instead rely on language priors, answer biases, and dataset regularities. Our benchmark comprises two task categories, Ad-verse Weather and Junctions & Intersections, with a nuScenes spatial reasoning extension, and evaluates six open-source VLMs along four diagnostic protocols: image versus no-image evaluation, counterfactual weather sensitivity, linguistic robustness under paraphrasing and nega-tion, and spatial reasoning. All ground-truth labels are derived pro-grammatically from BDD100K and DriveLM annotations, enabling re-producible evaluation without manual labeling. Across all models, we find that competitive overall accuracy conceals systematic failure modes, including strong affirmation bias, limited sensitivity to counterfactual scene changes, near-chance performance on negated questions despite high paraphrase consistency, and confident driving decisions even with-out visual input. These results demonstrate that current open-source VLMs remain insufficiently grounded for safety-critical autonomous driv-ing and underscore the need for diagnostic evaluation beyond aggregate accuracy. The code will be made publically available. 
+
+Keywords: Vision-Language Models · Autonomous Driving · Diagnos-tic Benchmark · Visual Grounding · Counterfactual Reasoning 
+
+1 Introduction 
+
+Vision-language models (VLMs) are increasingly being explored as interpretable reasoning modules for autonomous driving, enabling systems to answer natural-language questions about road scenes, explain driving decisions, and support interactive perception, prediction, and planning. Recent benchmarks such as DriveLM [14] and DriveBench [16] demonstrate the potential of language-guided interfaces for evaluating and interacting with driving systems. Beyond improving interpretability, such interfaces provide a promising mechanism for inspecting model decisions in safety-critical scenarios, where understanding why a decision is made is often as important as the decision itself. arXiv:2611.19184v1 [cs.CV] 14 Nov 2026 2 S. Gangisetty et al. Language Prior Probing                          
+
+> Counterfactual Scene Sensitivity – Adverse Weather
+> Is visibility reduced by weather change?
+> Clear Foggy Rainy Snowy
+> NO ✓NO ✗NO ✗NO ✗
+> Should the driver turn on headlights?
+> YES ✓YES ✗
+> with Image without Image
+> Linguistic Variations Robustness
+> Original Q: Is a pedestrian crossing the road?
+> GT: YES Model: YES ✓
+> Paraphrase Q: Is someone walking across the street?
+> GT: YES (same) Model: NO ✗
+> Negation Q: Is there NO pedestrian crossing?
+> GT: NO (flipped) Model: YES ✗
+
+Fig. 1: Motivation for diagnostic evaluation of driving VLMs. Existing driving benchmarks may report high ac-curacy even when VLMs are not visually grounded. Our framework probes three complementary failure modes: (top) coun-terfactual scene sensitivity under con-trolled weather changes, (bottom left) re-liance on language priors through image versus no-image evaluation, and (bottom right) robustness to linguistic variations via paraphrases and negation. Together, these diagnostics expose failure modes that are hidden by aggregate benchmark accuracy. 
+
+Despite this promise, strong per-formance on driving benchmarks does not necessarily imply that a model is reasoning from visual evidence. Recent studies have shown that VLMs can fail surprisingly simple visual reasoning tasks despite competitive benchmark accuracy [11]. Other work attributes this behavior to modality imbalance, where models rely disproportionately on language priors instead of image con-tent [5,13]. In autonomous driving, such reliance is particularly concerning: amodel may recommend braking, yield-ing, or switching on headlights because these actions are statistically associated with the question rather than because it has correctly recognized pedestri-ans, traffic signals, weather conditions, or other scene-specific cues. Consistent with this observation, DriveBench [16] reports that modern VLMs continue to produce plausible driving responses even when visual inputs are degraded or entirely absent. These findings suggest that aggregate accuracy alone is insufficient to assess the reliability of VLMs for safety-critical driving (Fig. 1). Reliable driving assistants must also remain robust to natural language vari-ation. Driving questions frequently involve negation and polarity, for example whether a pedestrian is not present, headlights are not required, or a junction is unsafe to enter. Prior work shows that VLMs perform only at or near chance on visually grounded negation tasks [1, 18], while exhibiting an affirmation bias, i.e., predicting the queried object or condition even when explicitly negated [6]. In autonomous driving, such failures translate directly into safety risks: unwar-ranted affirmative responses may hallucinate hazards, whereas incorrect negative responses may suppress genuine warnings. Together, these observations moti-vate evaluation protocols that test not only perception accuracy but also visual grounding and semantic robustness. Motivated by these limitations, we ask a different question from existing driving benchmarks: 
+
+Do current VLMs genuinely reason from visual evidence when answering safety-critical driving questions, or do they rely on language priors, answer bi-ases, and dataset regularities? 
+
+To answer this question, we introduce a diagnostic evaluation framework that moves beyond aggregate accuracy to probe complementary aspects of driving reliability. The framework evaluates (i) visual grounding by comparing image-Do VLMs Really Look at the Road? 3
+
+Table 1: Comparison of our diagnostic framework over the closest related benchmarks.      
+
+> POPE [8] NegVQA [18] NegBench [1] DriveLM [14] DriveBench [16] Ours
+
+Driving – – – ✓ ✓ ✓
+
+No-image – – – – ✓† ✓
+
+Counterfactual – – – – ✓‡ ✓
+
+Paraphrase – – – – – ✓
+
+Negation – ✓ ✓ – – ✓
+
+Spatial QA – – – ✓ – ✓ 
+
+> †Text-only evaluation (no image input). ‡Synthetic weather corruptions, not paired scene-level counterfactuals.
+
+conditioned predictions against a no-image baseline, (ii) robustness to counter-factual weather changes through paired clear, fog, rain, and snow scenes, (iii) linguistic robustness using paraphrased and negated question variants, and (iv) spatial reasoning in complex intersection scenarios using DriveLM/nuScenes an-notations. We instantiate this framework on two benchmark categories, Adverse Weather and Junctions & Intersections , constructed entirely through pro-grammatic ground-truth derivation from BDD100K [17] and DriveLM/nuScenes [4, 14], eliminating manual annotation while ensuring reproducibility. Our evaluation of open-source VLMs reveals that competitive benchmark accuracy often conceals systematic failure modes. Models exhibit strong affirma-tion and safety-prior biases, limited sensitivity to counterfactual scene changes, weak spatial reasoning in safety-critical junctions, and near-chance performance on negated questions despite remaining highly consistent under paraphrasing. These results indicate that current VLMs frequently produce plausible driving responses without consistently grounding their decisions in visual evidence. We hope this benchmark encourages more diagnostic and safety-oriented evaluation of VLMs for autonomous driving beyond conventional accuracy-based compar-isons. A comparison with existing benchmarks is provided in Table 1; additional discussion of related work is included in the supplementary material. Our contributions are threefold: 
+
+– We introduce a diagnostic benchmark for autonomous driving that evaluates visual grounding, counterfactual robustness, linguistic robustness, and spatial reasoning, moving beyond aggregate accuracy as the primary evaluation criterion. 
+
+– We construct two complementary benchmark categories , Adverse Weather and Junctions & Intersections, using fully programmatic ground-truth derivation from BDD100K and DriveLM/nuScenes, together with coun-terfactual weather transformations and controlled linguistic variants. 
+
+– We present a comprehensive evaluation of open-source VLMs , re-vealing consistent failure modes including language-prior reliance, affirma-tion bias, weak sensitivity to visual scene changes, limited spatial reasoning, and poor polarity-aware reasoning despite competitive benchmark accuracy. 4 S. Gangisetty et al. 
+
+2 Diagnostic Driving Evaluation Framework 
+
+Fig. 2 provides an overview of the proposed diagnostic driving evaluation frame-work. We first describe the benchmark construction, including data curation, programmatic ground-truth derivation, and question design for the Adverse Weather and Junctions & Intersections tasks. We then present the diagnostic evaluation protocol and metrics for assessing visual grounding, counterfactual robustness, linguistic robustness, and spatial reasoning. 
+
+2.1 Data Curation 
+
+The benchmark comprises 520 images in total: 320 from BDD100K (including 72 counterfactual weather images) and 200 CAM_FRONT keyframes from Driv-eLM/nuScenes. This yields 26,788 binary question–answer pairs. More detailed statistics are provided in the Supplementary Material. 
+
+BDD100K. The primary benchmark is constructed from the BDD100K valida-tion split [17]. Images are manually curated using an interactive stratified grid viewer that groups candidate frames by driving condition, enabling balanced se-lection while avoiding visually redundant scenes. For the Adverse Weather cat-egory, 108 images are selected across five conditions (26 rainy, 16 foggy, 25 snowy, 17 night-time, and 24 clear-daytime scenes). For the Junctions & Intersec-tions category, 140 images are selected across five junction types (26 signalised, 28 multi-signal, 27 pedestrian-heavy, 35 unsignalised, and 24 highway-merge in-tersections). In total, the benchmark contains 248 uniquely curated BDD100K images with balanced coverage of diverse driving scenarios. 
+
+nuScenes and DriveLM. To extend the Junctions & Intersections bench-mark beyond scene-level reasoning, we additionally sample 200 CAM_FRONT keyframes from the DriveLM v1.1 annotations [14] on the nuScenes dataset [4]. The subset is stratified over intersection scenarios and pedestrian presence, while restricting evaluation to the front camera to leverage its camera-attributed 2D object annotations. These keyframes support spatial, predictive, and planning-oriented reasoning tasks that complement the BDD100K benchmark. 
+
+2.2 Ground-Truth Derivation 
+
+Ground truth is generated entirely through deterministic functions operating on existing dataset annotations, eliminating manual question-answer labelling. Each question is associated with a derivation function that maps annotation at-tributes to a binary decision label, ensuring reproducible and scalable benchmark construction. For BDD100K, derivation functions operate on enriched image annotations including weather, time of day, scene type, traffic-light states, per-class object annotations, bounding-box geometry, and occlusion metadata. We employ a two-tier strategy: Tier-I questions are derived directly from reliable annotation fields, whereas Tier-II questions use deterministic combinations of multiple attributes Do VLMs Really Look at the Road? 5
+
+> Fig. 2: Overview of the proposed diagnostic driving evaluation framework.
+> BDD100K and nuScenes images are curated with metadata for programmatic ground-truth derivation. The Adverse Weather task introduces weather counterfactuals (fog, rain, snow) and paraphrase/negation variants, while Junctions & Intersections extends the benchmark with nuScenes spatial reasoning and the same linguistic variants. VLMs are first evaluated using binary yes/no prompts across all diagnostic protocols, followed by failure-driven targeted reasoning analysis using evidence-based prompts.
+
+when a single annotation is insufficient to support a driving decision. This enables driver-centric questions while avoiding subjective visual judgement. For the DriveLM/nuScenes extension, ground truth is derived from camera-attributed 2D object annotations in the CAM_FRONT view. Relative object locations are used to infer spatial relationships (e.g., left, right, or ahead of the ego vehicle), supporting deterministic construction of spatial, prediction, and planning questions for complex intersection scenarios. 
+
+2.3 Question Design 
+
+Questions are formulated from the driver’s perspective , requiring models to make safety-critical driving decisions rather than merely describe the scene (e.g., 
+
+Should the driver turn on the headlights?” instead of Is it raining?” ). Each ques-tion is associated with a deterministic ground-truth derivation function, and the correct answer is designed to vary across visually similar scenes, preventing mod-els from relying solely on dataset statistics or condition labels. The benchmark comprises two complementary category tasks: Adverse Weather and Junc-tions & Intersections , each constructed to probe different aspects of visually grounded driving reasoning. 1. Adverse Weather. This task category evaluates whether models adapt driving decisions to changing weather conditions rather than relying on fixed language or safety priors. 
+
+– Language-prior probing. Every binary driver-centric question is eval-uated under both image-conditioned and no-image settings. Comparing the two directly measures whether a model genuinely uses visual evi-dence or continues to produce plausible driving decisions when visual information is absent. 
+
+– Counterfactual weather augmentation. To evaluate visual ground-ing, each clear-weather scene is paired with counterfactual fog, rain, and 6 S. Gangisetty et al. 
+
+snow variants generated from the same underlying image. Fog and rain are synthesized using the physics-based degradation models of JarvisIR [9], while snow is generated using Stable Diffusion image-to-image synthe-sis [12]. Since only the weather condition changes while scene geometry remains fixed, answer changes can be attributed directly to weather-dependent visual reasoning. 
+
+– Semantic question types. Questions are organised into five semantic types. Together, these span progressively more challenging reasoning lev-els, from recognizing visual cues to making safety-critical decisions that integrate multiple scene attributes. 
+
+• Perception : recognising traffic lights, vehicles, pedestrians, or visibil-ity cues. 
+
+• Action : driver decisions such as headlights, speed adaptation, or over-taking. 
+
+• Hazard : identifying safety-critical risks arising from weather or oc-clusions. 
+
+• Scene : understanding road, lighting, and environmental conditions. 
+
+• Adversarial : combining multiple conditions or contrastive cues to probe deeper reasoning. 
+
+– Linguistic variations. Every question is further expanded into two meaning-preserving paraphrases and one negated variant. This separates robustness to superficial rewording from the ability to correctly reason under semantic polarity reversal. 2. Junctions & Intersections. This category task evaluates reasoning in com-plex intersection scenarios where safe driving depends on understanding dy-namic interactions among traffic participants. 
+
+– Language-prior probing. As in Adverse Weather, every question is evaluated with and without the driving image, exposing whether inter-section decisions remain visually grounded or are dominated by language and safety priors. 
+
+– Semantic question types. The BDD100K benchmark includes ques-tions covering traffic-light interpretation, pedestrian awareness, hazard recognition, driver actions, and overall scene understanding using the same five semantic categories defined for Adverse Weather. 
+
+– nuScenes spatial reasoning extension. To probe reasoning beyond scene recognition, the benchmark is extended using DriveLM/nuScenes annotations with three additional reasoning types: 
+
+• Spatial Reasoning : relative positions of surrounding vehicles and pedes-trians (left/right/front). 
+
+• Prediction : anticipated behavior of surrounding traffic participants. 
+
+• Planning : ego-vehicle decisions conditioned on the spatial configura-tion of the scene. These questions require relational reasoning over object-level anno-tations rather than simple object recognition, making them substan-tially more diagnostic of higher-level driving intelligence. Do VLMs Really Look at the Road? 7
+
+– Linguistic variations. The same paraphrase and negation protocol is applied, enabling direct comparison of linguistic robustness across both benchmark tasks. 
+
+2.4 Model Evaluation and Diagnostic Protocol 
+
+The proposed framework evaluates VLMs in two stages. The first measures large-scale binary decision performance across the complete benchmark, while the sec-ond investigates why models fail through targeted reasoning analysis. Together, these stages separate quantitative performance from qualitative failure diagnosis. 
+
+Primary Evaluation. 
+
+VLMs are first evaluated on the complete benchmark using a constrained binary prompt that requires either Yes or No as the response. This stage pro-vides a controlled and comparable evaluation across all benchmark tasks while minimizing the influence of verbose generation styles. Responses that cannot be resolved into binary decisions are recorded as unclear and excluded from accu-racy computation. Primary evaluation is performed under four diagnostic protocols designed to expose different failure modes beyond aggregate accuracy. 
+
+– with Image. Models receive the driving image together with a binary driv-ing question. This represents the standard evaluation setting and measures decision accuracy when visual evidence is available. 
+
+– without Image. The driving image is replaced with a blank input while the question remains unchanged. Comparing performance between with and without image quantifies the extent to which predictions depend on visual evidence rather than language or safety priors. 
+
+– Counterfactual weather evaluation. For Adverse Weather, every clear-weather image is paired with synthesized fog, rain, and snow variants while keeping the underlying scene unchanged. Differences in predictions reveal whether driving decisions appropriately respond to controlled visual changes instead of remaining invariant. 
+
+– Linguistic variation evaluation. Each question is further evaluated using two paraphrases and one negated formulation. Paraphrases assess robust-ness to meaning-preserving rewording, whereas negated questions evaluate polarity-aware reasoning under semantic reversal. For the Junctions & Intersections benchmark, we additionally evaluate a nuScenes spatial reasoning extension, containing spatial reasoning, prediction, and plan-ning questions derived from DriveLM annotations. This extension examines whether models generalize beyond scene recognition to higher-level relational reasoning required for autonomous driving. 
+
+Targeted Reasoning Evaluation. 8 S. Gangisetty et al. 
+
+Binary predictions alone provide limited insight into the causes of model failures. We therefore perform a second evaluation stage on a failure-driven sub-set identified from the primary evaluation. This targeted analysis is conducted on representative VLMs, selected to represent different performance and bias characteristics. Instead of binary responses, models are prompted to produce a binary decision followed by a short evidence-based explanation describing the visual cues supporting their answer. By comparing explanations across image-conditioned and no-image settings, as well as across counterfactual and linguistic variants, this stage reveals whether failures arise from missing visual grounding, reliance on language or safety priors, hallucinated evidence, or incorrect semantic reasoning. Rather than relying solely on aggregate accuracy, the benchmark reports diagnostic metrics that quantify different aspects of model reliability discussed in Supplementary Material. 
+
+3 Experimental Results 
+
+3.1 Implementation Details 
+
+We evaluate six representative open-source VLMs: Moondream 2B [15], SmolVLM 2.2B [10], PaliGemma 3B [3], Qwen2.5-VL 7B [2], InternVL3 8B [19], LLaVA-OV 8B [7]. All models are evaluated in a strictly zero-shot setting without task-specific fine-tuning, in-context examples, or additional prompt engineering. Inference is performed using Hugging Face transformers library with models loaded in bfloat16 precision on a single NVIDIA RTX 3080 GPU. Greedy decoding is used throughout, with a maximum generation length of 50 tokens for the primary binary evaluation and 200 tokens for the targeted reasoning analysis. Binary predictions are extracted using a prefix scan for yes /no , followed by a keyword-based fallback over the first generated sentence. Responses that cannot be unambiguously mapped to either class are recorded as unclear and excluded from quantitative analysis. Due to restrictive safety guardrails, PaliGemma-3B and SmolVLM-2.2B are excluded from targeted reasoning analysis. 
+
+3.2 Performance Analysis on Adverse Weather Language-prior (with Image). Table 2 presents results under the image-conditioned setting. Although the strongest models achieve around 76–78% over-all accuracy, the benchmark reveals that comparable performance can arise from fundamentally different decision strategies. GT-conditioned analysis ex-poses pronounced response biases that are largely invisible from aggregate accu-racy alone. Moondream 2B (+29.5,pp) and InternVL3 8B (+18.4,pp) consistently over-affirm, whereas SmolVLM 2.2B exhibits the opposite behaviour (-42.0,pp), defaulting to negative responses irrespective of the visual scene. Such asymmet-ric biases are particularly problematic for autonomous driving, where systematic false positives or false negatives can directly translate into unsafe decisions. Do VLMs Really Look at the Road? 9
+
+Table 2: Image-conditioned performance on the Adverse Weather task. Re-sults are reported in accuracy. The adverse weather type relates to weather in the conditioned image. The affirmation gap (A. Gap) quantifies response bias, where pos-itive (negative) values indicate over-affirmative (over-negative) behavior. Bold and underlined values denote the best and worst results.                                                                                                     
+
+> Language-prior probing (%) Adverse weather type (%) Semantic question types (%) Model Overall GT=yes GT=no A. Gap Rainy Foggy Snowy Night Clear Perc. Action Hazard Scene Adv. Moondream 2B [15] 60.1 76.0 46.5 +29.5 59.6 66.1 67.4 80.2 36.6 61.9 62.3 43.0 72.1 62.2 PaliGemma 3B [3] 66.7 67.8 65.8 +2.0 61.1 67.1 65.2 75.5 67.6 65.2 73.7 66.3 70.1 59.1 SmolVLM 2.2B [10] 66.7 43.8 85.8 −42.0 56.1 70.5 63.6 79.6 69.4 61.1 78.4 59.2 68.7 72.7 LLaVA-OV 8B [7] 78.3 74.5 81.5 −7.0 70.6 76.6 77.4 93.1 78.7 72.3 77.9 74.5 92.8 79.7
+> InternVL3 8B [19] 75.8 85.8 67.4 +18.4 73.4 66.2 72.0 85.6 82.5 70.6 79.7 72.8 85.3 75.3 Qwen2.5-VL 7B [2] 76.2 72.8 79.0 −6.2 69.0 72.6 74.3 91.1 78.3 71.0 78.4 71.3 87.5 77.9
+
+Table 3: Counterfactual weather augmentation and linguistic variation per-formance on the Adverse Weather task. SCS measures the percentage of original– counterfactual image pairs for which the model changes its prediction. Bold and underlined values denote the best and worst results.                                                                             
+
+> Counterfactual SCS (%) Linguistic Variation
+> Model Overall Fog Rain Snow Observation Para. (%) Neg. (%) Observation Moondream 2B [15] 13.4 16.7 16.0 11.6 Lowest SCS; answers largely weather-invariant 80.0 36.6 Stable under paraphrase; worst negation PaliGemma 3B [3] 39.3 39.6 43.1 36.3 Most sensitive; strongest re-sponse to rain 80.9 48.6 High stability; near-chance negation SmolVLM 2.2B [10] 28.1 32.2 29.0 26.6 Moderate; fog induces largest shift 78.5 43.2 Stable paraphrase; below-chance negation LLaVA-OV 8B [7] 32.6 37.3 36.3 32.0 Strong; consistently reacts across all weather 80.0 44.2 Robust to rewording; weak po-larity handling InternVL3 8B [19] 27.9 30.9 31.5 28.8 Moderate; balanced across weather types
+> 87.1 52.2 Best paraphrase among 5B; only model above chance Qwen2.5-VL 7B [2] 34.2 38.1 42.0 23.4 Second-most sensitive over-all; strongest fog response 86.8 73.4 Only model clearly above chance on negation; large margin over next-best Mean 29.2 32.5 33.0 26.4
+
+Adverse weather types. Performance varies substantially across weather con-ditions, indicating that current VLMs are not uniformly grounded in visual ev-idence. Surprisingly, all models perform better on night scenes than on visually simpler clear-day scenes. Since many weather-dependent driving actions (e.g., us-ing headlights or reducing speed) are naturally affirmative at night, this pattern suggests that models exploit correlations between scene context and expected an-swers rather than reasoning from the observed weather itself. Moondream’s sharp degradation on clear scenes (36.6%) further illustrates its inability to suppress affirmative responses when adverse-weather actions are unnecessary, revealing reliance on learned safety priors instead of scene-specific evidence (Fig. 3). 
+
+Semantic question types. Performance also depends strongly on the reason-ing required by the question. Scene-understanding questions are consistently the easiest across models, whereas hazard-related questions remain the most chal-lenging, particularly for smaller VLMs. This gap suggests that recognizing global scene characteristics is substantially easier than making safety-critical decisions that require integrating localized visual cues with driving context. Consequently, high performance on scene-level perception should not be interpreted as evidence of reliable decision-making for autonomous driving (Fig. 3). 10 S. Gangisetty et al. Q: Is road surface visible enough to judge whether it is wet, icy, or dry?                                                                                         
+
+> GT: YES
+> LLaVA-OV 8B: YES ✓
+> SmolVLM 2.2B: NO ✗
+> Rainy | Perception Clear | Action
+> Q: Should the driver turn on their headlights right now?
+> GT: NO
+> InternVL3 8B: NO ✓
+> Moondream 2B: YES ✗
+> Snowy | Hazard
+> Q: Is there a pedestrian in aposition where they could step into the vehicle's path?
+> GT: NO
+> LLaVA-OV 8B: NO ✓
+> Moondream 2B: YES ✗
+> Clear | Adversarial
+> Q: Would adriver need to use headlights to safely navigate this scene?
+> GT: NO
+> LLaVA-OV 8B: NO ✓
+> PaliGemma 3B: YES ✗
+> Clear (source image) Foggy Rainy Snowy
+> Q: Would a driver need to use headlights to safely navigate this scene?
+> GT: NO GT: YES GT: YES GT: YES
+> PaliGemma 3B: NO YES ✓YES ✓YES ✓
+> Moondream 2B: NO NO ✗NO ✗NO ✗
+> ✓(answer flipped — visually grounded) ✗(no flip — weather-invariant) Q: Is overall light level sufficient to drive without headlights?
+> GT: YES
+> InternVL 8B: YES ✓
+> Moondream 3B: NO ✗
+> Variant: Original
+> Q: Is there enough natural or artificial light to drive without switching on headlights?
+> GT: YES (same)
+> InternVL 8B: YES ✓
+> Moondream 3B: NO ✗
+> Paraphrase 1
+> Q: Can the driver see clearly without headlights here?
+> GT: YES (same)
+> InternVL 8B: YES ✓
+> Moondream 3B: NO ✗
+> Paraphrase 2
+> Q: Is it too dark to drive safely without headlights in this scene?
+> GT: NO (flipped)
+> InternVL 8B: YES ✓
+> Moondream 3B: NO ✗
+> Negated
+
+Linguistic variation Counterfactual SCS Semantic question types 
+
+Fig. 3: Qualitative analysis of the Adverse Weather task. Semantic question types: best- and worst-performing models on matched image-question pairs across per-ception, action, hazard, and adversarial questions. Counterfactual SCS: PaliGemma-3B adapts its prediction across clear, fog, rain, and snow, whereas Moondream-2B remains weather-invariant. Linguistic variation: InternVL3-8B is consistent across the original question and paraphrases but fails under negation. Zoom in for details; additional de-tails are provided in the Supplementary. 
+
+Counterfactual Scene-Change Sensitivity (SCS) and Linguistic Ro-bustness. Table 3 evaluates whether VLMs adapt their decisions when either the visual scene or the linguistic formulation changes while preserving the under-lying driving task. Counterfactual weather transformations probe visual ground-ing by measuring whether models revise their predictions when clear scenes are converted into fog, rain, or snow, whereas linguistic variants assess robustness to paraphrasing and semantic polarity reversal. Counterfactual evaluation reveals that current VLMs are often insensitive to safety-relevant visual changes. PaliGemma 3B exhibits the highest SCS (39.3%), indicating that its decisions respond most consistently to changing weather con-ditions, whereas Moondream 2B remains largely invariant (13.4%), suggesting that its predictions are driven more by learned answer priors than by visual evi-dence. Across models, rain and fog induce larger response changes than snow, yet the overall SCS remains modest, indicating that even substantial degradations in visibility frequently fail to alter model decisions. For autonomous driving, such behavior is undesirable, as weather-dependent hazards should naturally lead to different driving actions (Fig. 3). Linguistic robustness exposes a complementary limitation. While all models remain highly consistent under paraphrasing (78.5–87.1%), negation accuracy collapses to near-chance for five of the six evaluated models. Qwen2.5-VL 7B is the only clear exception, achieving 73.4% negation accuracy, demonstrating that robust polarity reasoning is attainable but not yet common among current open-source VLMs. The large gap between paraphrase consistency and nega-tion accuracy indicates that these models are not generally sensitive to wording Do VLMs Really Look at the Road? 11 
+
+Table 4: Image-conditioned performance on the Junctions & Intersections task. Results are reported in accuracy. The affirmation gap (A. Gap) quantifies re-sponse bias, where positive (negative) values indicate over-affirmative (over-negative) behavior. Bold and underlined values denote the best and worst results.                                                                 
+
+> Language-prior probing (%) Semantic question types (%) Model Overall GT=yes GT=no A. Gap Perc. Action Hazard Scene Adv. Moondream 2B [15] 63.7 85.0 45.5 +39.5 82.1 51.9 34.0 77.1 37.9 PaliGemma 3B [3] 71.1 73.0 69.6 +3.4 78.3 61.6 38.1 82.0 69.7 SmolVLM 2.2B [10] 73.5 71.7 74.9 −3.2 85.5 67.1 47.7 77.7 66.3 LLaVA-OV 8B [7] 73.5 75.4 72.0 +3.4 87.0 57.1 52.7 88.9 56.7 InternVL3 8B [19] 80.2 78.8 81.3 −2.5 86.7 67.3 80.9 86.7 72.8 Qwen2.5-VL 7B [2] 78.9 77.5 80.0 −2.5 87.0 71.0 56.6 88.7 76.4
+
+changes; instead, they struggle specifically with semantic polarity reversal. In safety-critical driving, such failures can directly invert decisions, for example confusing whether a vehicle should or should not stop (Fig. 3). Together, these results expose two core limitations of current VLMs in au-tonomous driving: (i) limited visual grounding, where models fail to update decisions under meaningful scene changes, and (ii) weak polarity-aware reason-ing, where subtle linguistic changes lead to incorrect driving decisions despite otherwise stable language understanding. 
+
+3.3 Performance Analysis on Junctions & Intersections Language-prior (with Image). Table 4 reports image-conditioned perfor-mance on the Junctions & Intersections benchmark. Although InternVL3 8B achieves the highest overall accuracy (80.2%), GT-conditioned analysis reveals that comparable accuracies often arise from markedly different response biases. Moondream 2B exhibits a strong affirmation bias (+39.5 pp), indicating a ten-dency to answer yes regardless of the visual scene, whereas InternVL3 8B and Qwen2.5-VL 7B show the most balanced response distributions ( −2.5 pp). These results reinforce a consistent finding across both benchmark categories: aggregate accuracy alone is insufficient for assessing reliability, as it conceals systematic decision policies that can dominate model behavior in safety-critical settings. 
+
+Semantic question types. Performance across semantic question types ex-poses a more fundamental limitation. Perception and scene-understanding ques-tions achieve consistently high accuracy (78–89%) across all models, indicat-ing that current VLMs can reliably recognize visible traffic elements and over-all road context. In contrast, accuracy drops substantially on hazard and ac-tion questions, which require integrating multiple visual cues before making a driving decision. For example, Moondream and PaliGemma achieve only 34.0% and 38.1% on hazard questions, despite substantially stronger perception per-formance, while even larger models exhibit a noticeable gap between recognition and decision-making (Fig. 4). 12 S. Gangisetty et al. Q: Is there a pedestrian on the left side of the road ahead?                                           
+
+> GT: NO
+> InternVL3 8B: NO ✓
+> Moondream 2B: YES ✗
+> Q: Is the White commercial vehicle moving ahead of the traffic sign or a road barrier?
+> GT: NO
+> InternVL3 8B: NO ✓
+> Moondream 2B: UNCLEAR ✗
+> Semantic question types Linguistic Variation
+> Spatial Reasoning Prediction
+> Q: Is the black car moving besides the ego-vehicle needs to be considered in the current scene by the ego-vehicle?
+> GT: NO
+> InternVL3 8B: NO ✓
+> Moondream 2B: YES ✗
+> Planning
+> Q: Is there arisk of apedestrian stepping into the path of the ego vehicle?
+> GT: NO
+> ALL Models: YES ✗
+> (universal affirmation bias on original phrasing) Signalized Junction | Rainy | Hazard
+> Q: Is there arisk of collision with apedestrian at this junction?
+> GT: NO
+> InternVL3 8B: NO ✓
+> Moondream 2B: YES ✗
+> Paraphrase 1
+> Q: Could apedestrian stepping into the road pose a hazard here?
+> GT: NO
+> InternVL3 8B: YES ✗
+> Moondream 2B: YES ✗
+> Paraphrase 2
+> Q: Is this junction free of any pedestrian hazard?
+> GT: YES (flipped)
+> InternVL3 8B: YES ✓
+> Moondream 2B: NO ✗
+> Negated
+
+Fig. 4: Qualitative analysis of the Junctions & Intersections task. Seman-tic question types: best- and worst-performing models on matched nuScenes examples spanning spatial reasoning, prediction, and planning. Linguistic variation: responses to the original question, paraphrases, and the negated variant illustrate differing robust-ness to semantic reformulation, with InternVL3-8B partially recovering under para-phrasing and negation while Moondream-2B remains inconsistent. Zoom in for details; additional details are provided in the Supplementary. 
+
+This disparity suggests that current VLMs are considerably better at seeing 
+
+the scene than reasoning about its driving implications. Recognizing pedestrians, traffic lights, or lane layouts does not reliably translate into judging whether they constitute an immediate hazard or determining an appropriate driving action. Qwen2.5-VL 7B further illustrates this disconnect, achieving the strongest action performance (71.0%) yet trailing InternVL3 8B by more than 24 pp on hazard reasoning (56.6% vs. 80.9%), demonstrating that competence in one driving skill does not generalize across related reasoning tasks. Overall, the Junctions & Intersections benchmark reveals that the primary limitation of current VLMs is not visual recognition, but the inability to con-sistently transform visual understanding into safe, context-aware driving deci-sions. This observation is further supported by the targeted reasoning analysis (Sec. 3.4), where many incorrect responses are accompanied by generic safety heuristics rather than evidence grounded in the observed traffic scene. 
+
+nuScenes spatial reasoning and linguistic robustness. Table 5 evalu-ates whether the failure modes observed on BDD100K generalize to the Driv-eLM/nuScenes spatial reasoning benchmark. Although Qwen2.5-VL 7B achieves the highest overall accuracy (78.8%), GT-conditioned analysis again reveals markedly different decision policies across models. Moondream 2B collapses to 36.2% accuracy, exhibiting an extreme affirmation bias (92.3% GT=yes vs. 14.2% GT=no) together with a high unclear rate, whereas SmolVLM 2.2B achieves competitive overall performance by exhibiting the opposite tendency, strongly favoring no responses. These results reinforce that similar benchmark accuracies can arise from fundamentally different reasoning failures rather than genuinely balanced decision making. Performance across question types further exposes the perception–reasoning gap. Spatial reasoning achieves consistently higher accuracy than planning across all models, suggesting that identifying object locations is considerably easier than translating those observations into prediction and driving decisions. Even on a benchmark designed for richer relational reasoning, current VLMs struggle Do VLMs Really Look at the Road? 13 
+
+Table 5: nuScenese spatial reasoning and linguistic variation performance on the Junctions & Intersections task. All accuracies exclude unclear responses. 
+
+Bold and underlined values denote the best and worst results.                                                                                                    
+
+> nuScenes Spatial Reasoning (%) Linguistic Variation
+> Model Overall Spatial Pred. Plan. GT=yes GT=no Observation Para. (%) Neg. (%) Observation Moondream 2B [15] 36.2 48.2 16.6 51.1 92.3 14.2 Near-complete over-affirmation; high unclear rate
+> 61.1 54.0 Moderate paraphrase; above-chance negation PaliGemma 3B [3] 69.3 64.1 75.5 61.6 51.9 75.1 Balanced; strong on pre-diction 57.6 49.4 Low paraphrase stability; near-chance negation SmolVLM 2.2B [10] 72.1 66.4 85.8 54.3 41.3 83.5 Extreme negation bias; defaults to no
+> 56.2 50.3 Low paraphrase stability; near-chance negation LLaVA-OV 8B [7] 71.8 70.8 76.3 60.7 62.4 74.9 Balanced; consistent across q-types 57.8 40.6 Moderate stability; worst negation InternVL3 8B [19] 72.1 69.6 76.3 62.3 67.1 73.2 Balanced; ties for second-highest overall 57.9 54.0 Best paraphrase; above-chance negation Qwen2.5-VL 7B [2] 78.8 75.4 87.5 60.2 51.3 88.0 Highest overall and strongest prediction ac-curacy, but weakest on GT=yes; leans toward default no
+> 55.3 56.8 Lowest paraphrase stability but highest negation accu-racy across all six models
+
+to progress from recognizing scene geometry to reasoning about safe vehicle behavior. Linguistic robustness exhibits the same trend observed in Adverse Weather. While paraphrase consistency remains moderate, negation accuracy is consis-tently near chance, dropping to 40.6% for LLaVA-OV 8B. Even the best-performing model reaches only 56.8%, indicating that failures under semantic polarity re-versal persist across datasets and question types. Together, these results demon-strate that the limitations identified in BDD100K are not dataset-specific: cur-rent VLMs continue to rely on biased decision policies, exhibit limited reasoning beyond perception, and remain unreliable under linguistically challenging but safety-critical queries (Fig. 4). 
+
+3.4 Qualitative Analysis of Reasoning Failures 
+
+To understand why VLMs fail, we perform a targeted reasoning analysis on representative failure cases using evidence-based prompts (see Supplementary Material). Across both benchmark tasks, correct explanations consistently ref-erence observable scene evidence, whereas incorrect explanations are dominated by generic safety heuristics and hallucinated scene attributes rather than image-grounded observations. The same behavior persists without images, where mod-els often produce confident driving recommendations instead of acknowledging insufficient visual information. These qualitative findings explain the strong no-image performance observed quantitatively and confirm that many failures stem from reliance on language priors rather than visual grounding. Fig. 5 presents representative failure cases across all diagnostic evaluation protocols. Despite different tasks and prompting conditions, the same failure patterns consistently emerge. Under image-conditioned evaluation, models fre-quently substitute visual evidence with generic safety priors, hallucinating haz-ards (e.g., wet roads or sightline obstructions) that are absent from the scene. Linguistic perturbations further expose poor semantic robustness: negated ques-tions are often interpreted identically to their affirmative counterparts, while meaning-preserving paraphrases can unexpectedly reverse model decisions. Coun-14 S. Gangisetty et al. Failure Type: Hallucination         
+
+> Q: Should the driver slowdown below the speed limit?
+> GT: NO
+> Moondream 2B: YES ✗
+> Reason: The road appears wet… reflections and water dropouts on the windshield…
+> with Image
+
+Adverse Weather        
+
+> Failure Type: Safety Prior
+> Q: Could alarge object vehicle obstruct the driver’s sightline?
+> GT: NO
+> LlaVA-OV 8B: YES ✗
+> Reason: A large vehicle could obstruct the sightline… narrow street… parked cars…
+
+Junctions & Intersections                                                    
+
+> Failure Type: Negation ignored
+> Original Q: Can you identify the road type despite weather?
+> GT: YES
+> Negated Q: Are conditions severe enough to make identification impossible?
+> GT: NO
+> LlaVA-OV 8B: YES ✗
+> Reason: Condition appear severe enough… numerous raindrops on the windshield…
+> with Image Negated variant
+> Failure Type: Paraphrase unstable
+> Original Q: Is it safe to overtake the vehicle ahead?
+> GT: YES
+> Paraphrase Q: Would it be safe to pass the vehicle given current conditions?
+> GT: YES
+> InternVL3 8B: NO ✗
+> Reason: It would not be safe to pass… curve ahead… limited visibility…
+> Paraphrase variant
+> Failure Type: Affirmation bias
+> Q: Is there arisk of glare from headlights or wet road reflections?
+> GT: NO
+> InternVL3 8B: YES ✗
+> Reason: There is a risk of glare… wet road… rain reduce visibility…
+> Counterfactual (rainy)
+> Failure Type: Negation bias
+> Q: Is there avehicle approaching from the left side of the intersection?
+> GT: YES
+> LLaVA-OV 8B: NO ✗
+> Reason: There is no vehicle approaching from the left… red light… no visible vehicles…
+> Failure Type: Guess vs Refusal
+> Q: Is there atleast one traffic light visible to the ego-vehicle?
+> GT: NO
+> Paraphrase Q: Would it be safe to pass the vehicle given current conditions?
+> GT: YES
+> InternVL3 8B: NO ✗(partial refusal) LLaVA-OV 8B: NO ✗(explicit ack.)
+> Spatial reasoning without Image
+
+Fig. 5: Targeted qualitative analysis of reasoning failures. Representative fail-ure cases from each diagnostic protocols showing that VLMs often generate plausi-ble driving decisions from language priors rather than visual evidence. Examples il-lustrate hallucination, safety-prior reasoning, negation blindness, paraphrase inconsis-tency, counterfactual scene insensitivity, spatial reasoning failure, and no-image guess-versus-refusal behavior. Each panel reports the question, ground truth, prediction, and generated rationale. Zoom in for details. 
+
+terfactual weather transformations reveal limited visual grounding, with models either failing to adapt their predictions when scene conditions change or exhibit-ing strong affirmation bias irrespective of the visual evidence. On the nuScenes extension, spatial reasoning failures arise from incorrect inference of object pres-ence despite clearly observable scene geometry. Finally, in the absence of images, models either generate confident but unsupported driving recommendations or inconsistently refuse to answer, demonstrating that plausible responses can be produced without any visual evidence. Additional qualitative examples and de-tailed reasoning traces are provided in the Supplementary Material. 
+
+4 Conclusion 
+
+We presented a diagnostic evaluation framework for assessing whether vision-language models make safety-critical driving decisions from visual evidence or from language priors. Rather than relying on aggregate accuracy, our frame-work evaluates visual grounding through four evaluation protocols and metrics: image versus no-image evaluation, counterfactual weather sensitivity, linguistic robustness, and spatial reasoning. Across six representative open-source VLMs evaluated on BDD100K and a DriveLM/nuScenes spatial reasoning extension, we find that competitive benchmark accuracy consistently masks systematic failure modes. Our analysis reveals strong reliance on language priors, limited sensitiv-ity to counterfactual scene changes, persistent affirmation and negation biases, and confident decisions even without visual input. These findings suggest that current open-source VLMs remain insufficiently grounded for safety-critical au-tonomous driving despite producing plausible natural-language explanations. We hope this benchmark encourages future research to move beyond aggre-gate accuracy toward evaluations that explicitly measure visual grounding, ro-bustness, and reasoning reliability, ultimately enabling more trustworthy vision-language models for autonomous driving. Do VLMs Really Look at the Road? 15 
+
+References 
+
+1. Alhamoud, K., Alshammari, S., Tian, Y., Li, G., Torr, P., Kim, Y., Ghas-semi, M.: Vision-language models do not understand negation. arXiv preprint arXiv:2501.09425 (2025) 2. Bai, S., Chen, K., Liu, X., Wang, J., Ge, W., Song, S., Dang, K., Wang, P., Wang, S., Tang, J., Zhong, H., Zhu, Y., Yang, M., Li, Z., Wan, J., Wang, P., Ding, W., Fu, Z., Xu, Y., Ye, J., Zhang, X., Xie, T., Cheng, Z., Zhang, H., Yang, Z., Xu, H., Lin, J.: Qwen2.5-vl technical report. arXiv preprint arXiv:2502.13923 (2025) 3. Beyer, L., Steiner, A., Pinto, A.S., Kolesnikov, A., Wang, X., Salz, D., Neumann, M., Alabdulmohsin, I., Tschannen, M., Bugliarello, E., Unterthiner, T., Keysers, D., Koppula, S., Liu, F., Grycner, A., Gritsenko, A., Houlsby, N., Kumar, M., Rong, K., Eisenschlos, J., Kabra, R., Bauer, M., Bošnjak, M., Chen, X., Minderer, M., Voigtlaender, P., Bica, I., Balazevic, I., Puigcerver, J., Papalampidi, P., Henaff, O., Xiong, X., Soricut, R., Harmsen, J., Zhai, X.: Paligemma: A versatile 3b vlm for transfer. arXiv preprint arXiv:2407.07726 (2024) 4. Caesar, H., Bankiti, V., Lang, A.H., Vora, S., Liong, V.E., Xu, Q., Krishnan, A., Pan, Y., Baldan, G., Beijbom, O.: nuScenes: A multimodal dataset for autonomous driving. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). pp. 11621–11631 (2020) 5. Deng, A., Cao, T., Chen, Z., Hooi, B.: Words or vision: Do vision-language models have blind faith in text? In: Proceedings of the IEEE/CVF Conference on Com-puter Vision and Pattern Recognition (CVPR). pp. 3867–3876 (2025) 6. Kang, I., Lim, Y., Lee, S., Choi, J., Choe, J., Shim, H.: What “not” to detect: Negation-aware VLMs via structured reasoning and token merging. arXiv preprint arXiv:2510.13232 (2025) 7. Li, B., Zhang, Y., Guo, D., Zhang, R., Li, F., Zhang, H., Zhang, K., Zhang, P., Li, Y., Liu, Z., Li, C.: Llava-onevision: Easy visual task transfer. arXiv preprint arXiv:2408.03326 (2024) 8. Li, Y., Du, Y., Zhou, K., Wang, J., Zhao, W.X., Wen, J.R.: Evaluating object hal-lucination in large vision-language models. In: Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (EMNLP) (2023) 9. Lin, Y., et al.: JarvisIR: Elevating autonomous driving perception with intelligent image restoration. arXiv preprint arXiv:2504.04158 (2025) 10. Marafioti, A., Zohar, O., Farré, M., Noyan, M., Bakouch, E., Cuenca, P., Zakka, C., Ben Allal, L., Lozhkov, A., Tazi, N., Srivastav, V., Lochner, J., Larcher, H., Morlon, M., Tunstall, L., von Werra, L., Wolf, T.: Smolvlm: Redefining small and efficient multimodal models. arXiv preprint arXiv:2504.05299 (2025) 11. Rahmanzadehgervi, P., Bolton, L., Taesiri, M.R., Nguyen, A.T.: Vision language models are blind. In: Proceedings of the Asian Conference on Computer Vision (ACCV) (2024) 12. Rombach, R., Blattmann, A., Lorenz, D., Esser, P., Ommer, B.: High-resolution image synthesis with latent diffusion models. CoRR abs/2112.10752 (2021) 13. Sim, M.Y., Zhang, W.E., Dai, X., Fang, B.: Can VLMs actually see and read? a survey on modality collapse in vision-language models. In: Findings of the Associ-ation for Computational Linguistics: ACL 2025. pp. 24452–24470 (2025) 14. Sima, C., Renz, K., Chitta, K., Chen, L., Zhang, H., Xie, C., Luo, P., Geiger, A., Li, H.: DriveLM: Driving with graph visual question answering. In: Proceedings of the European Conference on Computer Vision (ECCV) (2024) 16 S. Gangisetty et al. 15. Team, M.: Moondream 2b. https://huggingface.co/moondream/moondream-2b-2025-04-14 (2025), official model release. Accessed: 2026-07-06 16. Xie, S., Kong, L., Dong, Y., Sima, C., Zhang, W., Chen, Q.A., Liu, Z., Pan, L.: Are vlms ready for autonomous driving? an empirical study from the reliability, data, and metric perspectives. In: Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV). pp. 6585–6597 (2025) 17. Yu, F., Chen, H., Wang, X., Xian, W., Chen, Y., Liu, F., Madhavan, V., Darrell, T.: BDD100K: A diverse driving dataset for heterogeneous multitask learning. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). pp. 2636–2645 (2020) 18. Zhang, Y., Su, Y., Liu, Y., Yeung-Levy, S.: NegVQA: Can vision language models understand negation? In: Findings of the Association for Computational Linguis-tics: ACL 2025. pp. 3707–3716 (2025) 19. Zhu, J., Wang, W., Chen, Z., Liu, Z., Ye, S., Gu, L., Tian, H., Duan, Y., Su, W., Shao, J., Gao, Z., Cui, E., Wang, X., Cao, Y., Liu, Y., Wei, X., Zhang, H., Wang, H., Xu, W., Li, H., Wang, J., Deng, N., Li, S., He, Y., Jiang, T., Luo, J., Wang, Y., He, C., Shi, B., Zhang, X., Shao, W., He, J., Xiong, Y., Qu, W., Sun, P., Jiao, P., Lv, H., Wu, L., Zhang, K., Deng, H., Ge, J., Chen, K., Wang, L., Dou, M., Lu, L., Zhu, X., Lu, T., Lin, D., Qiao, Y., Dai, J., Wang, W.: Internvl3: Exploring advanced training and test-time recipes for open-source multimodal models. arXiv preprint arXiv:2504.10479 (2025)

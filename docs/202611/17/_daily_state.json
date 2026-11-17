@@ -1,0 +1,73 @@
+{
+  "date": "20261117",
+  "date_label": "",
+  "generated_at": "2026-11-17 02:33:57 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2611.17720v1",
+      "route": "202611/17/2611.17720v1-ego2flow-benchmarking-the-traffic-system-impact-of-autonomous-driving-on-maps-distilled-from-real-world-roads",
+      "title": "Ego2Flow: Benchmarking the Traffic-System Impact of Autonomous Driving on Maps Distilled from Real-World Roads",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "用于评估自动驾驶规划闭环性能的交通仿真基准",
+      "first_seen_at": "2026-11-17 02:33:57 UTC",
+      "updated_at": "2026-11-17 02:33:57 UTC"
+    },
+    {
+      "paper_id": "2611.17660v1",
+      "route": "202611/17/2611.17660v1-evids-an-environment--vehicle-dynamics-integrated-simulation-platform-for-intelligent-chassis-development",
+      "title": "EViDS: An Environment--Vehicle Dynamics Integrated Simulation Platform for Intelligent Chassis Development",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "融合CARLA与CarSim的自动驾驶仿真平台",
+      "first_seen_at": "2026-11-17 02:33:57 UTC",
+      "updated_at": "2026-11-17 02:33:57 UTC"
+    },
+    {
+      "paper_id": "2611.17505v1",
+      "route": "202611/17/2611.17505v1-adversarial-tracking-attacks-on-image-sensors-for-object-tracking-in-autonomous-vehicles",
+      "title": "Adversarial Tracking: Attacks on Image Sensors for Object Tracking in Autonomous Vehicles",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "在CARLA驾驶仿真器中评测跟踪系统",
+      "first_seen_at": "2026-11-17 02:33:57 UTC",
+      "updated_at": "2026-11-17 02:33:57 UTC"
+    },
+    {
+      "paper_id": "2611.19184v1",
+      "route": "202611/17/2611.19184v1-do-vlms-really-look-at-the-road-a-diagnostic-evaluation-for-autonomous-driving",
+      "title": "Do VLMs Really Look at the Road? A Diagnostic Evaluation for Autonomous Driving",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "driving-eval"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "针对自动驾驶视觉语言模型的诊断评测框架",
+      "first_seen_at": "2026-11-17 02:33:57 UTC",
+      "updated_at": "2026-11-17 02:33:57 UTC"
+    }
+  ]
+}
